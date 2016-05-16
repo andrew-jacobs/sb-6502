@@ -1,0 +1,14 @@
+Global Symbol Map
+
+
+
+Sections:
+
+.page0           : 000000F0 - 000000FA in monitor-65c02.obj
+                   000000FB - 000000FF in monitor-65c02.obj
+                   00000100 - 000001FF in monitor-65c02.obj
+.bss             : 00000200 - 000002FF in monitor-65c02.obj
+.code            : 0000F000 - 0000F37B in monitor-65c02.obj
+                   0000FE00 - 0000FEFF in monitor-65c02.obj
+                   0000FF00 - 0000FFCC in monitor-65c02.obj
+                   0000FFFA - 0000FFFF in monitor-65c02.obj
