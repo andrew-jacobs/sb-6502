@@ -21,11 +21,11 @@ SPI_SLCT	.EQU	$FE07
 NUL		.EQU	$00
 BEL		.EQU	$07
 BS		.EQU	$08
-HT		.EQU 	$09
+HT		.EQU	$09
 CR		.EQU	$0D
 LF		.EQU	$0A
-DC1		.EQU	'^'	;$11
-DC3		.EQU	'!'	;$13
+DC1		.EQU	$11			; XON
+DC3		.EQU	$13			; XOFF
 ESC		.EQU	$1B
 DEL		.EQU	$7F
 
@@ -140,11 +140,11 @@ MB_YRG		.EQU	%00000100
 ; Addressing modes
 
 		.IF	__65C02__
-MO_BIT		.EQU	MB_BIT       |MB_ZPG
+MO_BIT		.EQU	MB_BIT	     |MB_ZPG
 MO_BRL		.EQU	MB_BIT|MB_REL|MB_ZPG
 		.ENDIF
 MO_ACC		.EQU	       MB_ACC|MB_IMP
-MO_IMP		.EQU	              MB_IMP
+MO_IMP		.EQU		      MB_IMP
 MO_IMM		.EQU		      MB_IMM
 MO_REL		.EQU		      MB_REL
 MO_ZPG		.EQU		      MB_ZPG
@@ -169,13 +169,13 @@ MO_IAX		.EQU	MB_IND|MB_XRG|MB_ABS
 
 		.PAGE0
 		.ORG	$00F0
-		
+
 A_REG		.SPACE	1
 X_REG		.SPACE	1
 Y_REG		.SPACE	1
 P_REG		.SPACE	1
 PC_REG		.SPACE	2
-		
+
 CMD_LEN		.SPACE	1			; Command buffer length
 ADDR_S		.SPACE	2
 ADDR_E		.SPACE	2
@@ -183,7 +183,7 @@ ADDR_E		.SPACE	2
 ;-------------------------------------------------------------------------------
 
 		.ORG	$00FB
-		
+
 ; Communications buffer offsets
 
 RX_HEAD		.SPACE	1		; UART recieve buffer offsets
@@ -199,7 +199,7 @@ FLAG_STOP	.EQU	$40
 ;-------------------------------------------------------------------------------
 
 		.ORG	$0100
-		
+
 STACK		.SPACE	256
 
 ;===============================================================================
@@ -223,229 +223,229 @@ BUFFER		.SPACE	CMD_SIZE
 
 		.CODE
 		.ORG	$F000
-		
+
 ;===============================================================================
 ;-------------------------------------------------------------------------------
 
 		.IF	__6502__
-OPCODES:		
-		.BYTE	OP_BRK,OP_ORA,OP_ERR,OP_ERR,OP_ERR,OP_ORA,OP_ASL,OP_ERR	; 0
+OPCODES:
+		.BYTE	OP_BRK,OP_ORA,OP_ERR,OP_ERR,OP_ERR,OP_ORA,OP_ASL,OP_ERR ; 0
 		.BYTE	OP_PHP,OP_ORA,OP_ASL,OP_ERR,OP_ERR,OP_ORA,OP_ASL,OP_ERR
-		.BYTE	OP_BPL,OP_ORA,OP_ERR,OP_ERR,OP_ERR,OP_ORA,OP_ASL,OP_ERR	; 1
+		.BYTE	OP_BPL,OP_ORA,OP_ERR,OP_ERR,OP_ERR,OP_ORA,OP_ASL,OP_ERR ; 1
 		.BYTE	OP_CLC,OP_ORA,OP_INC,OP_ERR,OP_ERR,OP_ORA,OP_ASL,OP_ERR
-		.BYTE	OP_JSR,OP_AND,OP_ERR,OP_ERR,OP_BIT,OP_AND,OP_ROL,OP_ERR	; 2
+		.BYTE	OP_JSR,OP_AND,OP_ERR,OP_ERR,OP_BIT,OP_AND,OP_ROL,OP_ERR ; 2
 		.BYTE	OP_PLP,OP_AND,OP_ROL,OP_ERR,OP_BIT,OP_AND,OP_ROL,OP_ERR
-		.BYTE	OP_BMI,OP_AND,OP_ERR,OP_ERR,OP_BIT,OP_AND,OP_ROL,OP_ERR	; 3
+		.BYTE	OP_BMI,OP_AND,OP_ERR,OP_ERR,OP_BIT,OP_AND,OP_ROL,OP_ERR ; 3
 		.BYTE	OP_SEC,OP_AND,OP_DEC,OP_ERR,OP_BIT,OP_AND,OP_ROL,OP_ERR
-		.BYTE	OP_RTI,OP_EOR,OP_ERR,OP_ERR,OP_ERR,OP_EOR,OP_LSR,OP_ERR	; 4
+		.BYTE	OP_RTI,OP_EOR,OP_ERR,OP_ERR,OP_ERR,OP_EOR,OP_LSR,OP_ERR ; 4
 		.BYTE	OP_PHA,OP_EOR,OP_LSR,OP_ERR,OP_JMP,OP_EOR,OP_LSR,OP_ERR
-		.BYTE	OP_BVC,OP_EOR,OP_ERR,OP_ERR,OP_ERR,OP_EOR,OP_LSR,OP_ERR	; 5
+		.BYTE	OP_BVC,OP_EOR,OP_ERR,OP_ERR,OP_ERR,OP_EOR,OP_LSR,OP_ERR ; 5
 		.BYTE	OP_CLI,OP_EOR,OP_ERR,OP_ERR,OP_ERR,OP_EOR,OP_LSR,OP_ERR
-		.BYTE	OP_RTS,OP_ADC,OP_ERR,OP_ERR,OP_ERR,OP_ADC,OP_ROR,OP_ERR	; 6
+		.BYTE	OP_RTS,OP_ADC,OP_ERR,OP_ERR,OP_ERR,OP_ADC,OP_ROR,OP_ERR ; 6
 		.BYTE	OP_PLA,OP_ADC,OP_ROR,OP_ERR,OP_JMP,OP_ADC,OP_ROR,OP_ERR
-		.BYTE	OP_BVS,OP_ADC,OP_ERR,OP_ERR,OP_ERR,OP_ADC,OP_ROR,OP_ERR	; 7
+		.BYTE	OP_BVS,OP_ADC,OP_ERR,OP_ERR,OP_ERR,OP_ADC,OP_ROR,OP_ERR ; 7
 		.BYTE	OP_SEI,OP_ADC,OP_ERR,OP_ERR,OP_ERR,OP_ADC,OP_ROR,OP_ERR
-		.BYTE	OP_ERR,OP_STA,OP_ERR,OP_ERR,OP_STY,OP_STA,OP_STX,OP_ERR	; 8
+		.BYTE	OP_ERR,OP_STA,OP_ERR,OP_ERR,OP_STY,OP_STA,OP_STX,OP_ERR ; 8
 		.BYTE	OP_DEY,OP_BIT,OP_TXA,OP_ERR,OP_STY,OP_STA,OP_STX,OP_ERR
-		.BYTE	OP_BCC,OP_STA,OP_ERR,OP_ERR,OP_STY,OP_STA,OP_STX,OP_ERR	; 9
+		.BYTE	OP_BCC,OP_STA,OP_ERR,OP_ERR,OP_STY,OP_STA,OP_STX,OP_ERR ; 9
 		.BYTE	OP_TYA,OP_STA,OP_TXS,OP_ERR,OP_ERR,OP_STA,OP_ERR,OP_ERR
-		.BYTE	OP_LDY,OP_LDA,OP_LDX,OP_ERR,OP_LDY,OP_LDA,OP_LDX,OP_ERR	; A
+		.BYTE	OP_LDY,OP_LDA,OP_LDX,OP_ERR,OP_LDY,OP_LDA,OP_LDX,OP_ERR ; A
 		.BYTE	OP_TAY,OP_LDA,OP_TAX,OP_ERR,OP_LDY,OP_LDA,OP_LDX,OP_ERR
-		.BYTE	OP_BCS,OP_LDA,OP_ERR,OP_ERR,OP_LDY,OP_LDA,OP_LDX,OP_ERR	; B
+		.BYTE	OP_BCS,OP_LDA,OP_ERR,OP_ERR,OP_LDY,OP_LDA,OP_LDX,OP_ERR ; B
 		.BYTE	OP_CLV,OP_LDA,OP_TSX,OP_ERR,OP_LDY,OP_LDA,OP_LDX,OP_ERR
-		.BYTE	OP_CPY,OP_CMP,OP_ERR,OP_ERR,OP_CPY,OP_CMP,OP_DEC,OP_ERR	; C
+		.BYTE	OP_CPY,OP_CMP,OP_ERR,OP_ERR,OP_CPY,OP_CMP,OP_DEC,OP_ERR ; C
 		.BYTE	OP_INY,OP_CMP,OP_DEX,OP_ERR,OP_CPY,OP_CMP,OP_DEC,OP_ERR
-		.BYTE	OP_BNE,OP_CMP,OP_ERR,OP_ERR,OP_ERR,OP_CMP,OP_DEC,OP_ERR	; D
+		.BYTE	OP_BNE,OP_CMP,OP_ERR,OP_ERR,OP_ERR,OP_CMP,OP_DEC,OP_ERR ; D
 		.BYTE	OP_CLD,OP_CMP,OP_ERR,OP_ERR,OP_ERR,OP_CMP,OP_DEC,OP_ERR
-		.BYTE	OP_CPX,OP_SBC,OP_ERR,OP_ERR,OP_CPX,OP_SBC,OP_INC,OP_ERR	; E
+		.BYTE	OP_CPX,OP_SBC,OP_ERR,OP_ERR,OP_CPX,OP_SBC,OP_INC,OP_ERR ; E
 		.BYTE	OP_INX,OP_SBC,OP_NOP,OP_ERR,OP_CPX,OP_SBC,OP_INC,OP_ERR
-		.BYTE	OP_BEQ,OP_SBC,OP_ERR,OP_ERR,OP_ERR,OP_SBC,OP_INC,OP_ERR	; F
+		.BYTE	OP_BEQ,OP_SBC,OP_ERR,OP_ERR,OP_ERR,OP_SBC,OP_INC,OP_ERR ; F
 		.BYTE	OP_SED,OP_SBC,OP_ERR,OP_ERR,OP_ERR,OP_SBC,OP_INC,OP_ERR
-		
+
 MODES:
-		.BYTE	MO_IMM,MO_IZX,MO_IMM,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_IMP	; 0
+		.BYTE	MO_IMM,MO_IZX,MO_IMM,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_IMP ; 0
 		.BYTE	MO_IMP,MO_IMM,MO_ACC,MO_IMP,MO_IMP,MO_ABS,MO_ABS,MO_IMP
-		.BYTE	MO_REL,MO_IZY,MO_IMP,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_IMP	; 1
+		.BYTE	MO_REL,MO_IZY,MO_IMP,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_IMP ; 1
 		.BYTE	MO_IMP,MO_ABY,MO_ACC,MO_IMP,MO_IMP,MO_ABX,MO_ABX,MO_IMP
-		.BYTE	MO_ABS,MO_IZX,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_IMP	; 2
+		.BYTE	MO_ABS,MO_IZX,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_IMP ; 2
 		.BYTE	MO_IMP,MO_IMM,MO_ACC,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_IMP
-		.BYTE	MO_REL,MO_IZY,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_ZPX,MO_IMP	; 3
+		.BYTE	MO_REL,MO_IZY,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_ZPX,MO_IMP ; 3
 		.BYTE	MO_IMP,MO_ABY,MO_ACC,MO_IMP,MO_ABX,MO_ABX,MO_ABX,MO_IMP
-		.BYTE	MO_IMP,MO_IZX,MO_IMP,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_IMP	; 4
+		.BYTE	MO_IMP,MO_IZX,MO_IMP,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_IMP ; 4
 		.BYTE	MO_IMP,MO_IMM,MO_ACC,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_IMP
-		.BYTE	MO_REL,MO_IZY,MO_IMP,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_IMP	; 5
+		.BYTE	MO_REL,MO_IZY,MO_IMP,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_IMP ; 5
 		.BYTE	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_IMP,MO_ABX,MO_ABX,MO_IMP
-		.BYTE	MO_IMP,MO_IZX,MO_IMP,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_IMP	; 6
+		.BYTE	MO_IMP,MO_IZX,MO_IMP,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_IMP ; 6
 		.BYTE	MO_IMP,MO_IMM,MO_ACC,MO_IMP,MO_IAB,MO_ABS,MO_ABS,MO_IMP
-		.BYTE	MO_REL,MO_IZY,MO_IMP,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_IMP	; 7
+		.BYTE	MO_REL,MO_IZY,MO_IMP,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_IMP ; 7
 		.BYTE	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_IMP,MO_ABX,MO_ABX,MO_IMP
-		.BYTE	MO_IMP,MO_IZX,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_IMP	; 8
+		.BYTE	MO_IMP,MO_IZX,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_IMP ; 8
 		.BYTE	MO_IMP,MO_IMM,MO_IMP,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_IMP
-		.BYTE	MO_REL,MO_IZY,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_ZPY,MO_IMP	; 9
+		.BYTE	MO_REL,MO_IZY,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_ZPY,MO_IMP ; 9
 		.BYTE	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_IMP,MO_ABX,MO_IMP,MO_IMP
-		.BYTE	MO_IMM,MO_IZX,MO_IMM,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_IMP	; A
+		.BYTE	MO_IMM,MO_IZX,MO_IMM,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_IMP ; A
 		.BYTE	MO_IMP,MO_IMM,MO_IMP,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_IMP
-		.BYTE	MO_REL,MO_IZY,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_ZPY,MO_IMP	; B
+		.BYTE	MO_REL,MO_IZY,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_ZPY,MO_IMP ; B
 		.BYTE	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_ABX,MO_ABX,MO_ABY,MO_IMP
-		.BYTE	MO_IMM,MO_IZX,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_IMP	; C
+		.BYTE	MO_IMM,MO_IZX,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_IMP ; C
 		.BYTE	MO_IMP,MO_IMM,MO_IMP,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_IMP
-		.BYTE	MO_REL,MO_IZY,MO_IMP,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_IMP	; D
+		.BYTE	MO_REL,MO_IZY,MO_IMP,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_IMP ; D
 		.BYTE	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_IMP,MO_ABX,MO_ABX,MO_IMP
-		.BYTE	MO_IMM,MO_IZX,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_IMP	; E
+		.BYTE	MO_IMM,MO_IZX,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_IMP ; E
 		.BYTE	MO_IMP,MO_IMM,MO_IMP,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_IMP
-		.BYTE	MO_REL,MO_IZY,MO_IMP,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_IMP	; F
+		.BYTE	MO_REL,MO_IZY,MO_IMP,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_IMP ; F
 		.BYTE	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_IMP,MO_ABX,MO_ABX,MO_IMP
 		.ENDIF
-		
+
 ;-------------------------------------------------------------------------------
 
 		.IF	__65C02__
 OPCODES:
-		.BYTE	OP_BRK,OP_ORA,OP_ERR,OP_ERR,OP_TSB,OP_ORA,OP_ASL,OP_RMB	; 0
+		.BYTE	OP_BRK,OP_ORA,OP_ERR,OP_ERR,OP_TSB,OP_ORA,OP_ASL,OP_RMB ; 0
 		.BYTE	OP_PHP,OP_ORA,OP_ASL,OP_ERR,OP_TSB,OP_ORA,OP_ASL,OP_BBR
-		.BYTE	OP_BPL,OP_ORA,OP_ORA,OP_ERR,OP_TRB,OP_ORA,OP_ASL,OP_RMB	; 1
+		.BYTE	OP_BPL,OP_ORA,OP_ORA,OP_ERR,OP_TRB,OP_ORA,OP_ASL,OP_RMB ; 1
 		.BYTE	OP_CLC,OP_ORA,OP_INC,OP_ERR,OP_TRB,OP_ORA,OP_ASL,OP_BBR
-		.BYTE	OP_JSR,OP_AND,OP_ERR,OP_ERR,OP_BIT,OP_AND,OP_ROL,OP_RMB	; 2
+		.BYTE	OP_JSR,OP_AND,OP_ERR,OP_ERR,OP_BIT,OP_AND,OP_ROL,OP_RMB ; 2
 		.BYTE	OP_PLP,OP_AND,OP_ROL,OP_ERR,OP_BIT,OP_AND,OP_ROL,OP_BBR
-		.BYTE	OP_BMI,OP_AND,OP_AND,OP_ERR,OP_BIT,OP_AND,OP_ROL,OP_RMB	; 3
+		.BYTE	OP_BMI,OP_AND,OP_AND,OP_ERR,OP_BIT,OP_AND,OP_ROL,OP_RMB ; 3
 		.BYTE	OP_SEC,OP_AND,OP_DEC,OP_ERR,OP_BIT,OP_AND,OP_ROL,OP_BBR
-		.BYTE	OP_RTI,OP_EOR,OP_ERR,OP_ERR,OP_ERR,OP_EOR,OP_LSR,OP_RMB	; 4
+		.BYTE	OP_RTI,OP_EOR,OP_ERR,OP_ERR,OP_ERR,OP_EOR,OP_LSR,OP_RMB ; 4
 		.BYTE	OP_PHA,OP_EOR,OP_LSR,OP_ERR,OP_JMP,OP_EOR,OP_LSR,OP_BBR
-		.BYTE	OP_BVC,OP_EOR,OP_EOR,OP_ERR,OP_ERR,OP_EOR,OP_LSR,OP_RMB	; 5
+		.BYTE	OP_BVC,OP_EOR,OP_EOR,OP_ERR,OP_ERR,OP_EOR,OP_LSR,OP_RMB ; 5
 		.BYTE	OP_CLI,OP_EOR,OP_PHY,OP_ERR,OP_ERR,OP_EOR,OP_LSR,OP_BBR
-		.BYTE	OP_RTS,OP_ADC,OP_ERR,OP_ERR,OP_STZ,OP_ADC,OP_ROR,OP_RMB	; 6
+		.BYTE	OP_RTS,OP_ADC,OP_ERR,OP_ERR,OP_STZ,OP_ADC,OP_ROR,OP_RMB ; 6
 		.BYTE	OP_PLA,OP_ADC,OP_ROR,OP_ERR,OP_JMP,OP_ADC,OP_ROR,OP_BBR
-		.BYTE	OP_BVS,OP_ADC,OP_ADC,OP_ERR,OP_STZ,OP_ADC,OP_ROR,OP_RMB	; 7
+		.BYTE	OP_BVS,OP_ADC,OP_ADC,OP_ERR,OP_STZ,OP_ADC,OP_ROR,OP_RMB ; 7
 		.BYTE	OP_SEI,OP_ADC,OP_PLY,OP_ERR,OP_JMP,OP_ADC,OP_ROR,OP_BBR
-		.BYTE	OP_BRA,OP_STA,OP_ERR,OP_ERR,OP_STY,OP_STA,OP_STX,OP_SMB	; 8
+		.BYTE	OP_BRA,OP_STA,OP_ERR,OP_ERR,OP_STY,OP_STA,OP_STX,OP_SMB ; 8
 		.BYTE	OP_DEY,OP_BIT,OP_TXA,OP_ERR,OP_STY,OP_STA,OP_STX,OP_BBS
-		.BYTE	OP_BCC,OP_STA,OP_STA,OP_ERR,OP_STY,OP_STA,OP_STX,OP_SMB	; 9
+		.BYTE	OP_BCC,OP_STA,OP_STA,OP_ERR,OP_STY,OP_STA,OP_STX,OP_SMB ; 9
 		.BYTE	OP_TYA,OP_STA,OP_TXS,OP_ERR,OP_STZ,OP_STA,OP_STZ,OP_BBS
-		.BYTE	OP_LDY,OP_LDA,OP_LDX,OP_ERR,OP_LDY,OP_LDA,OP_LDX,OP_SMB	; A
+		.BYTE	OP_LDY,OP_LDA,OP_LDX,OP_ERR,OP_LDY,OP_LDA,OP_LDX,OP_SMB ; A
 		.BYTE	OP_TAY,OP_LDA,OP_TAX,OP_ERR,OP_LDY,OP_LDA,OP_LDX,OP_BBS
-		.BYTE	OP_BCS,OP_LDA,OP_LDA,OP_ERR,OP_LDY,OP_LDA,OP_LDX,OP_SMB	; B
+		.BYTE	OP_BCS,OP_LDA,OP_LDA,OP_ERR,OP_LDY,OP_LDA,OP_LDX,OP_SMB ; B
 		.BYTE	OP_CLV,OP_LDA,OP_TSX,OP_ERR,OP_LDY,OP_LDA,OP_LDX,OP_BBS
-		.BYTE	OP_CPY,OP_CMP,OP_ERR,OP_ERR,OP_CPY,OP_CMP,OP_DEC,OP_SMB	; C
+		.BYTE	OP_CPY,OP_CMP,OP_ERR,OP_ERR,OP_CPY,OP_CMP,OP_DEC,OP_SMB ; C
 		.BYTE	OP_INY,OP_CMP,OP_DEX,OP_WAI,OP_CPY,OP_CMP,OP_DEC,OP_BBS
-		.BYTE	OP_BNE,OP_CMP,OP_CMP,OP_ERR,OP_ERR,OP_CMP,OP_DEC,OP_SMB	; D
+		.BYTE	OP_BNE,OP_CMP,OP_CMP,OP_ERR,OP_ERR,OP_CMP,OP_DEC,OP_SMB ; D
 		.BYTE	OP_CLD,OP_CMP,OP_PHX,OP_STP,OP_ERR,OP_CMP,OP_DEC,OP_BBS
-		.BYTE	OP_CPX,OP_SBC,OP_ERR,OP_ERR,OP_CPX,OP_SBC,OP_INC,OP_SMB	; E
+		.BYTE	OP_CPX,OP_SBC,OP_ERR,OP_ERR,OP_CPX,OP_SBC,OP_INC,OP_SMB ; E
 		.BYTE	OP_INX,OP_SBC,OP_NOP,OP_ERR,OP_CPX,OP_SBC,OP_INC,OP_BBS
-		.BYTE	OP_BEQ,OP_SBC,OP_SBC,OP_ERR,OP_ERR,OP_SBC,OP_INC,OP_SMB	; F
+		.BYTE	OP_BEQ,OP_SBC,OP_SBC,OP_ERR,OP_ERR,OP_SBC,OP_INC,OP_SMB ; F
 		.BYTE	OP_SED,OP_SBC,OP_PLX,OP_ERR,OP_ERR,OP_SBC,OP_INC,OP_BBS
 
 MODES:
-		.BYTE	MO_IMM,MO_IZX,MO_IMM,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_ZPG	; 0
+		.BYTE	MO_IMM,MO_IZX,MO_IMM,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_ZPG ; 0
 		.BYTE	MO_IMP,MO_IMM,MO_ACC,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_BRL
-		.BYTE	MO_REL,MO_IZY,MO_IZP,MO_IMP,MO_ZPG,MO_ZPX,MO_ZPX,MO_ZPG	; 1
+		.BYTE	MO_REL,MO_IZY,MO_IZP,MO_IMP,MO_ZPG,MO_ZPX,MO_ZPX,MO_ZPG ; 1
 		.BYTE	MO_IMP,MO_ABY,MO_ACC,MO_IMP,MO_ABS,MO_ABX,MO_ABX,MO_BRL
-		.BYTE	MO_ABS,MO_IZX,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_ZPG	; 2
+		.BYTE	MO_ABS,MO_IZX,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_ZPG ; 2
 		.BYTE	MO_IMP,MO_IMM,MO_ACC,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_BRL
-		.BYTE	MO_REL,MO_IZY,MO_IZP,MO_IMP,MO_ZPX,MO_ZPX,MO_ZPX,MO_ZPG	; 3
+		.BYTE	MO_REL,MO_IZY,MO_IZP,MO_IMP,MO_ZPX,MO_ZPX,MO_ZPX,MO_ZPG ; 3
 		.BYTE	MO_IMP,MO_ABY,MO_ACC,MO_IMP,MO_ABX,MO_ABX,MO_ABX,MO_BRL
-		.BYTE	MO_IMP,MO_IZX,MO_IMP,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG	; 4
+		.BYTE	MO_IMP,MO_IZX,MO_IMP,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG ; 4
 		.BYTE	MO_IMP,MO_IMM,MO_ACC,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_BRL
-		.BYTE	MO_REL,MO_IZY,MO_IZP,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_ZPG	; 5
+		.BYTE	MO_REL,MO_IZY,MO_IZP,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_ZPG ; 5
 		.BYTE	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_IMP,MO_ABX,MO_ABX,MO_BRL
-		.BYTE	MO_IMP,MO_IZX,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_ZPG	; 6
+		.BYTE	MO_IMP,MO_IZX,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_ZPG ; 6
 		.BYTE	MO_IMP,MO_IMM,MO_ACC,MO_IMP,MO_IAB,MO_ABS,MO_ABS,MO_BRL
-		.BYTE	MO_REL,MO_IZY,MO_IZP,MO_IMP,MO_ZPX,MO_ZPX,MO_ZPX,MO_ZPG	; 7
+		.BYTE	MO_REL,MO_IZY,MO_IZP,MO_IMP,MO_ZPX,MO_ZPX,MO_ZPX,MO_ZPG ; 7
 		.BYTE	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_IAX,MO_ABX,MO_ABX,MO_BRL
-		.BYTE	MO_REL,MO_IZX,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_ZPG	; 8
+		.BYTE	MO_REL,MO_IZX,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_ZPG ; 8
 		.BYTE	MO_IMP,MO_IMM,MO_IMP,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_BRL
-		.BYTE	MO_REL,MO_IZY,MO_IZP,MO_IMP,MO_ZPX,MO_ZPX,MO_ZPY,MO_ZPG	; 9
+		.BYTE	MO_REL,MO_IZY,MO_IZP,MO_IMP,MO_ZPX,MO_ZPX,MO_ZPY,MO_ZPG ; 9
 		.BYTE	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_ABS,MO_ABX,MO_ABX,MO_BRL
-		.BYTE	MO_IMM,MO_IZX,MO_IMM,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_ZPG	; A
+		.BYTE	MO_IMM,MO_IZX,MO_IMM,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_ZPG ; A
 		.BYTE	MO_IMP,MO_IMM,MO_IMP,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_BRL
-		.BYTE	MO_REL,MO_IZY,MO_IZP,MO_IMP,MO_ZPX,MO_ZPX,MO_ZPY,MO_ZPG	; B
+		.BYTE	MO_REL,MO_IZY,MO_IZP,MO_IMP,MO_ZPX,MO_ZPX,MO_ZPY,MO_ZPG ; B
 		.BYTE	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_ABX,MO_ABX,MO_ABY,MO_BRL
-		.BYTE	MO_IMM,MO_IZX,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_ZPG	; C
+		.BYTE	MO_IMM,MO_IZX,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_ZPG ; C
 		.BYTE	MO_IMP,MO_IMM,MO_IMP,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_BRL
-		.BYTE	MO_REL,MO_IZY,MO_IZP,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_ZPG	; D
+		.BYTE	MO_REL,MO_IZY,MO_IZP,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_ZPG ; D
 		.BYTE	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_IMP,MO_ABX,MO_ABX,MO_BRL
-		.BYTE	MO_IMM,MO_IZX,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_ZPG	; E
+		.BYTE	MO_IMM,MO_IZX,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_ZPG ; E
 		.BYTE	MO_IMP,MO_IMM,MO_IMP,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_BRL
-		.BYTE	MO_REL,MO_IZY,MO_IZP,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_ZPG	; F
+		.BYTE	MO_REL,MO_IZY,MO_IZP,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_ZPG ; F
 		.BYTE	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_IMP,MO_ABX,MO_ABX,MO_BRL
 		.ENDIF
-		
+
 ;-------------------------------------------------------------------------------
 
 SQUEEZE		.MACRO	CH1,CH2,CH3
 		.WORD	((((CH1 & $1F) << 5)|(CH2 & $1F)) << 5)|(CH3 & $1F)
 		.ENDM
-		
+
 MNEMONICS:
-		SQUEEZE	'A','D','C'
-		SQUEEZE	'A','N','D'
-		SQUEEZE	'A','S','L'
-		SQUEEZE	'B','B','R'
-		SQUEEZE	'B','B','S'
-		SQUEEZE	'B','C','C'
-		SQUEEZE	'B','C','S'
-		SQUEEZE	'B','E','Q'
-		SQUEEZE	'B','I','T'
-		SQUEEZE	'B','N','E'
-		SQUEEZE	'B','M','I'
-		SQUEEZE	'B','P','L'
-		SQUEEZE	'B','R','A'
-		SQUEEZE	'B','R','K'
-		SQUEEZE	'B','V','C'
-		SQUEEZE	'B','V','S'
-		SQUEEZE	'C','L','C'
-		SQUEEZE	'C','L','D'
-		SQUEEZE	'C','L','I'
-		SQUEEZE	'C','L','V'
-		SQUEEZE	'C','M','P'
-		SQUEEZE	'C','P','X'
-		SQUEEZE	'C','P','Y'
-		SQUEEZE	'D','E','C'
-		SQUEEZE	'D','E','X'
-		SQUEEZE	'D','E','Y'
-		SQUEEZE	'E','O','R'
-		SQUEEZE	'I','N','C'
-		SQUEEZE	'I','N','X'
-		SQUEEZE	'I','N','Y'
-		SQUEEZE	'J','M','P'
-		SQUEEZE	'J','S','R'
-		SQUEEZE	'L','D','A'
-		SQUEEZE	'L','D','X'
-		SQUEEZE	'L','D','Y'
-		SQUEEZE	'L','S','R'
-		SQUEEZE	'N','O','P'
-		SQUEEZE	'O','R','A'
-		SQUEEZE	'P','H','A'
-		SQUEEZE	'P','H','P'
-		SQUEEZE	'P','H','X'
-		SQUEEZE	'P','H','Y'
-		SQUEEZE	'P','L','A'
-		SQUEEZE	'P','L','P'
-		SQUEEZE	'P','L','X'
-		SQUEEZE	'P','L','Y'
-		SQUEEZE	'R','M','B'
-		SQUEEZE	'R','O','L'
-		SQUEEZE	'R','O','R'
-		SQUEEZE	'R','T','I'
-		SQUEEZE	'R','T','S'
-		SQUEEZE	'S','B','C'
-		SQUEEZE	'S','E','C'
-		SQUEEZE	'S','E','D'
-		SQUEEZE	'S','E','I'
-		SQUEEZE	'S','M','B'
-		SQUEEZE	'S','T','A'
-		SQUEEZE	'S','T','P'
-		SQUEEZE	'S','T','X'
-		SQUEEZE	'S','T','Y'
-		SQUEEZE	'S','T','Z'
-		SQUEEZE	'T','A','X'
-		SQUEEZE	'T','A','Y'
-		SQUEEZE	'T','R','B'
-		SQUEEZE	'T','S','B'
-		SQUEEZE	'T','S','X'
-		SQUEEZE	'T','X','A'
-		SQUEEZE	'T','X','S'
-		SQUEEZE	'T','Y','A'
-		SQUEEZE	'W','A','I'
+		SQUEEZE 'A','D','C'
+		SQUEEZE 'A','N','D'
+		SQUEEZE 'A','S','L'
+		SQUEEZE 'B','B','R'
+		SQUEEZE 'B','B','S'
+		SQUEEZE 'B','C','C'
+		SQUEEZE 'B','C','S'
+		SQUEEZE 'B','E','Q'
+		SQUEEZE 'B','I','T'
+		SQUEEZE 'B','N','E'
+		SQUEEZE 'B','M','I'
+		SQUEEZE 'B','P','L'
+		SQUEEZE 'B','R','A'
+		SQUEEZE 'B','R','K'
+		SQUEEZE 'B','V','C'
+		SQUEEZE 'B','V','S'
+		SQUEEZE 'C','L','C'
+		SQUEEZE 'C','L','D'
+		SQUEEZE 'C','L','I'
+		SQUEEZE 'C','L','V'
+		SQUEEZE 'C','M','P'
+		SQUEEZE 'C','P','X'
+		SQUEEZE 'C','P','Y'
+		SQUEEZE 'D','E','C'
+		SQUEEZE 'D','E','X'
+		SQUEEZE 'D','E','Y'
+		SQUEEZE 'E','O','R'
+		SQUEEZE 'I','N','C'
+		SQUEEZE 'I','N','X'
+		SQUEEZE 'I','N','Y'
+		SQUEEZE 'J','M','P'
+		SQUEEZE 'J','S','R'
+		SQUEEZE 'L','D','A'
+		SQUEEZE 'L','D','X'
+		SQUEEZE 'L','D','Y'
+		SQUEEZE 'L','S','R'
+		SQUEEZE 'N','O','P'
+		SQUEEZE 'O','R','A'
+		SQUEEZE 'P','H','A'
+		SQUEEZE 'P','H','P'
+		SQUEEZE 'P','H','X'
+		SQUEEZE 'P','H','Y'
+		SQUEEZE 'P','L','A'
+		SQUEEZE 'P','L','P'
+		SQUEEZE 'P','L','X'
+		SQUEEZE 'P','L','Y'
+		SQUEEZE 'R','M','B'
+		SQUEEZE 'R','O','L'
+		SQUEEZE 'R','O','R'
+		SQUEEZE 'R','T','I'
+		SQUEEZE 'R','T','S'
+		SQUEEZE 'S','B','C'
+		SQUEEZE 'S','E','C'
+		SQUEEZE 'S','E','D'
+		SQUEEZE 'S','E','I'
+		SQUEEZE 'S','M','B'
+		SQUEEZE 'S','T','A'
+		SQUEEZE 'S','T','P'
+		SQUEEZE 'S','T','X'
+		SQUEEZE 'S','T','Y'
+		SQUEEZE 'S','T','Z'
+		SQUEEZE 'T','A','X'
+		SQUEEZE 'T','A','Y'
+		SQUEEZE 'T','R','B'
+		SQUEEZE 'T','S','B'
+		SQUEEZE 'T','S','X'
+		SQUEEZE 'T','X','A'
+		SQUEEZE 'T','X','S'
+		SQUEEZE 'T','Y','A'
+		SQUEEZE 'W','A','I'
 
 ;===============================================================================
 ;
@@ -482,17 +482,17 @@ REGISTERS:
 		JSR	SHOW_STR
 		LDA	A_REG
 		JSR	HEX2
-		
+
 		LDX	#X_STR
 		JSR	SHOW_STR
 		LDA	X_REG
 		JSR	HEX2
-		
+
 		LDX	#Y_STR
 		JSR	SHOW_STR
 		LDA	Y_REG
 		JSR	HEX2
-		
+
 COMMAND:
 		.IF	__65C02__
 		STZ	CMD_LEN		; Mark the buffer as empty
@@ -505,8 +505,8 @@ PROMPT:
 		JSR	CRLF		; Move cursor to next line
 		LDA	#'.'		; And output the prompt
 		JSR	UART_TX
-		
-		LDX	#0		
+
+		LDX	#0
 		REPEAT
 		 CPX	CMD_LEN		; Any saved characters to display?
 		 BREAK	EQ		; No
@@ -528,14 +528,14 @@ BACKSPACE:	  CPX	#0		; Anything in the buffer?
 		   PLA
 		   JSR	UART_TX
 		   DEX
-		   CONTINUE
 		  ENDIF
+		  CONTINUE
 		 ENDIF
-		 
+
 		 CMP	#CR		; End of command entry?
 		 BREAK	EQ		; Yes
-		 
-		 CMP	#DEL		
+
+		 CMP	#DEL		; Convert DEL into BS
 		 IF	EQ
 		  LDA	#BS
 		  BNE	BACKSPACE
@@ -545,37 +545,93 @@ SQUAWK:		  LDA	#BEL		; Yes, squawk!
 		  JSR	UART_TX
 		  CONTINUE
 		 ENDIF
-		 
+
 		 CMP	#' '		; In the range $00-$1F?
 		 BCC	SQUAWK		; Yes, squawk!
-		 
+
+		 CPX	#CMD_SIZE-1	; Command buffer full?
+		 BCS	SQUAWK		; Yes, squawk!
+
 		 STA	BUFFER,X	; Save the character
 		 INX			; Bump the count
 		 JSR	UART_TX		; And echo to terminal
 		FOREVER
-		
-		STX	CMD_LEN		; Save the command length
 
+		STX	CMD_LEN		; Save the command length
+		LDX	#0		; Set character offset to start
+		JSR	NEXT_CHAR	; And get first character
+		BCS	COMMAND
+		
 ;===============================================================================
 ; 'G' - Go
 ;-------------------------------------------------------------------------------
 
-		CMP	'G'
+		CMP	#'G'
 		IF	EQ
-		
-		
+
+		 LDA	PC_REG+1	; Push the target address
+		 PHA
+		 LDA	PC_REG+0
+		 PHA
+		 LDA	P_REG		; And status flags
+		 PHA
+		 LDA	A_REG		; Reload A, X and Y
+		 LDX	X_REG
+		 LDY	Y_REG
+		 RTI			; Then go to code
 		ENDIF
-		
+
+;===============================================================================
+; 'M' - Show Memory
+;-------------------------------------------------------------------------------		
+
 ;===============================================================================
 ; 'R' - Show Registers
 ;-------------------------------------------------------------------------------
 
-		CMP	'S'
+		CMP	#'R'
 		IF	EQ
 		 JMP	REGISTERS
 		ENDIF
+		
+;===============================================================================
+; 'S' - Load SREC
+;-------------------------------------------------------------------------------
 
+
+
+;===============================================================================
+; Error
+;-------------------------------------------------------------------------------
+
+ERROR:
+		LDX	#ERR_STR
+		JSR	SHOW_STR
 		JMP	COMMAND
+		
+;===============================================================================
+; Parsing Utilities
+;-------------------------------------------------------------------------------
+
+NEXT_CHAR:
+		CPX	CMD_LEN		; Reached end of buffer
+		IF	CS
+		 RTS
+		ENDIF
+		LDA	BUFFER,X
+		INX
+
+TO_UPPER:
+		CMP	#'a'
+		IF	CS
+		 CMP	#'z'+1
+		 IF	CC
+		  AND	#$5F
+		 ENDIF
+		ENDIF
+		CLC
+		RTS
+
 
 ;===============================================================================
 ; Display Utilities
@@ -584,7 +640,7 @@ SQUAWK:		  LDA	#BEL		; Yes, squawk!
 ; Display the byte in A as two hexadecimal digits. The values in A & Y are
 ; destroyed.
 
-HEX2:	
+HEX2:
 		PHA			; Save a copy of the value
 		LSR	A		; Shift down the hi nybble
 		LSR	A
@@ -592,11 +648,11 @@ HEX2:
 		LSR	A
 		JSR	HEX		; Convert and display
 		PLA			; Pull back value and ...
-		
+
 ; Display the lo nybble of A as a hexadecimal digit. The values in A & Y are
 ; destroyed.
 
-HEX		AND	#$0F		; Isolate the lo nybble	
+HEX		AND	#$0F		; Isolate the lo nybble
 		SED			; Converted to ASCII
 		CLC
 		ADC	#$90
@@ -604,12 +660,12 @@ HEX		AND	#$0F		; Isolate the lo nybble
 		CLD
 		JMP	UART_TX		; And display.
 
-; Output a single space. The values in A & Y are destroyed.	
+; Output a single space. The values in A & Y are destroyed.
 
 SPACE:
-		LDA	#' '		
+		LDA	#' '
 		JMP	UART_TX
-		
+
 ; Output a CR/LF control sequence to move the display cursor to the start of
 ; the next line. A & Y are destroyed.
 
@@ -618,7 +674,7 @@ CRLF:
 		JSR	UART_TX
 		LDA	#LF		; .. followed by a new line
 		JMP	UART_TX
-		
+
 ;===============================================================================
 
 
@@ -643,7 +699,8 @@ X_STR		.EQU	.-STRINGS
 		.BYTE	" X=",0
 Y_STR		.EQU	.-STRINGS
 		.BYTE	" Y=",0
-		
+ERR_STR		.EQU	.-STRINGS
+		.BYTE	CR,LF,"?",0
 
 ;===============================================================================
 ; I/O Page
@@ -668,14 +725,14 @@ RESET:
 		STX	RX_TAIL
 		STX	TX_HEAD
 		STX	TX_TAIL
-		STX	FLAGS		; And flow control flags
+;		STX	FLAGS		; And flow control flags
 
 		LDA	#$01		; Enable ACIA RX interrupt
 		STA	ACIA_CMND
 
 		CLI			; Allow interrupts
 		BRK
-		
+
 ;===============================================================================
 ; UART Interface
 ;-------------------------------------------------------------------------------
@@ -699,22 +756,22 @@ UART_TX:
 ;
 
 UART_RX:
-		BIT	FLAGS		; Terminal stopped from sending?
-		IF	MI
-		 JSR	RX_COUNT	; Yes, check RX buffer count
-		 CMP	#RX_SIZE*1/10	; Restart when only 10% full
-		 IF	CC
-		  LDA	#DC1		; Send XON
-		  JSR	UART_TX
-		.IF	__65C02__
-		  STZ	FLAGS		; Mark as no longer stopped
-		.ELSE
-		  LDA	#0		; Mark as no longer stopped
-		  STA	FLAGS
-		.ENDIF
-		 ENDIF
-		ENDIF
-		
+;		BIT	FLAGS		; Terminal stopped from sending?
+;		IF	MI
+;		 JSR	RX_COUNT	; Yes, check RX buffer count
+;		 CMP	#RX_SIZE*1/10	; Restart when only 10% full
+;		 IF	CC
+;		  LDA	#DC1		; Send XON
+;		  JSR	UART_TX
+;		.IF	__65C02__
+;		  STZ	FLAGS		; Mark as no longer stopped
+;		.ELSE
+;		  LDA	#0		; Mark as no longer stopped
+;		  STA	FLAGS
+;		.ENDIF
+;		 ENDIF
+;		ENDIF
+
 		LDY	RX_HEAD		; Wait until there is some data
 		REPEAT
 		 CPY	RX_TAIL
@@ -727,14 +784,23 @@ UART_RX:
 ;
 ;
 
+		.IF	0
 RX_COUNT:
 		SEC
 		LDA	RX_TAIL		; Subtract the two offsets
 		SBC	RX_HEAD
-		IF	MI
+		IF	CC
 		 ADC	#RX_SIZE	; And correct if negative
 		ENDIF
 		RTS			; Done
+		.ENDIF
+		
+;===============================================================================
+; NMI Handler
+;-------------------------------------------------------------------------------
+
+NMI:
+		JMP	BREAK
 
 ;===============================================================================
 ; IRQ Handler
@@ -755,63 +821,28 @@ IRQ:
 		PHA
 		CLD
 		.ENDIF
-		
+
 		TSX			; Check for BRK
 		LDA	STACK+4,X
 		AND	#$10
-		IF	NE
-		 JMP	BREAK
-		ENDIF
-		
+		BNE	NMI		; Enter via NMI handler
+
 ;-------------------------------------------------------------------------------
 
 		LDA	ACIA_STAT	; ACIA is the source?
 		BPL	NOT_ACIA	; No.
-		
-		PHA
-		AND	#$08		; RX Buffer full?
-		IF	NE
-		 LDA	ACIA_DATA	; Yes, fetch the character
-		 LDY	RX_TAIL		; .. and save it
-		 STA	RX_BUFF,Y
-		 JSR	BUMP_RX
-		 CPY	RX_HEAD		; Is buffer completely full?
-		 IF	NE
-		  STY	RX_TAIL		; No, update tail offset
-		 ENDIF
-		
-		 LDA	#$C0		; Already stopped or stopping?
-		 BIT	FLAGS
-		 IF 	PL
-		  IF	EQ
-		   JSR	RX_COUNT	; Fetch FX buffer count
-		   CMP	#RX_SIZE*9/10	; More than 90%
-		   IF 	CS
-		    LDA	#FLAG_STOP	; Yes, set flags to send XOFF
-		.IF	__65C02__
-		    TSB	FLAGS
-		.ELSE
-		    ORA	FLAGS
-		    STA	FLAGS
-		.ENDIF
-		    LDA	#$05		; Ensure transmit interrupt enabled
-		    STA	ACIA_CMND
-		   ENDIF
-		  ENDIF
-		 ENDIF
-		ENDIF
 
-		PLA
+		PHA
 		AND	#$10		; TX Buffer empty?
 		IF	NE
-		 BIT	FLAGS		; Do we need to send XOFF?
-		 IF	VS
-		  LDA	#DC3		; Yes, send XOFF to terminal
-		  STA	ACIA_DATA
-		  ASL	FLAGS		; And mark as sent
-		  BNE	NOT_ACIA
-		 ENDIF
-		
+;		 BIT	FLAGS		; Do we need to send XOFF?
+;		 IF	VS
+;		  LDA	#DC3		; Yes, send XOFF to terminal
+;		  STA	ACIA_DATA
+;		  ASL	FLAGS		; And mark as sent
+;		  BNE	NOT_ACIA
+;		 ENDIF
+
 		 LDY	TX_HEAD		; Any data to send?
 		 CPY	TX_TAIL
 		 IF	NE
@@ -823,6 +854,33 @@ IRQ:
 		  LDA	#$01		; No, disable TX interrupt
 		  STA	ACIA_CMND
 		 ENDIF
+		ENDIF
+
+		PLA
+		AND	#$08		; RX Buffer full?
+		IF	NE
+		 LDA	ACIA_DATA	; Yes, fetch the character
+		 LDY	RX_TAIL		; .. and save it
+		 STA	RX_BUFF,Y
+		 JSR	BUMP_RX
+		 CPY	RX_HEAD		; Is buffer completely full?
+		 IF	NE
+		  STY	RX_TAIL		; No, update tail offset
+		 ENDIF
+
+;		 BIT	FLAGS		; Already stopped or stopping?
+;		 IF	PL
+;		  IF	VC
+;		   JSR	RX_COUNT	; Fetch FX buffer count
+;		   CMP	#RX_SIZE*9/10	; More than 90%
+;		   IF	CS
+;		    LDA #FLAG_STOP	; Yes, set flags to send XOFF
+;		    STA FLAGS
+;		    LDA #$05		; Ensure transmit interrupt enabled
+;		    STA ACIA_CMND
+;		   ENDIF
+;		  ENDIF
+;		 ENDIF
 		ENDIF
 NOT_ACIA:
 
@@ -861,13 +919,6 @@ BUMP_TX:
 		 LDY	#0
 		ENDIF
 		RTS
-
-;===============================================================================
-; NMI Handler
-;-------------------------------------------------------------------------------
-
-NMI:
-		RTI
 
 ;===============================================================================
 ; Vector Locations
