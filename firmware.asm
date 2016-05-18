@@ -7,9 +7,14 @@
 ;                                         
 ; A Firmware for a Three Chip 6502/65C02 Single Board Computer
 ;-------------------------------------------------------------------------------
-; Copyright (C),2014-2016 HandCoded Software Ltd.
+; Copyright (C)2014-2016 Andrew John Jacobs
 ; All rights reserved.
 ;
+; This work is made available under the terms of the Creative Commons
+; Attribution-NonCommercial-ShareAlike 4.0 International license. Open the
+; following URL to see the details.
+;
+; http://creativecommons.org/licenses/by-nc-sa/4.0/
 ;===============================================================================
 ;
 ; Notes:

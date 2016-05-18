@@ -11,7 +11,7 @@
 ;                                                              
 ;
 ;-------------------------------------------------------------------------------
-; Copyright (C)2014-2016 HandCoded Software Ltd.
+; Copyright (C)2014-2016 Andrew John Jacobs.
 ; All rights reserved.
 ;
 ; This work is made available under the terms of the Creative Commons
