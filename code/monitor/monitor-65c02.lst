@@ -14,7 +14,7 @@ Portable 65xx Assembler [16.05]
                             ;
                             ;
                             ;-------------------------------------------------------------------------------
-                            ; Copyright (C)2014-2016 HandCoded Software Ltd.
+                            ; Copyright (C)2014-2016 Andrew John Jacobs.
                             ; All rights reserved.
                             ;
                             ; This work is made available under the terms of the Creative Commons
@@ -222,19 +222,17 @@ Portable 65xx Assembler [16.05]
 0000F7  0000              : ADDR_S          .SPACE  2
 0000F9  0000              : ADDR_E          .SPACE  2
                             
+0000FB  0000              : TEMP            .SPACE  2
+0000FD  00                : COUNT           .SPACE  1
+                            
                             ;-------------------------------------------------------------------------------
-                            
-                                            .ORG    $00FB
-                            
 
 Portable 65xx Assembler [16.05]
 
-                            ; Communications buffer offsets
                             
-0000FB  00                : RX_HEAD         .SPACE  1               ; UART recieve buffer offsets
-0000FC  00                : RX_TAIL         .SPACE  1
-0000FD  00                : TX_HEAD         .SPACE  1               ; UART transmit buffer offsets
-0000FE  00                : TX_TAIL         .SPACE  1
+                                            .ORG    $00FE
+                            
+0000FE  00                : IO_TEMP         .SPACE  1
                             
 0000FF  00                : FLAGS           .SPACE  1               ; I/O Flags for XON/XOFF
                             
@@ -251,16 +249,23 @@ Portable 65xx Assembler [16.05]
                             ; UART Buffers
                             ;-------------------------------------------------------------------------------
                             
-        00000040          = RX_SIZE         .EQU    64
-        00000040          = TX_SIZE         .EQU    64
+        0000003E          = RX_SIZE         .EQU    62
+        0000003E          = TX_SIZE         .EQU    62
                             
         00000080          = CMD_SIZE        .EQU    128
                             
                                             .BSS
                                             .ORG    $0200
                             
-000200  0000000000000000> : RX_BUFF         .SPACE  RX_SIZE         ; UART recieve buffer
-000240  0000000000000000> : TX_BUFF         .SPACE  TX_SIZE         ; UART transmit buffer
+                            ; Communications buffer offsets
+                            
+000200  00                : RX_HEAD         .SPACE  1               ; UART recieve buffer offsets
+000201  00                : RX_TAIL         .SPACE  1
+000202  00                : TX_HEAD         .SPACE  1               ; UART transmit buffer offsets
+000203  00                : TX_TAIL         .SPACE  1
+                            
+000204  0000000000000000> : RX_BUFF         .SPACE  RX_SIZE         ; UART recieve buffer
+000242  0000000000000000> : TX_BUFF         .SPACE  TX_SIZE         ; UART transmit buffer
                             
 000280  0000000000000000> : BUFFER          .SPACE  CMD_SIZE
                             
@@ -278,14 +283,14 @@ Portable 65xx Assembler [16.05]
                           -                 .BYTE   OP_PHP,OP_ORA,OP_ASL,OP_ERR,OP_ERR,OP_ORA,OP_ASL,OP_ERR
                           -                 .BYTE   OP_BPL,OP_ORA,OP_ERR,OP_ERR,OP_ERR,OP_ORA,OP_ASL,OP_ERR ; 1
                           -                 .BYTE   OP_CLC,OP_ORA,OP_INC,OP_ERR,OP_ERR,OP_ORA,OP_ASL,OP_ERR
+
+Portable 65xx Assembler [16.05]
+
                           -                 .BYTE   OP_JSR,OP_AND,OP_ERR,OP_ERR,OP_BIT,OP_AND,OP_ROL,OP_ERR ; 2
                           -                 .BYTE   OP_PLP,OP_AND,OP_ROL,OP_ERR,OP_BIT,OP_AND,OP_ROL,OP_ERR
                           -                 .BYTE   OP_BMI,OP_AND,OP_ERR,OP_ERR,OP_BIT,OP_AND,OP_ROL,OP_ERR ; 3
                           -                 .BYTE   OP_SEC,OP_AND,OP_DEC,OP_ERR,OP_BIT,OP_AND,OP_ROL,OP_ERR
                           -                 .BYTE   OP_RTI,OP_EOR,OP_ERR,OP_ERR,OP_ERR,OP_EOR,OP_LSR,OP_ERR ; 4
-
-Portable 65xx Assembler [16.05]
-
                           -                 .BYTE   OP_PHA,OP_EOR,OP_LSR,OP_ERR,OP_JMP,OP_EOR,OP_LSR,OP_ERR
                           -                 .BYTE   OP_BVC,OP_EOR,OP_ERR,OP_ERR,OP_ERR,OP_EOR,OP_LSR,OP_ERR ; 5
                           -                 .BYTE   OP_CLI,OP_EOR,OP_ERR,OP_ERR,OP_ERR,OP_EOR,OP_LSR,OP_ERR
@@ -335,14 +340,14 @@ Portable 65xx Assembler [16.05]
                           -                 .BYTE   MO_IMP,MO_IMM,MO_IMP,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_IMP
                           -                 .BYTE   MO_REL,MO_IZY,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_ZPY,MO_IMP ; B
                           -                 .BYTE   MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_ABX,MO_ABX,MO_ABY,MO_IMP
+
+Portable 65xx Assembler [16.05]
+
                           -                 .BYTE   MO_IMM,MO_IZX,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_IMP ; C
                           -                 .BYTE   MO_IMP,MO_IMM,MO_IMP,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_IMP
                           -                 .BYTE   MO_REL,MO_IZY,MO_IMP,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_IMP ; D
                           -                 .BYTE   MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_IMP,MO_ABX,MO_ABX,MO_IMP
                           -                 .BYTE   MO_IMM,MO_IZX,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_IMP ; E
-
-Portable 65xx Assembler [16.05]
-
                           -                 .BYTE   MO_IMP,MO_IMM,MO_IMP,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_IMP
                           -                 .BYTE   MO_REL,MO_IZY,MO_IMP,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_IMP ; F
                           -                 .BYTE   MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_IMP,MO_ABX,MO_ABX,MO_IMP
@@ -392,14 +397,14 @@ Portable 65xx Assembler [16.05]
 00F118  00071000030B0B61  :                 .BYTE   MO_IMP,MO_ABY,MO_ACC,MO_IMP,MO_ABS,MO_ABX,MO_ABX,MO_BRL
 00F120  0389000001010101  :                 .BYTE   MO_ABS,MO_IZX,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_ZPG ; 2
 00F128  0002100003030361  :                 .BYTE   MO_IMP,MO_IMM,MO_ACC,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_BRL
+
+Portable 65xx Assembler [16.05]
+
 00F130  4085810005050501  :                 .BYTE   MO_REL,MO_IZY,MO_IZP,MO_IMP,MO_ZPX,MO_ZPX,MO_ZPX,MO_ZPG ; 3
 00F138  000710000B0B0B61  :                 .BYTE   MO_IMP,MO_ABY,MO_ACC,MO_IMP,MO_ABX,MO_ABX,MO_ABX,MO_BRL
 00F140  0089000000010101  :                 .BYTE   MO_IMP,MO_IZX,MO_IMP,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG ; 4
 00F148  0002100003030361  :                 .BYTE   MO_IMP,MO_IMM,MO_ACC,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_BRL
 00F150  4085810000050501  :                 .BYTE   MO_REL,MO_IZY,MO_IZP,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_ZPG ; 5
-
-Portable 65xx Assembler [16.05]
-
 00F158  00070000000B0B61  :                 .BYTE   MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_IMP,MO_ABX,MO_ABX,MO_BRL
 00F160  0089000001010101  :                 .BYTE   MO_IMP,MO_IZX,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_ZPG ; 6
 00F168  0002100083030361  :                 .BYTE   MO_IMP,MO_IMM,MO_ACC,MO_IMP,MO_IAB,MO_ABS,MO_ABS,MO_BRL
@@ -449,14 +454,14 @@ Portable 65xx Assembler [16.05]
                                             SQUEEZE 'B','I','T'
 00F210  3409              +                 .WORD   (((('B' & $1F) << 5)|('I' & $1F)) << 5)|('T' & $1F)
                                             SQUEEZE 'B','N','E'
+
+Portable 65xx Assembler [16.05]
+
 00F212  C509              +                 .WORD   (((('B' & $1F) << 5)|('N' & $1F)) << 5)|('E' & $1F)
                                             SQUEEZE 'B','M','I'
 00F214  A909              +                 .WORD   (((('B' & $1F) << 5)|('M' & $1F)) << 5)|('I' & $1F)
                                             SQUEEZE 'B','P','L'
 00F216  0C0A              +                 .WORD   (((('B' & $1F) << 5)|('P' & $1F)) << 5)|('L' & $1F)
-
-Portable 65xx Assembler [16.05]
-
                                             SQUEEZE 'B','R','A'
 00F218  410A              +                 .WORD   (((('B' & $1F) << 5)|('R' & $1F)) << 5)|('A' & $1F)
                                             SQUEEZE 'B','R','K'
@@ -506,14 +511,14 @@ Portable 65xx Assembler [16.05]
                                             SQUEEZE 'L','S','R'
 00F246  7232              +                 .WORD   (((('L' & $1F) << 5)|('S' & $1F)) << 5)|('R' & $1F)
                                             SQUEEZE 'N','O','P'
+
+Portable 65xx Assembler [16.05]
+
 00F248  F039              +                 .WORD   (((('N' & $1F) << 5)|('O' & $1F)) << 5)|('P' & $1F)
                                             SQUEEZE 'O','R','A'
 00F24A  413E              +                 .WORD   (((('O' & $1F) << 5)|('R' & $1F)) << 5)|('A' & $1F)
                                             SQUEEZE 'P','H','A'
 00F24C  0141              +                 .WORD   (((('P' & $1F) << 5)|('H' & $1F)) << 5)|('A' & $1F)
-
-Portable 65xx Assembler [16.05]
-
                                             SQUEEZE 'P','H','P'
 00F24E  1041              +                 .WORD   (((('P' & $1F) << 5)|('H' & $1F)) << 5)|('P' & $1F)
                                             SQUEEZE 'P','H','X'
@@ -563,14 +568,14 @@ Portable 65xx Assembler [16.05]
                                             SQUEEZE 'T','A','Y'
 00F27C  3950              +                 .WORD   (((('T' & $1F) << 5)|('A' & $1F)) << 5)|('Y' & $1F)
                                             SQUEEZE 'T','R','B'
+
+Portable 65xx Assembler [16.05]
+
 00F27E  4252              +                 .WORD   (((('T' & $1F) << 5)|('R' & $1F)) << 5)|('B' & $1F)
                                             SQUEEZE 'T','S','B'
 00F280  6252              +                 .WORD   (((('T' & $1F) << 5)|('S' & $1F)) << 5)|('B' & $1F)
                                             SQUEEZE 'T','S','X'
 00F282  7852              +                 .WORD   (((('T' & $1F) << 5)|('S' & $1F)) << 5)|('X' & $1F)
-
-Portable 65xx Assembler [16.05]
-
                                             SQUEEZE 'T','X','A'
 00F284  0153              +                 .WORD   (((('T' & $1F) << 5)|('X' & $1F)) << 5)|('A' & $1F)
                                             SQUEEZE 'T','X','S'
@@ -603,31 +608,31 @@ Portable 65xx Assembler [16.05]
 00F2A2  85F5              :                 STA     PC_REG+1
                             
                             REGISTERS:
-00F2A4  2087F3            :                 JSR     CRLF
+00F2A4  20F9F4            :                 JSR     CRLF
 00F2A7  A200              :                 LDX     #PC_STR
-00F2A9  2091F3            :                 JSR     SHOW_STR
+00F2A9  2003F5            :                 JSR     SHOW_STR
 00F2AC  A5F5              :                 LDA     PC_REG+1
-00F2AE  206DF3            :                 JSR     HEX2
+00F2AE  20D6F4            :                 JSR     HEX2
 00F2B1  A5F4              :                 LDA     PC_REG+0
-00F2B3  206DF3            :                 JSR     HEX2
+00F2B3  20D6F4            :                 JSR     HEX2
                             
-00F2B6  A208              :                 LDX     #A_STR
-00F2B8  2091F3            :                 JSR     SHOW_STR
+00F2B6  A20D              :                 LDX     #A_STR
+00F2B8  2003F5            :                 JSR     SHOW_STR
 00F2BB  A5F0              :                 LDA     A_REG
-00F2BD  206DF3            :                 JSR     HEX2
+00F2BD  20D6F4            :                 JSR     HEX2
                             
-00F2C0  A20C              :                 LDX     #X_STR
-00F2C2  2091F3            :                 JSR     SHOW_STR
+00F2C0  A211              :                 LDX     #X_STR
+00F2C2  2003F5            :                 JSR     SHOW_STR
 00F2C5  A5F1              :                 LDA     X_REG
-00F2C7  206DF3            :                 JSR     HEX2
-                            
-00F2CA  A210              :                 LDX     #Y_STR
-00F2CC  2091F3            :                 JSR     SHOW_STR
-00F2CF  A5F2              :                 LDA     Y_REG
-00F2D1  206DF3            :                 JSR     HEX2
+00F2C7  20D6F4            :                 JSR     HEX2
 
 Portable 65xx Assembler [16.05]
 
+                            
+00F2CA  A215              :                 LDX     #Y_STR
+00F2CC  2003F5            :                 JSR     SHOW_STR
+00F2CF  A5F2              :                 LDA     Y_REG
+00F2D1  20D6F4            :                 JSR     HEX2
                             
                             COMMAND:
                                             .IF     __65C02__
@@ -638,143 +643,456 @@ Portable 65xx Assembler [16.05]
                                             .ENDIF
                             
                             PROMPT:
-00F2D6  2087F3            :                 JSR     CRLF            ; Move cursor to next line
+00F2D6  20F9F4            :                 JSR     CRLF            ; Move cursor to next line
 00F2D9  A92E              :                 LDA     #'.'            ; And output the prompt
-00F2DB  2014FF            :                 JSR     UART_TX
+00F2DB  2018FF            :                 JSR     UART_TX
                             
 00F2DE  A200              :                 LDX     #0
                                             REPEAT
 00F2E0  E4F6              :                  CPX    CMD_LEN         ; Any saved characters to display?
 00F2E2  F009              :                  BREAK  EQ              ; No
 00F2E4  BD8002            :                  LDA    BUFFER,X        ; Yes, print from the buffer
-00F2E7  2014FF            :                  JSR    UART_TX
+00F2E7  2018FF            :                  JSR    UART_TX
 00F2EA  E8                :                  INX
 00F2EB  80F3              :                 FOREVER
                             
                                             REPEAT
-00F2ED  2028FF            :                  JSR    UART_RX         ; Wait for some user input
+00F2ED  2035FF            :                  JSR    UART_RX         ; Wait for some user input
+                                             
+00F2F0  C91B              :                  CMP    #ESC            ; Cancel input?
+00F2F2  D002              :                  IF     EQ
+00F2F4  F0DE              :                   BEQ   COMMAND         ; Yes
+                                             ENDIF
                             
-00F2F0  C908              :                  CMP    #BS             ; Backspace?
-00F2F2  D012              :                  IF     EQ
-00F2F4  E000              : BACKSPACE:        CPX   #0              ; Anything in the buffer?
-00F2F6  F00C              :                   IF    NE
-00F2F8  48                :                    PHA                  ; Erase the last character
-00F2F9  2014FF            :                    JSR  UART_TX
-00F2FC  2082F3            :                    JSR  SPACE
-00F2FF  68                :                    PLA
-00F300  2014FF            :                    JSR  UART_TX
-00F303  CA                :                    DEX
+00F2F6  C908              :                  CMP    #BS             ; Backspace?
+00F2F8  D012              :                  IF     EQ
+00F2FA  E000              : BACKSPACE:        CPX   #0              ; Anything in the buffer?
+00F2FC  F00C              :                   IF    NE
+00F2FE  48                :                    PHA                  ; Erase the last character
+00F2FF  2018FF            :                    JSR  UART_TX
+00F302  20EFF4            :                    JSR  SPACE
+00F305  68                :                    PLA
+00F306  2018FF            :                    JSR  UART_TX
+00F309  CA                :                    DEX
                                               ENDIF
-00F304  80E7              :                   CONTINUE
+00F30A  80E1              :                   CONTINUE
                                              ENDIF
                             
-00F306  C90D              :                  CMP    #CR             ; End of command entry?
-00F308  F022              :                  BREAK  EQ              ; Yes
+00F30C  C90D              :                  CMP    #CR             ; End of command entry?
+00F30E  F022              :                  BREAK  EQ              ; Yes
                             
-00F30A  C97F              :                  CMP    #DEL            ; Convert DEL into BS
-00F30C  D004              :                  IF     EQ
-00F30E  A908              :                   LDA   #BS
-00F310  D0E2              :                   BNE   BACKSPACE
-                                             ENDIF
-00F312  9007              :                  IF     CS              ; In the range $7F-$FF?
-00F314  A907              : SQUAWK:           LDA   #BEL            ; Yes, squawk!
-00F316  2014FF            :                   JSR   UART_TX
-00F319  80D2              :                   CONTINUE
-                                             ENDIF
-                            
+00F310  C97F              :                  CMP    #DEL            ; Convert DEL into BS
 
 Portable 65xx Assembler [16.05]
 
-00F31B  C920              :                  CMP    #' '            ; In the range $00-$1F?
-00F31D  90F5              :                  BCC    SQUAWK          ; Yes, squawk!
+00F312  D004              :                  IF     EQ
+00F314  A908              :                   LDA   #BS
+00F316  D0E2              :                   BNE   BACKSPACE
+                                             ENDIF
+00F318  9007              :                  IF     CS              ; In the range $7F-$FF?
+00F31A  A907              : SQUAWK:           LDA   #BEL            ; Yes, squawk!
+00F31C  2018FF            :                   JSR   UART_TX
+00F31F  80CC              :                   CONTINUE
+                                             ENDIF
                             
-00F31F  E07F              :                  CPX    #CMD_SIZE-1     ; Command buffer full?
-00F321  B0F1              :                  BCS    SQUAWK          ; Yes, squawk!
+00F321  C920              :                  CMP    #' '            ; In the range $00-$1F?
+00F323  90F5              :                  BCC    SQUAWK          ; Yes, squawk!
                             
-00F323  9D8002            :                  STA    BUFFER,X        ; Save the character
-00F326  E8                :                  INX                    ; Bump the count
-00F327  2014FF            :                  JSR    UART_TX         ; And echo to terminal
-00F32A  80C1              :                 FOREVER
+00F325  E07F              :                  CPX    #CMD_SIZE-1     ; Command buffer full?
+00F327  B0F1              :                  BCS    SQUAWK          ; Yes, squawk!
                             
-00F32C  86F6              :                 STX     CMD_LEN         ; Save the command length
-00F32E  A200              :                 LDX     #0              ; Set character offset to start
-00F330  2058F3            :                 JSR     NEXT_CHAR       ; And get first character
-00F333  B09F              :                 BCS     COMMAND
+00F329  9D8002            :                  STA    BUFFER,X        ; Save the character
+00F32C  E8                :                  INX                    ; Bump the count
+00F32D  2018FF            :                  JSR    UART_TX         ; And echo to terminal
+00F330  80BB              :                 FOREVER
+                            
+00F332  86F6              :                 STX     CMD_LEN         ; Save the command length
+00F334  A200              :                 LDX     #0              ; Set character offset to start
+00F336  2066F4            :                 JSR     SKIP_CHAR       ; And get first character
+00F339  B099              :                 BCS     COMMAND
+                            
+                            ;===============================================================================
+                            ; 'A' - Assemble
+                            ;-------------------------------------------------------------------------------
+                            
+00F33B  C941              :                 CMP     #'A'
+00F33D  D000              :                 IF      EQ
+                                            ENDIF
+                            
+                            ;===============================================================================
+                            ; 'D' - Disassemble Memory
+                            ;-------------------------------------------------------------------------------
+                            
+00F33F  C944              :                 CMP     #'D'
+00F341  D000              :                 IF      EQ
+                                            ENDIF
                                             
                             ;===============================================================================
                             ; 'G' - Go
                             ;-------------------------------------------------------------------------------
                             
-00F335  C947              :                 CMP     #'G'
-00F337  D010              :                 IF      EQ
+00F343  C947              :                 CMP     #'G'
+00F345  D010              :                 IF      EQ
                             
-00F339  A5F5              :                  LDA    PC_REG+1        ; Push the target address
-00F33B  48                :                  PHA
-00F33C  A5F4              :                  LDA    PC_REG+0
-00F33E  48                :                  PHA
-00F33F  A5F3              :                  LDA    P_REG           ; And status flags
-00F341  48                :                  PHA
-00F342  A5F0              :                  LDA    A_REG           ; Reload A, X and Y
-00F344  A6F1              :                  LDX    X_REG
-00F346  A4F2              :                  LDY    Y_REG
-00F348  40                :                  RTI                    ; Then go to code
+00F347  A5F5              :                  LDA    PC_REG+1        ; Push the target address
+00F349  48                :                  PHA
+00F34A  A5F4              :                  LDA    PC_REG+0
+00F34C  48                :                  PHA
+00F34D  A5F3              :                  LDA    P_REG           ; And status flags
+
+Portable 65xx Assembler [16.05]
+
+00F34F  48                :                  PHA
+00F350  A5F0              :                  LDA    A_REG           ; Reload A, X and Y
+00F352  A6F1              :                  LDX    X_REG
+00F354  A4F2              :                  LDY    Y_REG
+00F356  40                :                  RTI                    ; Then go to code
                                             ENDIF
                             
                             ;===============================================================================
                             ; 'M' - Show Memory
                             ;-------------------------------------------------------------------------------                
                             
+00F357  C94D              :                 CMP     #'M'
+00F359  D05E              :                 IF      EQ
+00F35B  2072F4            :                  JSR    GET_WORD
+00F35E  B056              :                  IF     CC
+00F360  20FCF3            :                   JSR   SET_ADDR_S
+00F363  2005F4            :                   JSR   SET_ADDR_E
+00F366  2072F4            :                   JSR   GET_WORD
+00F369  B005              :                   IF    CC
+00F36B  2005F4            :                    JSR  SET_ADDR_E
+00F36E  8002              :                   ELSE
+00F370  E6FA              :                    INC  ADDR_E+1
+                                              ENDIF
+                                              
+                                              REPEAT
+00F372  20F9F4            :                    JSR  CRLF            ; Print the memory address
+00F375  A5F8              :                    LDA  ADDR_S+1
+00F377  20D6F4            :                    JSR  HEX2
+00F37A  A5F7              :                    LDA  ADDR_S+0
+00F37C  20D6F4            :                    JSR  HEX2
+                                               
+00F37F  A000              :                    LDY  #0              ; Dump 16 bytes of data
+                                               REPEAT
+00F381  20EFF4            :                     JSR SPACE
+00F384  B1F7              :                     LDA (ADDR_S),Y
+00F386  C8                :                     INY
+00F387  20D6F4            :                     JSR HEX2
+00F38A  C010              :                     CPY #16
+00F38C  D0F3              :                    UNTIL EQ
+                                               
+00F38E  20EFF4            :                    JSR  SPACE           ; Then show as characters
+00F391  20F4F4            :                    JSR  BAR
+00F394  A000              :                    LDY  #0
+                                               REPEAT
+00F396  B1F7              :                     LDA (ADDR_S),Y
+00F398  C8                :                     INY
+00F399  20CAF4            :                     JSR IS_PRINTABLE
+00F39C  B002              :                     IF CC
+00F39E  A92E              :                      LDA #'.'
+                                                ENDIF
+00F3A0  2018FF            :                     JSR UART_TX
+00F3A3  C010              :                     CPY #16
+00F3A5  D0EF              :                    UNTIL EQ
+00F3A7  20F4F4            :                    JSR  BAR
+
+Portable 65xx Assembler [16.05]
+
+                                               
+00F3AA  98                :                    TYA
+00F3AB  200EF4            :                    JSR  BUMP_ADDR
+00F3AE  2018F4            :                    JSR  CHECK_END
+00F3B1  30BF              :                   UNTIL PL
+00F3B3  4CD4F2            :                   JMP   COMMAND
+                                             ENDIF
+00F3B6  4CF4F3            :                  JMP    ERROR
+                                            ENDIF
+                            
                             ;===============================================================================
                             ; 'R' - Show Registers
                             ;-------------------------------------------------------------------------------
                             
-00F349  C952              :                 CMP     #'R'
-00F34B  D003              :                 IF      EQ
-00F34D  4CA4F2            :                  JMP    REGISTERS
+00F3B9  C952              :                 CMP     #'R'
+00F3BB  D003              :                 IF      EQ
+00F3BD  4CA4F2            :                  JMP    REGISTERS
                                             ENDIF
                                             
                             ;===============================================================================
                             ; 'S' - Load SREC
                             ;-------------------------------------------------------------------------------
                             
+00F3C0  C953              :                 CMP     #'S'
+00F3C2  D000              :                 IF      EQ
+                                            ENDIF
+                                            
+                            ;===============================================================================
+                            ; 'T' - Trace
+                            ;-------------------------------------------------------------------------------
                             
+00F3C4  C954              :                 CMP     #'T'
+00F3C6  D000              :                 IF      EQ
+                                            ENDIF
+                                            
+                            ;===============================================================================
+                            ; 'W' - Write Memory
+                            ;-------------------------------------------------------------------------------
+                            
+00F3C8  C957              :                 CMP     #'W'
+00F3CA  D020              :                 IF      EQ
+00F3CC  2072F4            :                  JSR    GET_WORD        ; Get the target address
+00F3CF  B018              :                  IF     CC
+00F3D1  20FCF3            :                   JSR   SET_ADDR_S      ; Copy to start address
+00F3D4  2076F4            :                   JSR   GET_BYTE        ; Get the value
+00F3D7  B010              :                   IF    CC
+00F3D9  A000              :                    LDY  #0              ; Write to  memory
+00F3DB  A5FB              :                    LDA  TEMP+0
+00F3DD  91F7              :                    STA  (ADDR_S),Y
+00F3DF  A901              :                    LDA  #1              ; Increment address
+00F3E1  200EF4            :                    JSR  BUMP_ADDR
+00F3E4  A957              :                    LDA  #'W'            ; Create prompt for next byte
+00F3E6  4C22F4            :                    JMP  SET_PROMPT
+                                              ENDIF
+
+Portable 65xx Assembler [16.05]
+
+                                             ENDIF
+00F3E9  4CF4F3            :                  JMP    ERROR           ; Handle syntax errors
+                                            ENDIF
+                                            
+                            ;===============================================================================
+                            ; '?' - Display Help
+                            ;-------------------------------------------------------------------------------
+                            
+00F3EC  C93F              :                 CMP     #'?'
+00F3EE  D004              :                 IF      EQ
+00F3F0  A21D              :                  LDX    #HLP_STR
+00F3F2  8002              :                 ELSE
+00F3F4  A219              : ERROR:           LDX    #ERR_STR
+                                            ENDIF
+00F3F6  2003F5            :                 JSR     SHOW_STR
+00F3F9  4CD4F2            :                 JMP     COMMAND
+                            
+                            ;===============================================================================
+                            ;-------------------------------------------------------------------------------
+                            
+                            SET_ADDR_S:
+00F3FC  A5FB              :                 LDA     TEMP+0
+00F3FE  85F7              :                 STA     ADDR_S+0
+00F400  A5FC              :                 LDA     TEMP+1
+00F402  85F8              :                 STA     ADDR_S+1
+00F404  60                :                 RTS
+                            
+                            SET_ADDR_E:
+00F405  A5FB              :                 LDA     TEMP+0
+00F407  85F9              :                 STA     ADDR_E+0
+00F409  A5FC              :                 LDA     TEMP+1
+00F40B  85FA              :                 STA     ADDR_E+1
+00F40D  60                :                 RTS
+                            
+                            BUMP_ADDR:
+00F40E  18                :                 CLC
+00F40F  65F7              :                 ADC     ADDR_S+0
+00F411  85F7              :                 STA     ADDR_S+0
+00F413  9002              :                 IF      CS
+00F415  E6F8              :                  INC    ADDR_S+1
+                                            ENDIF
+00F417  60                :                 RTS
+                                            
+                            CHECK_END:
+00F418  38                :                 SEC
+00F419  A5F7              :                 LDA     ADDR_S+0
+00F41B  E5F9              :                 SBC     ADDR_E+0
+00F41D  A5F8              :                 LDA     ADDR_S+1
+00F41F  E5FA              :                 SBC     ADDR_E+1
+00F421  60                :                 RTS
+                            
+                            ; Create a prompt string in the command buffer for the command in A using the
+                            ; current value of the starting address.
                             
 
 Portable 65xx Assembler [16.05]
 
-                            ;===============================================================================
-                            ; Error
-                            ;-------------------------------------------------------------------------------
-                            
-                            ERROR:
-00F350  A214              :                 LDX     #ERR_STR
-00F352  2091F3            :                 JSR     SHOW_STR
-00F355  4CD4F2            :                 JMP     COMMAND
+                            SET_PROMPT:
+00F422  A200              :                 LDX     #0              ; Clear buffer and add command letter
+00F424  204AF4            :                 JSR     APPEND_CHAR
+00F427  A920              :                 LDA     #' '            ; Then a space
+00F429  204AF4            :                 JSR     APPEND_CHAR
                                             
+00F42C  A5F8              :                 LDA     ADDR_S+1        ; Followed by the address
+00F42E  203EF4            :                 JSR     APPEND_HEX2
+00F431  A5F7              :                 LDA     ADDR_S+0
+00F433  203EF4            :                 JSR     APPEND_HEX2
+00F436  A920              :                 LDA     #' '            ; And another space
+00F438  204AF4            :                 JSR     APPEND_CHAR
+00F43B  4CD6F2            :                 JMP     PROMPT          ; Then output it
+                            
+                            ; Convert the byte in A into hexadecimal digits and append to the command buffer.               
+                                            
+                            APPEND_HEX2:
+00F43E  48                :                 PHA
+00F43F  4A                :                 LSR     A
+00F440  4A                :                 LSR     A
+00F441  4A                :                 LSR     A
+00F442  4A                :                 LSR     A
+00F443  2047F4            :                 JSR     APPEND_HEX
+00F446  68                :                 PLA
+                            APPEND_HEX:
+00F447  20E5F4            :                 JSR     TO_HEX
+                            
+                            ; Append the character in A to the command buffer to create the next prompt
+                            ; string.
+                            
+                            APPEND_CHAR:
+00F44A  9D8002            :                 STA     BUFFER,X
+00F44D  E8                :                 INX
+00F44E  86F6              :                 STX     CMD_LEN
+00F450  60                :                 RTS
+                                                            
                             ;===============================================================================
                             ; Parsing Utilities
                             ;-------------------------------------------------------------------------------
                             
-                            NEXT_CHAR:
-00F358  E4F6              :                 CPX     CMD_LEN         ; Reached end of buffer
-00F35A  9001              :                 IF      CS
-00F35C  60                :                  RTS
-                                            ENDIF
-00F35D  BD8002            :                 LDA     BUFFER,X
-00F360  E8                :                 INX
+                            ; Get the next characater from the command buffer indicated by the X register
+                            ; and convert it to UPPER case. If the carry is set then the end of the buffer
+                            ; has been reached.
                             
+                            NEXT_CHAR:
+00F451  E4F6              :                 CPX     CMD_LEN         ; Reached end of buffer
+00F453  9001              :                 IF      CS
+00F455  60                :                  RTS
+                                            ENDIF
+00F456  BD8002            :                 LDA     BUFFER,X
+00F459  E8                :                 INX
+                            
+                            ; Convert the character in A to upper case.
+                            
+
+Portable 65xx Assembler [16.05]
+
                             TO_UPPER:
-00F361  C961              :                 CMP     #'a'
-00F363  9006              :                 IF      CS
-00F365  C97B              :                  CMP    #'z'+1
-00F367  B002              :                  IF     CC
-00F369  295F              :                   AND   #$5F
+00F45A  C961              :                 CMP     #'a'
+00F45C  9006              :                 IF      CS
+00F45E  C97B              :                  CMP    #'z'+1
+00F460  B002              :                  IF     CC
+00F462  295F              :                   AND   #$5F
                                              ENDIF
                                             ENDIF
-00F36B  18                :                 CLC
-00F36C  60                :                 RTS
+00F464  18                :                 CLC
+00F465  60                :                 RTS
+                                            
+                            SKIP_CHAR:
+                                            REPEAT
+00F466  2051F4            :                  JSR    NEXT_CHAR
+00F469  9001              :                  IF     CS
+00F46B  60                :                   RTS
+                                             ENDIF
+00F46C  C920              :                  CMP    #' '
+00F46E  F0F6              :                 UNTIL   NE
+00F470  18                :                 CLC
+00F471  60                :                 RTS
+                            
+                            ; Parse a word from the command buffer and store it at 0,Y. Return if the
+                            ; carry set if there is a syntax error.
+                            
+                            GET_WORD:
+00F472  A004              :                 LDY     #4              ; Set maximim number of nybbles
+00F474  D002              :                 BNE     GET_BYTE+2
                             
                             
+                            ; Parse a word from the command buffer and store it at 0,Y. Return if the
+                            ; carry set if there is a syntax error.
+                            
+                            GET_BYTE:
+00F476  A002              :                 LDY     #2              ; Set maximum number of nybble
+00F478  84FD              :                 STY     COUNT
+                                            
+                                            .IF     __65C02__
+00F47A  64FB              :                 STZ     TEMP+0          ; Clear conversion area
+00F47C  64FC              :                 STZ     TEMP+1
+                                            .ELSE
+                          -                 LDY     #0
+                          -                 STY     TEMP+0          ; Clear conversion area
+                          -                 STY     TEMP+1
+                                            .ENDIF
+                            
+00F47E  2066F4            :                 JSR     SKIP_CHAR       ; Fetch first character
+00F481  20A9F4            :                 JSR     GET_NYBBLE      ; And try to convert
+00F484  9001              :                 IF      CS
+00F486  60                :                  RTS                    ; Syntax error
+                                            ENDIF
+                                            REPEAT
+00F487  06FB              :                  ASL    TEMP+0          ; Fold into the result
+00F489  26FC              :                  ROL    TEMP+1
+
+Portable 65xx Assembler [16.05]
+
+00F48B  06FB              :                  ASL    TEMP+0
+00F48D  26FC              :                  ROL    TEMP+1
+00F48F  06FB              :                  ASL    TEMP+0
+00F491  26FC              :                  ROL    TEMP+1
+00F493  06FB              :                  ASL    TEMP+0
+00F495  26FC              :                  ROL    TEMP+1
+00F497  05FB              :                  ORA    TEMP+0
+00F499  85FB              :                  STA    TEMP+0
+                                             
+00F49B  C6FD              :                  DEC    COUNT           ; Reach maximum length?
+00F49D  F008              :                  BREAK  EQ
+                                             
+00F49F  2051F4            :                  JSR    NEXT_CHAR       ; Try for another nybble
+00F4A2  20A9F4            :                  JSR    GET_NYBBLE
+00F4A5  90E0              :                 UNTIL CS                
+00F4A7  18                :                 CLC                     ; Conversion sucessfull
+00F4A8  60                :                 RTS
+                            
+                            ;
+                            ;
+                            
+                            GET_NYBBLE:
+00F4A9  20BAF4            :                 JSR     IS_HEX          ; Got a hex digit?
+00F4AC  900A              :                 IF      CS
+00F4AE  C941              :                  CMP    #'A'            ; Handle letters
+00F4B0  9002              :                  IF     CS
+00F4B2  E907              :                   SBC   #7
+                                             ENDIF
+00F4B4  290F              :                  AND    #$0F            ; Skip out nybble
+00F4B6  18                :                  CLC                    ; Done
+00F4B7  60                :                  RTS
+                                            ENDIF
+00F4B8  38                :                 SEC                     ; Set carry -- not hex
+00F4B9  60                :                 RTS
+                            
+                            ; Return with the carry set of the character in A is a digit or 'A' thru 'F'.
+                            
+                            IS_HEX:
+00F4BA  C93A              :                 CMP     #'9'+1
+00F4BC  B003              :                 IF      CC
+00F4BE  C930              :                  CMP    #'0'
+00F4C0  60                :                  RTS
+                                            ENDIF
+00F4C1  C947              :                 CMP     #'F'+1
+00F4C3  B003              :                 IF      CC
+00F4C5  C941              :                  CMP    #'A'
+00F4C7  60                :                  RTS
+                                            ENDIF
+00F4C8  18                :                 CLC
+00F4C9  60                :                 RTS
+                                            
+                            IS_PRINTABLE:
+00F4CA  C920              :                 CMP     #' '
+00F4CC  9006              :                 IF      CS
+
+Portable 65xx Assembler [16.05]
+
+00F4CE  C97F              :                  CMP    #DEL
+00F4D0  B002              :                  IF     CC
+00F4D2  38                :                   SEC
+00F4D3  60                :                   RTS
+                                             ENDIF
+                                            ENDIF
+00F4D4  18                :                 CLC
+00F4D5  60                :                 RTS
+                                            
                             ;===============================================================================
                             ; Display Utilities
                             ;-------------------------------------------------------------------------------
@@ -783,82 +1101,103 @@ Portable 65xx Assembler [16.05]
                             ; destroyed.
                             
                             HEX2:
-00F36D  48                :                 PHA                     ; Save a copy of the value
-00F36E  4A                :                 LSR     A               ; Shift down the hi nybble
-00F36F  4A                :                 LSR     A
-00F370  4A                :                 LSR     A
-00F371  4A                :                 LSR     A
-00F372  2076F3            :                 JSR     HEX             ; Convert and display
-00F375  68                :                 PLA                     ; Pull back value and ...
+00F4D6  48                :                 PHA                     ; Save a copy of the value
+00F4D7  4A                :                 LSR     A               ; Shift down the hi nybble
+00F4D8  4A                :                 LSR     A
+00F4D9  4A                :                 LSR     A
+00F4DA  4A                :                 LSR     A
+00F4DB  20DFF4            :                 JSR     HEX             ; Convert and display
+00F4DE  68                :                 PLA                     ; Pull back value and ...
                             
                             ; Display the lo nybble of A as a hexadecimal digit. The values in A & Y are
                             ; destroyed.
                             
-00F376  290F              : HEX             AND     #$0F            ; Isolate the lo nybble
-00F378  F8                :                 SED                     ; Converted to ASCII
-
-Portable 65xx Assembler [16.05]
-
-00F379  18                :                 CLC
-00F37A  6990              :                 ADC     #$90
-00F37C  6940              :                 ADC     #$40
-00F37E  D8                :                 CLD
-00F37F  4C14FF            :                 JMP     UART_TX         ; And display.
-                            
+00F4DF  20E5F4            : HEX             JSR     TO_HEX          ; Convert to printable character
+00F4E2  4C18FF            :                 JMP     UART_TX         ; And display.
+                                            
+                            ;
+                                            
+00F4E5  290F              : TO_HEX          AND     #$0F            ; Isolate the lo nybble
+00F4E7  F8                :                 SED                     ; Converted to ASCII
+00F4E8  18                :                 CLC
+00F4E9  6990              :                 ADC     #$90
+00F4EB  6940              :                 ADC     #$40
+00F4ED  D8                :                 CLD
+00F4EE  60                :                 RTS
+                                            
                             ; Output a single space. The values in A & Y are destroyed.
                             
                             SPACE:
-00F382  A920              :                 LDA     #' '
-00F384  4C14FF            :                 JMP     UART_TX
+00F4EF  A920              :                 LDA     #' '
+00F4F1  4C18FF            :                 JMP     UART_TX
+                                            
+                            BAR:
+00F4F4  A97C              :                 LDA     #'|'
+00F4F6  4C18FF            :                 JMP     UART_TX
                             
                             ; Output a CR/LF control sequence to move the display cursor to the start of
                             ; the next line. A & Y are destroyed.
                             
+
+Portable 65xx Assembler [16.05]
+
                             CRLF:
-00F387  A90D              :                 LDA     #CR             ; Output a carriage return
-00F389  2014FF            :                 JSR     UART_TX
-00F38C  A90A              :                 LDA     #LF             ; .. followed by a new line
-00F38E  4C14FF            :                 JMP     UART_TX
+00F4F9  A90D              :                 LDA     #CR             ; Output a carriage return
+00F4FB  2018FF            :                 JSR     UART_TX
+00F4FE  A90A              :                 LDA     #LF             ; .. followed by a new line
+00F500  4C18FF            :                 JMP     UART_TX
                             
-                            ;===============================================================================
+                            ;-------------------------------------------------------------------------------
                             
                             
                             SHOW_STR:
                                             REPEAT
-00F391  BD9DF3            :                  LDA    STRINGS,X
-00F394  D001              :                  IF     EQ
-00F396  60                :                   RTS
+00F503  BD0FF5            :                  LDA    STRINGS,X
+00F506  D001              :                  IF     EQ
+00F508  60                :                   RTS
                                              ENDIF
-00F397  2014FF            :                  JSR    UART_TX
-00F39A  E8                :                  INX
-00F39B  80F4              :                 FOREVER
+00F509  2018FF            :                  JSR    UART_TX
+00F50C  E8                :                  INX
+00F50D  80F4              :                 FOREVER
                             
                             STRINGS:
         00000000          = PC_STR          .EQU    .-STRINGS
-00F39D  50433D00          :                 .BYTE   "PC=",0
-        00000004          = P_STR           .EQU    .-STRINGS
-00F3A1  20503D00          :                 .BYTE   " P=",0
-        00000008          = A_STR           .EQU    .-STRINGS
-00F3A5  20413D00          :                 .BYTE   " A=",0
-        0000000C          = X_STR           .EQU    .-STRINGS
-00F3A9  20583D00          :                 .BYTE   " X=",0
-        00000010          = Y_STR           .EQU    .-STRINGS
-00F3AD  20593D00          :                 .BYTE   " Y=",0
-        00000014          = ERR_STR         .EQU    .-STRINGS
-00F3B1  0D0A3F00          :                 .BYTE   CR,LF,"?",0
-                            
-                            ;===============================================================================
+00F50F  50433D00          :                 .BYTE   "PC=",0
+        00000004          = SP_STR          .EQU    .-STRINGS
+00F513  2053503D00        :                 .BYTE   " SP=",0
+        00000009          = P_STR           .EQU    .-STRINGS
+00F518  20503D00          :                 .BYTE   " P=",0
+        0000000D          = A_STR           .EQU    .-STRINGS
+00F51C  20413D00          :                 .BYTE   " A=",0
+        00000011          = X_STR           .EQU    .-STRINGS
+00F520  20583D00          :                 .BYTE   " X=",0
+        00000015          = Y_STR           .EQU    .-STRINGS
+00F524  20593D00          :                 .BYTE   " Y=",0
+        00000019          = ERR_STR         .EQU    .-STRINGS
+00F528  0D0A3F00          :                 .BYTE   CR,LF,"?",0
+        0000001D          = HLP_STR         .EQu    .-STRINGS
+00F52C  0D0A412078787878> :                 .BYTE   CR,LF,"A xxxx opcode [args]\tAssemble"
+00F54B  0D0A442078787878> :                 .BYTE   CR,LF,"D xxxx yyyy\t\tDisassemble"
+00F565  0D0A47205B787878> :                 .BYTE   CR,LF,"G [xxxx]\t\tGoto"
+00F575  0D0A4D2078787878> :                 .BYTE   CR,LF,"M xxxx yyyy\t\tDisplay Memory"
+00F592  0D0A520909094469> :                 .BYTE   CR,LF,"R\t\t\tDisplay Registers"
+00F5A9  0D0A532E2E2E0909> :                 .BYTE   CR,LF,"S...\t\t\tS19 Load"
+00F5BA  0D0A54205B787878> :                 .BYTE   CR,LF,"T [xxxx]\t\tTrace"
+00F5CB  0D0A572078787878> :                 .BYTE   CR,LF,"W xxxx yy\t\tWrite Memory"
+00F5E4  00                :                 .BYTE   0
+                                            
+                            ;==============================================================================
                             ; I/O Page
                             ;-------------------------------------------------------------------------------
                             
                                             .ORG    $FE00
 00FE00  0000000000000000> :                 .SPACE  256
-
-Portable 65xx Assembler [16.05]
-
                             
                             ;===============================================================================
                             ; Reset Handler
+
+Portable 65xx Assembler [16.05]
+
                             ;-------------------------------------------------------------------------------
                             
                                             .ORG    $FF00
@@ -869,36 +1208,42 @@ Portable 65xx Assembler [16.05]
 00FF03  9A                :                 TXS
                             
 00FF04  E8                :                 INX                     ; Clear buffer offsets
-00FF05  86FB              :                 STX     RX_HEAD
-00FF07  86FC              :                 STX     RX_TAIL
-00FF09  86FD              :                 STX     TX_HEAD
-00FF0B  86FE              :                 STX     TX_TAIL
+00FF05  8E0002            :                 STX     RX_HEAD
+00FF08  8E0102            :                 STX     RX_TAIL
+00FF0B  8E0202            :                 STX     TX_HEAD
+00FF0E  8E0302            :                 STX     TX_TAIL
                             ;               STX     FLAGS           ; And flow control flags
                             
-00FF0D  A901              :                 LDA     #$01            ; Enable ACIA RX interrupt
-00FF0F  8D02FE            :                 STA     ACIA_CMND
+00FF11  A901              :                 LDA     #$01            ; Enable ACIA RX interrupt
+00FF13  8D02FE            :                 STA     ACIA_CMND
                             
-00FF12  58                :                 CLI                     ; Allow interrupts
-00FF13  00                :                 BRK
+00FF16  58                :                 CLI                     ; Allow interrupts
+00FF17  00                :                 BRK
                             
                             ;===============================================================================
                             ; UART Interface
                             ;-------------------------------------------------------------------------------
                             
                             ; Inserts the byte in A into the transmit buffer. If the buffer is full then
-                            ; wait until some space is available. A & Y are destroyed.
+                            ; wait until some space is available. Registers are preserved.
                             
                             UART_TX:
-00FF14  A4FE              :                 LDY     TX_TAIL         ; Save the data byte at the tail
-00FF16  994002            :                 STA     TX_BUFF,Y
-00FF19  2081FF            :                 JSR     BUMP_TX         ; Work out the next offset
+00FF18  48                :                 PHA
+00FF19  84FE              :                 STY     IO_TEMP
+                                            
+00FF1B  AC0302            :                 LDY     TX_TAIL         ; Save the data byte at the tail
+00FF1E  994202            :                 STA     TX_BUFF,Y
+00FF21  209BFF            :                 JSR     BUMP_TX         ; Work out the next offset
                                             REPEAT                  ; And wait until save to store
-00FF1C  C4FD              :                  CPY    TX_HEAD
-00FF1E  F0FC              :                 UNTIL   NE
-00FF20  84FE              :                 STY     TX_TAIL
-00FF22  A905              :                 LDA     #$05            ; Ensure TX interrupt enabled
-00FF24  8D02FE            :                 STA     ACIA_CMND
-00FF27  60                :                 RTS                     ; Done
+00FF24  CC0202            :                  CPY    TX_HEAD
+00FF27  F0FB              :                 UNTIL   NE
+00FF29  8C0302            :                 STY     TX_TAIL
+00FF2C  A905              :                 LDA     #$05            ; Ensure TX interrupt enabled
+00FF2E  8D02FE            :                 STA     ACIA_CMND
+                                            
+00FF31  A4FE              :                 LDY     IO_TEMP
+00FF33  68                :                 PLA
+00FF34  60                :                 RTS                     ; Done
                             
                             ;
                             ;
@@ -907,12 +1252,12 @@ Portable 65xx Assembler [16.05]
                             ;               BIT     FLAGS           ; Terminal stopped from sending?
                             ;               IF      MI
                             ;                JSR    RX_COUNT        ; Yes, check RX buffer count
-                            ;                CMP    #RX_SIZE*1/10   ; Restart when only 10% full
-                            ;                IF     CC
-                            ;                 LDA   #DC1            ; Send XON
 
 Portable 65xx Assembler [16.05]
 
+                            ;                CMP    #RX_SIZE*1/10   ; Restart when only 10% full
+                            ;                IF     CC
+                            ;                 LDA   #DC1            ; Send XON
                             ;                 JSR   UART_TX
                             ;               .IF     __65C02__
                             ;                 STZ   FLAGS           ; Mark as no longer stopped
@@ -923,14 +1268,16 @@ Portable 65xx Assembler [16.05]
                             ;                ENDIF
                             ;               ENDIF
                             
-00FF28  A4FB              :                 LDY     RX_HEAD         ; Wait until there is some data
+00FF35  84FE              :                 STY     IO_TEMP
+00FF37  AC0002            :                 LDY     RX_HEAD         ; Wait until there is some data
                                             REPEAT
-00FF2A  C4FC              :                  CPY    RX_TAIL
-00FF2C  F0FC              :                 UNTIL   NE
-00FF2E  B90002            :                 LDA     RX_BUFF,Y       ; Then extract the head byte
-00FF31  2081FF            :                 JSR     BUMP_RX         ; Update the offset
-00FF34  84FB              :                 STY     RX_HEAD
-00FF36  60                :                 RTS                     ; Done
+00FF3A  CC0102            :                  CPY    RX_TAIL
+00FF3D  F0FB              :                 UNTIL   NE
+00FF3F  B90402            :                 LDA     RX_BUFF,Y       ; Then extract the head byte
+00FF42  209BFF            :                 JSR     BUMP_RX         ; Update the offset
+00FF45  8C0002            :                 STY     RX_HEAD
+00FF48  A4FE              :                 LDY     IO_TEMP
+00FF4A  60                :                 RTS                     ; Done
                             
                             ;
                             ;
@@ -951,7 +1298,7 @@ Portable 65xx Assembler [16.05]
                             ;-------------------------------------------------------------------------------
                             
                             NMI:
-00FF37  4C8CF2            :                 JMP     BREAK
+00FF4B  4C8CF2            :                 JMP     BREAK
                             
                             ;===============================================================================
                             ; IRQ Handler
@@ -961,34 +1308,34 @@ Portable 65xx Assembler [16.05]
                             ; buffer full.
                             
                             IRQ:
-00FF3A  48                :                 PHA                     ; Save users registers
-                                            .IF     __65C02__
-00FF3B  DA                :                 PHX
-00FF3C  5A                :                 PHY
-                                            .ELSE
-                          -                 TXA
+00FF4E  48                :                 PHA                     ; Save users registers
 
 Portable 65xx Assembler [16.05]
 
+                                            .IF     __65C02__
+00FF4F  DA                :                 PHX
+00FF50  5A                :                 PHY
+                                            .ELSE
+                          -                 TXA
                           -                 PHA
                           -                 TYA
                           -                 PHA
                           -                 CLD
                                             .ENDIF
                             
-00FF3D  BA                :                 TSX                     ; Check for BRK
-00FF3E  BD0401            :                 LDA     STACK+4,X
-00FF41  2910              :                 AND     #$10
-00FF43  D0F2              :                 BNE     NMI             ; Enter via NMI handler
+00FF51  BA                :                 TSX                     ; Check for BRK
+00FF52  BD0401            :                 LDA     STACK+4,X
+00FF55  2910              :                 AND     #$10
+00FF57  D0F2              :                 BNE     NMI             ; Enter via NMI handler
                             
                             ;-------------------------------------------------------------------------------
                             
-00FF45  AD01FE            :                 LDA     ACIA_STAT       ; ACIA is the source?
-00FF48  1033              :                 BPL     NOT_ACIA        ; No.
+00FF59  AD01FE            :                 LDA     ACIA_STAT       ; ACIA is the source?
+00FF5C  1039              :                 BPL     NOT_ACIA        ; No.
                             
-00FF4A  48                :                 PHA
-00FF4B  2910              :                 AND     #$10            ; TX Buffer empty?
-00FF4D  F018              :                 IF      NE
+00FF5E  48                :                 PHA
+00FF5F  2910              :                 AND     #$10            ; TX Buffer empty?
+00FF61  F01B              :                 IF      NE
                             ;                BIT    FLAGS           ; Do we need to send XOFF?
                             ;                IF     VS
                             ;                 LDA   #DC3            ; Yes, send XOFF to terminal
@@ -997,36 +1344,36 @@ Portable 65xx Assembler [16.05]
                             ;                 BNE   NOT_ACIA
                             ;                ENDIF
                             
-00FF4F  A4FD              :                  LDY    TX_HEAD         ; Any data to send?
-00FF51  C4FE              :                  CPY    TX_TAIL
-00FF53  F00D              :                  IF     NE
-00FF55  B94002            :                   LDA   TX_BUFF,Y       ; Yes, extract and send it
-00FF58  8D00FE            :                   STA   ACIA_DATA
-00FF5B  2081FF            :                   JSR   BUMP_TX
-00FF5E  84FD              :                   STY   TX_HEAD
-00FF60  8005              :                  ELSE
-00FF62  A901              :                   LDA   #$01            ; No, disable TX interrupt
-00FF64  8D02FE            :                   STA   ACIA_CMND
+00FF63  AC0202            :                  LDY    TX_HEAD         ; Any data to send?
+00FF66  CC0302            :                  CPY    TX_TAIL
+00FF69  F00E              :                  IF     NE
+00FF6B  B94202            :                   LDA   TX_BUFF,Y       ; Yes, extract and send it
+00FF6E  8D00FE            :                   STA   ACIA_DATA
+00FF71  209BFF            :                   JSR   BUMP_TX
+00FF74  8C0202            :                   STY   TX_HEAD
+00FF77  8005              :                  ELSE
+00FF79  A901              :                   LDA   #$01            ; No, disable TX interrupt
+00FF7B  8D02FE            :                   STA   ACIA_CMND
                                              ENDIF
                                             ENDIF
                             
-00FF67  68                :                 PLA
-00FF68  2908              :                 AND     #$08            ; RX Buffer full?
-00FF6A  F011              :                 IF      NE
-00FF6C  AD00FE            :                  LDA    ACIA_DATA       ; Yes, fetch the character
-00FF6F  A4FC              :                  LDY    RX_TAIL         ; .. and save it
-00FF71  990002            :                  STA    RX_BUFF,Y
-00FF74  2081FF            :                  JSR    BUMP_RX
-00FF77  C4FB              :                  CPY    RX_HEAD         ; Is buffer completely full?
-00FF79  F002              :                  IF     NE
-00FF7B  84FC              :                   STY   RX_TAIL         ; No, update tail offset
+00FF7E  68                :                 PLA
+00FF7F  2908              :                 AND     #$08            ; RX Buffer full?
+00FF81  F014              :                 IF      NE
+00FF83  AD00FE            :                  LDA    ACIA_DATA       ; Yes, fetch the character
+00FF86  AC0102            :                  LDY    RX_TAIL         ; .. and save it
+00FF89  990402            :                  STA    RX_BUFF,Y
+00FF8C  209BFF            :                  JSR    BUMP_RX
+00FF8F  CC0002            :                  CPY    RX_HEAD         ; Is buffer completely full?
+00FF92  F003              :                  IF     NE
+
+Portable 65xx Assembler [16.05]
+
+00FF94  8C0102            :                   STY   RX_TAIL         ; No, update tail offset
                                              ENDIF
                             
                             ;                BIT    FLAGS           ; Already stopped or stopping?
                             ;                IF     PL
-
-Portable 65xx Assembler [16.05]
-
                             ;                 IF    VC
                             ;                  JSR  RX_COUNT        ; Fetch FX buffer count
                             ;                  CMP  #RX_SIZE*9/10   ; More than 90%
@@ -1044,16 +1391,16 @@ Portable 65xx Assembler [16.05]
                             ;-------------------------------------------------------------------------------
                             
                                             .IF     __65C02__
-00FF7D  7A                :                 PLY                     ; Restore user registers
-00FF7E  FA                :                 PLX
+00FF97  7A                :                 PLY                     ; Restore user registers
+00FF98  FA                :                 PLX
                                             .ELSE
                           -                 PLA                     ; Restore user registers
                           -                 TAY
                           -                 PLA
                           -                 TAX
                                             .ENDIF
-00FF7F  68                :                 PLA
-00FF80  40                :                 RTI                     ; Done
+00FF99  68                :                 PLA
+00FF9A  40                :                 RTI                     ; Done
                             
                             ; Bump and wrap a recieve buffer index value.
                             
@@ -1070,25 +1417,25 @@ Portable 65xx Assembler [16.05]
                             ; Bump and wrap a transmit buffer index value.
                             
                             BUMP_TX:
-00FF81  C8                :                 INY
-00FF82  C040              :                 CPY     #TX_SIZE
-00FF84  D002              :                 IF      EQ
-00FF86  A000              :                  LDY    #0
+00FF9B  C8                :                 INY
+00FF9C  C03E              :                 CPY     #TX_SIZE
+00FF9E  D002              :                 IF      EQ
+00FFA0  A000              :                  LDY    #0
                                             ENDIF
-00FF88  60                :                 RTS
+00FFA2  60                :                 RTS
+
+Portable 65xx Assembler [16.05]
+
                             
                             ;===============================================================================
                             ; Vector Locations
                             ;-------------------------------------------------------------------------------
                             
-
-Portable 65xx Assembler [16.05]
-
                                             .ORG    $FFFA
                             
-00FFFA  37FF              :                 .WORD   NMI             ; NMI
+00FFFA  4BFF              :                 .WORD   NMI             ; NMI
 00FFFC  00FF              :                 .WORD   RESET           ; RESET
-00FFFE  3AFF              :                 .WORD   IRQ             ; IRQ/BRK
+00FFFE  4EFF              :                 .WORD   IRQ             ; IRQ/BRK
                             
                                             .END
 
@@ -1103,183 +1450,204 @@ ACIA_DATA                        0000FE00  | NUL                              00
 ACIA_STAT                        0000FE01  | OP_ERR                           00000000 
 ADDR_E                           000000F9  | PC_STR                           00000000 
 ADDR_S                           000000F7  | __6501__                         00000000 
-A_REG                            000000F0  | __6502__                         00000000 
-A_STR                            00000008  | __65816__                        00000000 
-BACKSPACE                        0000F2F4  | __65832__                        00000000 
-BEL                              00000007  | __65SC02__                       00000000 
-BREAK                            0000F28C  | MB_ZPG                           00000001 
-BS                               00000008  | MO_ZPG                           00000001 
-BUFFER                           00000280  | __65C02__                        00000001 
-BUMP_RX                          0000FF81  | MB_IMM                           00000002 
-BUMP_TX                          0000FF81  | MO_IMM                           00000002 
-CMD_LEN                          000000F6  | OP_ADC                           00000002 
-CMD_SIZE                         00000080  | MB_ABS                           00000003 
-COMMAND                          0000F2D4  | MO_ABS                           00000003 
-CR                               0000000D  | MB_YRG                           00000004 
-CRLF                             0000F387  | OP_AND                           00000004 
-DC1                              00000011  | P_STR                            00000004 
-DC3                              00000013  | MO_ZPX                           00000005 
-DEL                              0000007F  | MO_ZPY                           00000005 
-ERROR                            0000F350  | OP_ASL                           00000006 
-ERR_STR                          00000014  | BEL                              00000007 
-ESC                              0000001B  | MO_ABY                           00000007 
-FLAGS                            000000FF  | A_STR                            00000008 
-FLAG_STOP                        00000040  | BS                               00000008 
-FLAG_STOPPED                     00000080  | MB_XRG                           00000008 
-HEX                              0000F376  | HT                               00000009 
-HEX2                             0000F36D  | OP_BBR                           00000009 
-HT                               00000009  | LF                               0000000A 
-IRQ                              0000FF3A  | OP_BBS                           0000000A 
-LF                               0000000A  | MO_ABX                           0000000B 
-MB_ABS                           00000003  | OP_BCC                           0000000C 
-MB_ACC                           00000010  | X_STR                            0000000C 
-MB_BIT                           00000020  | CR                               0000000D 
-MB_IMM                           00000002  | OP_BCS                           0000000E 
-MB_IMP                           00000000  | MB_ACC                           00000010 
-MB_IND                           00000080  | MO_ACC                           00000010 
-MB_REL                           00000040  | OP_BEQ                           00000010 
-MB_XRG                           00000008  | Y_STR                            00000010 
-MB_YRG                           00000004  | DC1                              00000011 
-MB_ZPG                           00000001  | OP_BIT                           00000012 
-MNEMONICS                        0000F200  | DC3                              00000013 
-MODES                            0000F100  | ERR_STR                          00000014 
-MO_ABS                           00000003  | OP_BNE                           00000014 
-MO_ABX                           0000000B  | OP_BMI                           00000016 
-MO_ABY                           00000007  | OP_BPL                           00000018 
-MO_ACC                           00000010  | OP_BRA                           0000001A 
-MO_BIT                           00000021  | ESC                              0000001B 
-MO_BRL                           00000061  | OP_BRK                           0000001C 
+APPEND_CHAR                      0000F44A  | __6502__                         00000000 
+APPEND_HEX                       0000F447  | __65816__                        00000000 
+APPEND_HEX2                      0000F43E  | __65832__                        00000000 
+A_REG                            000000F0  | __65SC02__                       00000000 
+A_STR                            0000000D  | MB_ZPG                           00000001 
+BACKSPACE                        0000F2FA  | MO_ZPG                           00000001 
+BAR                              0000F4F4  | __65C02__                        00000001 
+BEL                              00000007  | MB_IMM                           00000002 
+BREAK                            0000F28C  | MO_IMM                           00000002 
+BS                               00000008  | OP_ADC                           00000002 
+BUFFER                           00000280  | MB_ABS                           00000003 
+BUMP_ADDR                        0000F40E  | MO_ABS                           00000003 
+BUMP_RX                          0000FF9B  | MB_YRG                           00000004 
+BUMP_TX                          0000FF9B  | OP_AND                           00000004 
+CHECK_END                        0000F418  | SP_STR                           00000004 
+CMD_LEN                          000000F6  | MO_ZPX                           00000005 
+CMD_SIZE                         00000080  | MO_ZPY                           00000005 
+COMMAND                          0000F2D4  | OP_ASL                           00000006 
+COUNT                            000000FD  | BEL                              00000007 
+CR                               0000000D  | MO_ABY                           00000007 
+CRLF                             0000F4F9  | BS                               00000008 
+DC1                              00000011  | MB_XRG                           00000008 
+DC3                              00000013  | HT                               00000009 
+DEL                              0000007F  | OP_BBR                           00000009 
+ERROR                            0000F3F4  | P_STR                            00000009 
+ERR_STR                          00000019  | LF                               0000000A 
+ESC                              0000001B  | OP_BBS                           0000000A 
+FLAGS                            000000FF  | MO_ABX                           0000000B 
+FLAG_STOP                        00000040  | OP_BCC                           0000000C 
+FLAG_STOPPED                     00000080  | A_STR                            0000000D 
+GET_BYTE                         0000F476  | CR                               0000000D 
+GET_NYBBLE                       0000F4A9  | OP_BCS                           0000000E 
+GET_WORD                         0000F472  | MB_ACC                           00000010 
+HEX                              0000F4DF  | MO_ACC                           00000010 
+HEX2                             0000F4D6  | OP_BEQ                           00000010 
+HLP_STR                          0000001D  | DC1                              00000011 
+HT                               00000009  | X_STR                            00000011 
+IO_TEMP                          000000FE  | OP_BIT                           00000012 
+IRQ                              0000FF4E  | DC3                              00000013 
+IS_HEX                           0000F4BA  | OP_BNE                           00000014 
+IS_PRINTABLE                     0000F4CA  | Y_STR                            00000015 
+LF                               0000000A  | OP_BMI                           00000016 
+MB_ABS                           00000003  | OP_BPL                           00000018 
+MB_ACC                           00000010  | ERR_STR                          00000019 
+MB_BIT                           00000020  | OP_BRA                           0000001A 
+MB_IMM                           00000002  | ESC                              0000001B 
 
 Portable 65xx Assembler [16.05]
 
-MO_IAB                           00000083  | OP_BVC                           0000001E 
-MO_IAX                           0000008B  | MB_BIT                           00000020 
-MO_IMM                           00000002  | OP_BVS                           00000020 
-MO_IMP                           00000000  | MO_BIT                           00000021 
-MO_IZP                           00000081  | OP_CLC                           00000022 
-MO_IZX                           00000089  | OP_CLD                           00000024 
-MO_IZY                           00000085  | OP_CLI                           00000026 
-MO_REL                           00000040  | OP_CLV                           00000028 
-MO_ZPG                           00000001  | OP_CMP                           0000002A 
-MO_ZPX                           00000005  | OP_CPX                           0000002C 
-MO_ZPY                           00000005  | OP_CPY                           0000002E 
-NEXT_CHAR                        0000F358  | OP_DEC                           00000030 
-NMI                              0000FF37  | OP_DEX                           00000032 
-NOT_ACIA                         0000FF7D  | OP_DEY                           00000034 
-NUL                              00000000  | OP_EOR                           00000036 
-OPCODES                          0000F000  | OP_INC                           00000038 
-OP_ADC                           00000002  | OP_INX                           0000003A 
-OP_AND                           00000004  | OP_INY                           0000003C 
-OP_ASL                           00000006  | OP_JMP                           0000003E 
-OP_BBR                           00000009  | FLAG_STOP                        00000040 
-OP_BBS                           0000000A  | MB_REL                           00000040 
-OP_BCC                           0000000C  | MO_REL                           00000040 
-OP_BCS                           0000000E  | OP_JSR                           00000040 
-OP_BEQ                           00000010  | RX_SIZE                          00000040 
-OP_BIT                           00000012  | TX_SIZE                          00000040 
-OP_BMI                           00000016  | OP_LDA                           00000042 
-OP_BNE                           00000014  | OP_LDX                           00000044 
-OP_BPL                           00000018  | OP_LDY                           00000046 
-OP_BRA                           0000001A  | OP_LSR                           00000048 
-OP_BRK                           0000001C  | OP_NOP                           0000004A 
-OP_BVC                           0000001E  | OP_ORA                           0000004C 
-OP_BVS                           00000020  | OP_PHA                           0000004E 
-OP_CLC                           00000022  | OP_PHP                           00000050 
-OP_CLD                           00000024  | OP_PHX                           00000052 
-OP_CLI                           00000026  | OP_PHY                           00000054 
-OP_CLV                           00000028  | OP_PLA                           00000056 
-OP_CMP                           0000002A  | OP_PLP                           00000058 
-OP_CPX                           0000002C  | OP_PLX                           0000005A 
-OP_CPY                           0000002E  | OP_PLY                           0000005C 
-OP_DEC                           00000030  | OP_RMB                           0000005E 
-OP_DEX                           00000032  | OP_ROL                           00000060 
-OP_DEY                           00000034  | MO_BRL                           00000061 
-OP_EOR                           00000036  | OP_ROR                           00000062 
-OP_ERR                           00000000  | OP_RTI                           00000064 
-OP_INC                           00000038  | OP_RTS                           00000066 
-OP_INX                           0000003A  | OP_SBC                           00000068 
-OP_INY                           0000003C  | OP_SEC                           0000006A 
-OP_JMP                           0000003E  | OP_SED                           0000006C 
-OP_JSR                           00000040  | OP_SEI                           0000006E 
-OP_LDA                           00000042  | OP_SMB                           00000070 
-OP_LDX                           00000044  | OP_STA                           00000072 
-OP_LDY                           00000046  | OP_STP                           00000074 
-OP_LSR                           00000048  | OP_STX                           00000076 
-OP_NOP                           0000004A  | OP_STY                           00000078 
+MB_IMP                           00000000  | OP_BRK                           0000001C 
+MB_IND                           00000080  | HLP_STR                          0000001D 
+MB_REL                           00000040  | OP_BVC                           0000001E 
+MB_XRG                           00000008  | MB_BIT                           00000020 
+MB_YRG                           00000004  | OP_BVS                           00000020 
+MB_ZPG                           00000001  | MO_BIT                           00000021 
+MNEMONICS                        0000F200  | OP_CLC                           00000022 
+MODES                            0000F100  | OP_CLD                           00000024 
+MO_ABS                           00000003  | OP_CLI                           00000026 
+MO_ABX                           0000000B  | OP_CLV                           00000028 
+MO_ABY                           00000007  | OP_CMP                           0000002A 
+MO_ACC                           00000010  | OP_CPX                           0000002C 
+MO_BIT                           00000021  | OP_CPY                           0000002E 
+MO_BRL                           00000061  | OP_DEC                           00000030 
+MO_IAB                           00000083  | OP_DEX                           00000032 
+MO_IAX                           0000008B  | OP_DEY                           00000034 
+MO_IMM                           00000002  | OP_EOR                           00000036 
+MO_IMP                           00000000  | OP_INC                           00000038 
+MO_IZP                           00000081  | OP_INX                           0000003A 
+MO_IZX                           00000089  | OP_INY                           0000003C 
+MO_IZY                           00000085  | OP_JMP                           0000003E 
+MO_REL                           00000040  | RX_SIZE                          0000003E 
+MO_ZPG                           00000001  | TX_SIZE                          0000003E 
+MO_ZPX                           00000005  | FLAG_STOP                        00000040 
+MO_ZPY                           00000005  | MB_REL                           00000040 
+NEXT_CHAR                        0000F451  | MO_REL                           00000040 
+NMI                              0000FF4B  | OP_JSR                           00000040 
+NOT_ACIA                         0000FF97  | OP_LDA                           00000042 
+NUL                              00000000  | OP_LDX                           00000044 
+OPCODES                          0000F000  | OP_LDY                           00000046 
+OP_ADC                           00000002  | OP_LSR                           00000048 
+OP_AND                           00000004  | OP_NOP                           0000004A 
+OP_ASL                           00000006  | OP_ORA                           0000004C 
+OP_BBR                           00000009  | OP_PHA                           0000004E 
+OP_BBS                           0000000A  | OP_PHP                           00000050 
+OP_BCC                           0000000C  | OP_PHX                           00000052 
+OP_BCS                           0000000E  | OP_PHY                           00000054 
+OP_BEQ                           00000010  | OP_PLA                           00000056 
+OP_BIT                           00000012  | OP_PLP                           00000058 
+OP_BMI                           00000016  | OP_PLX                           0000005A 
+OP_BNE                           00000014  | OP_PLY                           0000005C 
+OP_BPL                           00000018  | OP_RMB                           0000005E 
+OP_BRA                           0000001A  | OP_ROL                           00000060 
+OP_BRK                           0000001C  | MO_BRL                           00000061 
+OP_BVC                           0000001E  | OP_ROR                           00000062 
+OP_BVS                           00000020  | OP_RTI                           00000064 
+OP_CLC                           00000022  | OP_RTS                           00000066 
+OP_CLD                           00000024  | OP_SBC                           00000068 
+OP_CLI                           00000026  | OP_SEC                           0000006A 
+OP_CLV                           00000028  | OP_SED                           0000006C 
+OP_CMP                           0000002A  | OP_SEI                           0000006E 
+OP_CPX                           0000002C  | OP_SMB                           00000070 
+OP_CPY                           0000002E  | OP_STA                           00000072 
+OP_DEC                           00000030  | OP_STP                           00000074 
 
 Portable 65xx Assembler [16.05]
 
-OP_ORA                           0000004C  | OP_STZ                           0000007A 
-OP_PHA                           0000004E  | OP_TAX                           0000007C 
-OP_PHP                           00000050  | OP_TAY                           0000007E 
-OP_PHX                           00000052  | DEL                              0000007F 
-OP_PHY                           00000054  | CMD_SIZE                         00000080 
-OP_PLA                           00000056  | FLAG_STOPPED                     00000080 
-OP_PLP                           00000058  | MB_IND                           00000080 
-OP_PLX                           0000005A  | OP_TRB                           00000080 
-OP_PLY                           0000005C  | MO_IZP                           00000081 
-OP_RMB                           0000005E  | OP_TSB                           00000082 
-OP_ROL                           00000060  | MO_IAB                           00000083 
-OP_ROR                           00000062  | OP_TSX                           00000084 
-OP_RTI                           00000064  | MO_IZY                           00000085 
-OP_RTS                           00000066  | OP_TXA                           00000086 
-OP_SBC                           00000068  | OP_TXS                           00000088 
-OP_SEC                           0000006A  | MO_IZX                           00000089 
-OP_SED                           0000006C  | OP_TYA                           0000008A 
-OP_SEI                           0000006E  | MO_IAX                           0000008B 
-OP_SMB                           00000070  | OP_WAI                           0000008C 
-OP_STA                           00000072  | A_REG                            000000F0 
-OP_STP                           00000074  | X_REG                            000000F1 
-OP_STX                           00000076  | Y_REG                            000000F2 
-OP_STY                           00000078  | P_REG                            000000F3 
-OP_STZ                           0000007A  | PC_REG                           000000F4 
-OP_TAX                           0000007C  | CMD_LEN                          000000F6 
-OP_TAY                           0000007E  | ADDR_S                           000000F7 
-OP_TRB                           00000080  | ADDR_E                           000000F9 
-OP_TSB                           00000082  | RX_HEAD                          000000FB 
-OP_TSX                           00000084  | RX_TAIL                          000000FC 
-OP_TXA                           00000086  | TX_HEAD                          000000FD 
-OP_TXS                           00000088  | TX_TAIL                          000000FE 
-OP_TYA                           0000008A  | FLAGS                            000000FF 
-OP_WAI                           0000008C  | STACK                            00000100 
-PC_REG                           000000F4  | RX_BUFF                          00000200 
-PC_STR                           00000000  | TX_BUFF                          00000240 
-PROMPT                           0000F2D6  | BUFFER                           00000280 
-P_REG                            000000F3  | OPCODES                          0000F000 
-P_STR                            00000004  | MODES                            0000F100 
-REGISTERS                        0000F2A4  | MNEMONICS                        0000F200 
-RESET                            0000FF00  | BREAK                            0000F28C 
-RX_BUFF                          00000200  | REGISTERS                        0000F2A4 
-RX_HEAD                          000000FB  | COMMAND                          0000F2D4 
-RX_SIZE                          00000040  | PROMPT                           0000F2D6 
-RX_TAIL                          000000FC  | BACKSPACE                        0000F2F4 
-SHOW_STR                         0000F391  | SQUAWK                           0000F314 
-SPACE                            0000F382  | ERROR                            0000F350 
-SPI_CTRL                         0000FE05  | NEXT_CHAR                        0000F358 
-SPI_DATA                         0000FE04  | TO_UPPER                         0000F361 
-SPI_DVSR                         0000FE06  | HEX2                             0000F36D 
-SPI_SLCT                         0000FE07  | HEX                              0000F376 
-SPI_STAT                         0000FE05  | SPACE                            0000F382 
-SQUAWK                           0000F314  | CRLF                             0000F387 
-STACK                            00000100  | SHOW_STR                         0000F391 
-STRINGS                          0000F39D  | STRINGS                          0000F39D 
+OP_DEX                           00000032  | OP_STX                           00000076 
+OP_DEY                           00000034  | OP_STY                           00000078 
+OP_EOR                           00000036  | OP_STZ                           0000007A 
+OP_ERR                           00000000  | OP_TAX                           0000007C 
+OP_INC                           00000038  | OP_TAY                           0000007E 
+OP_INX                           0000003A  | DEL                              0000007F 
+OP_INY                           0000003C  | CMD_SIZE                         00000080 
+OP_JMP                           0000003E  | FLAG_STOPPED                     00000080 
+OP_JSR                           00000040  | MB_IND                           00000080 
+OP_LDA                           00000042  | OP_TRB                           00000080 
+OP_LDX                           00000044  | MO_IZP                           00000081 
+OP_LDY                           00000046  | OP_TSB                           00000082 
+OP_LSR                           00000048  | MO_IAB                           00000083 
+OP_NOP                           0000004A  | OP_TSX                           00000084 
+OP_ORA                           0000004C  | MO_IZY                           00000085 
+OP_PHA                           0000004E  | OP_TXA                           00000086 
+OP_PHP                           00000050  | OP_TXS                           00000088 
+OP_PHX                           00000052  | MO_IZX                           00000089 
+OP_PHY                           00000054  | OP_TYA                           0000008A 
+OP_PLA                           00000056  | MO_IAX                           0000008B 
+OP_PLP                           00000058  | OP_WAI                           0000008C 
+OP_PLX                           0000005A  | A_REG                            000000F0 
+OP_PLY                           0000005C  | X_REG                            000000F1 
+OP_RMB                           0000005E  | Y_REG                            000000F2 
+OP_ROL                           00000060  | P_REG                            000000F3 
+OP_ROR                           00000062  | PC_REG                           000000F4 
+OP_RTI                           00000064  | CMD_LEN                          000000F6 
+OP_RTS                           00000066  | ADDR_S                           000000F7 
+OP_SBC                           00000068  | ADDR_E                           000000F9 
+OP_SEC                           0000006A  | TEMP                             000000FB 
+OP_SED                           0000006C  | COUNT                            000000FD 
+OP_SEI                           0000006E  | IO_TEMP                          000000FE 
+OP_SMB                           00000070  | FLAGS                            000000FF 
+OP_STA                           00000072  | STACK                            00000100 
+OP_STP                           00000074  | RX_HEAD                          00000200 
+OP_STX                           00000076  | RX_TAIL                          00000201 
+OP_STY                           00000078  | TX_HEAD                          00000202 
+OP_STZ                           0000007A  | TX_TAIL                          00000203 
+OP_TAX                           0000007C  | RX_BUFF                          00000204 
+OP_TAY                           0000007E  | TX_BUFF                          00000242 
+OP_TRB                           00000080  | BUFFER                           00000280 
+OP_TSB                           00000082  | OPCODES                          0000F000 
+OP_TSX                           00000084  | MODES                            0000F100 
+OP_TXA                           00000086  | MNEMONICS                        0000F200 
+OP_TXS                           00000088  | BREAK                            0000F28C 
+OP_TYA                           0000008A  | REGISTERS                        0000F2A4 
+OP_WAI                           0000008C  | COMMAND                          0000F2D4 
+PC_REG                           000000F4  | PROMPT                           0000F2D6 
+PC_STR                           00000000  | BACKSPACE                        0000F2FA 
+PROMPT                           0000F2D6  | SQUAWK                           0000F31A 
+P_REG                            000000F3  | ERROR                            0000F3F4 
+P_STR                            00000009  | SET_ADDR_S                       0000F3FC 
+REGISTERS                        0000F2A4  | SET_ADDR_E                       0000F405 
+RESET                            0000FF00  | BUMP_ADDR                        0000F40E 
 
 Portable 65xx Assembler [16.05]
 
-TO_UPPER                         0000F361  | ACIA_DATA                        0000FE00 
-TX_BUFF                          00000240  | ACIA_STAT                        0000FE01 
-TX_HEAD                          000000FD  | ACIA_CMND                        0000FE02 
-TX_SIZE                          00000040  | ACIA_CTRL                        0000FE03 
-TX_TAIL                          000000FE  | SPI_DATA                         0000FE04 
-UART_RX                          0000FF28  | SPI_CTRL                         0000FE05 
-UART_TX                          0000FF14  | SPI_STAT                         0000FE05 
+RX_BUFF                          00000204  | CHECK_END                        0000F418 
+RX_HEAD                          00000200  | SET_PROMPT                       0000F422 
+RX_SIZE                          0000003E  | APPEND_HEX2                      0000F43E 
+RX_TAIL                          00000201  | APPEND_HEX                       0000F447 
+SET_ADDR_E                       0000F405  | APPEND_CHAR                      0000F44A 
+SET_ADDR_S                       0000F3FC  | NEXT_CHAR                        0000F451 
+SET_PROMPT                       0000F422  | TO_UPPER                         0000F45A 
+SHOW_STR                         0000F503  | SKIP_CHAR                        0000F466 
+SKIP_CHAR                        0000F466  | GET_WORD                         0000F472 
+SPACE                            0000F4EF  | GET_BYTE                         0000F476 
+SPI_CTRL                         0000FE05  | GET_NYBBLE                       0000F4A9 
+SPI_DATA                         0000FE04  | IS_HEX                           0000F4BA 
+SPI_DVSR                         0000FE06  | IS_PRINTABLE                     0000F4CA 
+SPI_SLCT                         0000FE07  | HEX2                             0000F4D6 
+SPI_STAT                         0000FE05  | HEX                              0000F4DF 
+SP_STR                           00000004  | TO_HEX                           0000F4E5 
+SQUAWK                           0000F31A  | SPACE                            0000F4EF 
+STACK                            00000100  | BAR                              0000F4F4 
+STRINGS                          0000F50F  | CRLF                             0000F4F9 
+TEMP                             000000FB  | SHOW_STR                         0000F503 
+TO_HEX                           0000F4E5  | STRINGS                          0000F50F 
+TO_UPPER                         0000F45A  | ACIA_DATA                        0000FE00 
+TX_BUFF                          00000242  | ACIA_STAT                        0000FE01 
+TX_HEAD                          00000202  | ACIA_CMND                        0000FE02 
+TX_SIZE                          0000003E  | ACIA_CTRL                        0000FE03 
+TX_TAIL                          00000203  | SPI_DATA                         0000FE04 
+UART_RX                          0000FF35  | SPI_CTRL                         0000FE05 
+UART_TX                          0000FF18  | SPI_STAT                         0000FE05 
 X_REG                            000000F1  | SPI_DVSR                         0000FE06 
-X_STR                            0000000C  | SPI_SLCT                         0000FE07 
+X_STR                            00000011  | SPI_SLCT                         0000FE07 
 Y_REG                            000000F2  | RESET                            0000FF00 
-Y_STR                            00000010  | UART_TX                          0000FF14 
-__6501__                         00000000  | UART_RX                          0000FF28 
-__6502__                         00000000  | NMI                              0000FF37 
-__65816__                        00000000  | IRQ                              0000FF3A 
-__65832__                        00000000  | NOT_ACIA                         0000FF7D 
-__65C02__                        00000001  | BUMP_RX                          0000FF81 
-__65SC02__                       00000000  | BUMP_TX                          0000FF81 
+Y_STR                            00000015  | UART_TX                          0000FF18 
+__6501__                         00000000  | UART_RX                          0000FF35 
+__6502__                         00000000  | NMI                              0000FF4B 
+__65816__                        00000000  | IRQ                              0000FF4E 
+__65832__                        00000000  | NOT_ACIA                         0000FF97 
+__65C02__                        00000001  | BUMP_RX                          0000FF9B 
+__65SC02__                       00000000  | BUMP_TX                          0000FF9B 

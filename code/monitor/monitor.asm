@@ -180,16 +180,14 @@ CMD_LEN		.SPACE	1			; Command buffer length
 ADDR_S		.SPACE	2
 ADDR_E		.SPACE	2
 
+TEMP		.SPACE	2
+COUNT		.SPACE	1
+
 ;-------------------------------------------------------------------------------
 
-		.ORG	$00FB
+		.ORG	$00FE
 
-; Communications buffer offsets
-
-RX_HEAD		.SPACE	1		; UART recieve buffer offsets
-RX_TAIL		.SPACE	1
-TX_HEAD		.SPACE	1		; UART transmit buffer offsets
-TX_TAIL		.SPACE	1
+IO_TEMP		.SPACE	1
 
 FLAGS		.SPACE	1		; I/O Flags for XON/XOFF
 
@@ -206,13 +204,20 @@ STACK		.SPACE	256
 ; UART Buffers
 ;-------------------------------------------------------------------------------
 
-RX_SIZE		.EQU	64
-TX_SIZE		.EQU	64
+RX_SIZE		.EQU	62
+TX_SIZE		.EQU	62
 
 CMD_SIZE	.EQU	128
 
 		.BSS
 		.ORG	$0200
+
+; Communications buffer offsets
+
+RX_HEAD		.SPACE	1		; UART recieve buffer offsets
+RX_TAIL		.SPACE	1
+TX_HEAD		.SPACE	1		; UART transmit buffer offsets
+TX_TAIL		.SPACE	1
 
 RX_BUFF		.SPACE	RX_SIZE		; UART recieve buffer
 TX_BUFF		.SPACE	TX_SIZE		; UART transmit buffer
@@ -517,6 +522,11 @@ PROMPT:
 
 		REPEAT
 		 JSR	UART_RX		; Wait for some user input
+		 
+		 CMP 	#ESC		; Cancel input?
+		 IF	EQ
+		  BEQ	COMMAND		; Yes
+		 ENDIF
 
 		 CMP	#BS		; Backspace?
 		 IF	EQ
@@ -559,8 +569,24 @@ SQUAWK:		  LDA	#BEL		; Yes, squawk!
 
 		STX	CMD_LEN		; Save the command length
 		LDX	#0		; Set character offset to start
-		JSR	NEXT_CHAR	; And get first character
+		JSR	SKIP_CHAR	; And get first character
 		BCS	COMMAND
+
+;===============================================================================
+; 'A' - Assemble
+;-------------------------------------------------------------------------------
+
+		CMP	#'A'
+		IF	EQ
+		ENDIF
+
+;===============================================================================
+; 'D' - Disassemble Memory
+;-------------------------------------------------------------------------------
+
+		CMP	#'D'
+		IF	EQ
+		ENDIF
 		
 ;===============================================================================
 ; 'G' - Go
@@ -585,6 +611,59 @@ SQUAWK:		  LDA	#BEL		; Yes, squawk!
 ; 'M' - Show Memory
 ;-------------------------------------------------------------------------------		
 
+		CMP	#'M'
+		IF	EQ
+		 JSR	GET_WORD
+		 IF	CC
+		  JSR	SET_ADDR_S
+		  JSR	SET_ADDR_E
+		  JSR	GET_WORD
+		  IF	CC
+		   JSR	SET_ADDR_E
+		  ELSE
+		   INC	ADDR_E+1
+		  ENDIF
+		  
+		  REPEAT
+		   JSR	CRLF		; Print the memory address
+		   LDA	ADDR_S+1
+		   JSR	HEX2
+		   LDA	ADDR_S+0
+		   JSR	HEX2
+		   
+		   LDY	#0		; Dump 16 bytes of data
+		   REPEAT
+		    JSR	SPACE
+		    LDA	(ADDR_S),Y
+		    INY
+		    JSR	HEX2
+		    CPY #16
+		   UNTIL EQ
+		   
+		   JSR	SPACE		; Then show as characters
+		   JSR	BAR
+		   LDY	#0
+		   REPEAT
+		    LDA	(ADDR_S),Y
+		    INY
+		    JSR	IS_PRINTABLE
+		    IF CC
+		     LDA #'.'
+		    ENDIF
+		    JSR	UART_TX
+		    CPY	#16
+		   UNTIL EQ
+		   JSR	BAR
+		   
+		   TYA
+		   JSR	BUMP_ADDR
+		   JSR	CHECK_END
+		  UNTIL	PL
+		  JMP	COMMAND
+		 ENDIF
+		 JMP	ERROR
+		ENDIF
+
 ;===============================================================================
 ; 'R' - Show Registers
 ;-------------------------------------------------------------------------------
@@ -598,20 +677,134 @@ SQUAWK:		  LDA	#BEL		; Yes, squawk!
 ; 'S' - Load SREC
 ;-------------------------------------------------------------------------------
 
-
-
+		CMP	#'S'
+		IF	EQ
+		ENDIF
+		
 ;===============================================================================
-; Error
+; 'T' - Trace
 ;-------------------------------------------------------------------------------
 
-ERROR:
-		LDX	#ERR_STR
+		CMP	#'T'
+		IF	EQ
+		ENDIF
+		
+;===============================================================================
+; 'W' - Write Memory
+;-------------------------------------------------------------------------------
+
+		CMP	#'W'
+		IF	EQ
+		 JSR	GET_WORD	; Get the target address
+		 IF	CC
+		  JSR	SET_ADDR_S	; Copy to start address
+		  JSR	GET_BYTE	; Get the value
+		  IF	CC
+		   LDY	#0		; Write to  memory
+		   LDA	TEMP+0
+		   STA	(ADDR_S),Y
+		   LDA	#1		; Increment address
+		   JSR	BUMP_ADDR
+		   LDA	#'W'		; Create prompt for next byte
+		   JMP	SET_PROMPT
+		  ENDIF
+		 ENDIF
+		 JMP	ERROR		; Handle syntax errors
+		ENDIF
+		
+;===============================================================================
+; '?' - Display Help
+;-------------------------------------------------------------------------------
+
+		CMP	#'?'
+		IF	EQ
+		 LDX	#HLP_STR
+		ELSE
+ERROR:		 LDX	#ERR_STR
+		ENDIF
 		JSR	SHOW_STR
 		JMP	COMMAND
+
+;===============================================================================
+;-------------------------------------------------------------------------------
+
+SET_ADDR_S:
+		LDA	TEMP+0
+		STA	ADDR_S+0
+		LDA	TEMP+1
+		STA	ADDR_S+1
+		RTS
+
+SET_ADDR_E:
+		LDA	TEMP+0
+		STA	ADDR_E+0
+		LDA	TEMP+1
+		STA	ADDR_E+1
+		RTS
+
+BUMP_ADDR:
+		CLC
+		ADC	ADDR_S+0
+		STA	ADDR_S+0
+		IF	CS
+		 INC	ADDR_S+1
+		ENDIF
+		RTS
 		
+CHECK_END:
+		SEC
+		LDA	ADDR_S+0
+		SBC	ADDR_E+0
+		LDA	ADDR_S+1
+		SBC	ADDR_E+1
+		RTS
+
+; Create a prompt string in the command buffer for the command in A using the
+; current value of the starting address.
+
+SET_PROMPT:
+		LDX	#0		; Clear buffer and add command letter
+		JSR	APPEND_CHAR
+		LDA	#' '		; Then a space
+		JSR	APPEND_CHAR
+		
+		LDA	ADDR_S+1	; Followed by the address
+		JSR	APPEND_HEX2
+		LDA	ADDR_S+0
+		JSR	APPEND_HEX2
+		LDA	#' '		; And another space
+		JSR	APPEND_CHAR
+		JMP	PROMPT		; Then output it
+
+; Convert the byte in A into hexadecimal digits and append to the command buffer.		
+		
+APPEND_HEX2:
+		PHA
+		LSR	A
+		LSR	A
+		LSR	A
+		LSR	A
+		JSR	APPEND_HEX
+		PLA
+APPEND_HEX:
+		JSR	TO_HEX
+
+; Append the character in A to the command buffer to create the next prompt
+; string.
+
+APPEND_CHAR:
+		STA	BUFFER,X
+		INX
+		STX	CMD_LEN
+		RTS
+				
 ;===============================================================================
 ; Parsing Utilities
 ;-------------------------------------------------------------------------------
+
+; Get the next characater from the command buffer indicated by the X register
+; and convert it to UPPER case. If the carry is set then the end of the buffer
+; has been reached.
 
 NEXT_CHAR:
 		CPX	CMD_LEN		; Reached end of buffer
@@ -620,6 +813,8 @@ NEXT_CHAR:
 		ENDIF
 		LDA	BUFFER,X
 		INX
+
+; Convert the character in A to upper case.
 
 TO_UPPER:
 		CMP	#'a'
@@ -631,8 +826,113 @@ TO_UPPER:
 		ENDIF
 		CLC
 		RTS
+		
+SKIP_CHAR:
+		REPEAT
+		 JSR	NEXT_CHAR
+		 IF 	CS
+		  RTS
+		 ENDIF
+		 CMP	#' '
+		UNTIL	NE
+		CLC
+		RTS
+
+; Parse a word from the command buffer and store it at 0,Y. Return if the
+; carry set if there is a syntax error.
+
+GET_WORD:
+		LDY	#4		; Set maximim number of nybbles
+		BNE	GET_BYTE+2
 
 
+; Parse a word from the command buffer and store it at 0,Y. Return if the
+; carry set if there is a syntax error.
+
+GET_BYTE:
+		LDY	#2		; Set maximum number of nybble
+		STY	COUNT
+		
+		.IF	__65C02__
+		STZ	TEMP+0		; Clear conversion area
+		STZ	TEMP+1
+		.ELSE
+		LDY	#0
+		STY	TEMP+0		; Clear conversion area
+		STY	TEMP+1
+		.ENDIF
+
+		JSR	SKIP_CHAR	; Fetch first character
+		JSR	GET_NYBBLE	; And try to convert
+		IF	CS
+		 RTS			; Syntax error
+		ENDIF
+		REPEAT
+		 ASL	TEMP+0		; Fold into the result
+		 ROL	TEMP+1
+		 ASL	TEMP+0
+		 ROL	TEMP+1
+		 ASL	TEMP+0
+		 ROL	TEMP+1
+		 ASL	TEMP+0
+		 ROL	TEMP+1
+		 ORA	TEMP+0
+		 STA	TEMP+0
+		 
+		 DEC	COUNT		; Reach maximum length?
+		 BREAK	EQ
+		 
+		 JSR	NEXT_CHAR	; Try for another nybble
+		 JSR	GET_NYBBLE
+		UNTIL CS		
+		CLC			; Conversion sucessfull
+		RTS
+
+;
+;
+
+GET_NYBBLE:
+		JSR	IS_HEX		; Got a hex digit?
+		IF	CS
+		 CMP	#'A'		; Handle letters
+		 IF	CS
+		  SBC	#7
+		 ENDIF
+		 AND	#$0F		; Skip out nybble
+		 CLC			; Done
+		 RTS
+		ENDIF
+		SEC			; Set carry -- not hex
+		RTS
+
+; Return with the carry set of the character in A is a digit or 'A' thru 'F'.
+
+IS_HEX:
+		CMP	#'9'+1
+		IF 	CC
+		 CMP	#'0'
+		 RTS
+		ENDIF
+		CMP	#'F'+1
+		IF	CC
+		 CMP	#'A'
+		 RTS
+		ENDIF
+		CLC
+		RTS
+		
+IS_PRINTABLE:
+		CMP	#' '
+		IF	CS
+		 CMP	#DEL
+		 IF	CC
+		  SEC
+		  RTS
+		 ENDIF
+		ENDIF
+		CLC
+		RTS
+		
 ;===============================================================================
 ; Display Utilities
 ;-------------------------------------------------------------------------------
@@ -652,18 +952,27 @@ HEX2:
 ; Display the lo nybble of A as a hexadecimal digit. The values in A & Y are
 ; destroyed.
 
-HEX		AND	#$0F		; Isolate the lo nybble
+HEX		JSR	TO_HEX		; Convert to printable character
+		JMP	UART_TX		; And display.
+		
+;
+		
+TO_HEX		AND	#$0F		; Isolate the lo nybble
 		SED			; Converted to ASCII
 		CLC
 		ADC	#$90
 		ADC	#$40
 		CLD
-		JMP	UART_TX		; And display.
-
+		RTS
+		
 ; Output a single space. The values in A & Y are destroyed.
 
 SPACE:
 		LDA	#' '
+		JMP	UART_TX
+		
+BAR:
+		LDA	#'|'
 		JMP	UART_TX
 
 ; Output a CR/LF control sequence to move the display cursor to the start of
@@ -675,7 +984,7 @@ CRLF:
 		LDA	#LF		; .. followed by a new line
 		JMP	UART_TX
 
-;===============================================================================
+;-------------------------------------------------------------------------------
 
 
 SHOW_STR:
@@ -691,6 +1000,8 @@ SHOW_STR:
 STRINGS:
 PC_STR		.EQU	.-STRINGS
 		.BYTE	"PC=",0
+SP_STR		.EQU	.-STRINGS
+		.BYTE	" SP=",0
 P_STR		.EQU	.-STRINGS
 		.BYTE	" P=",0
 A_STR		.EQU	.-STRINGS
@@ -701,8 +1012,18 @@ Y_STR		.EQU	.-STRINGS
 		.BYTE	" Y=",0
 ERR_STR		.EQU	.-STRINGS
 		.BYTE	CR,LF,"?",0
-
-;===============================================================================
+HLP_STR		.EQu	.-STRINGS
+		.BYTE	CR,LF,"A xxxx opcode [args]\tAssemble"
+		.BYTE 	CR,LF,"D xxxx yyyy\t\tDisassemble"
+		.BYTE	CR,LF,"G [xxxx]\t\tGoto"
+		.BYTE	CR,LF,"M xxxx yyyy\t\tDisplay Memory"
+		.BYTE	CR,LF,"R\t\t\tDisplay Registers"
+		.BYTE	CR,LF,"S...\t\t\tS19 Load"
+		.BYTE	CR,LF,"T [xxxx]\t\tTrace"
+		.BYTE	CR,LF,"W xxxx yy\t\tWrite Memory"
+		.BYTE 	0
+		
+;==============================================================================
 ; I/O Page
 ;-------------------------------------------------------------------------------
 
@@ -738,9 +1059,12 @@ RESET:
 ;-------------------------------------------------------------------------------
 
 ; Inserts the byte in A into the transmit buffer. If the buffer is full then
-; wait until some space is available. A & Y are destroyed.
+; wait until some space is available. Registers are preserved.
 
 UART_TX:
+		PHA
+		STY	IO_TEMP
+		
 		LDY	TX_TAIL		; Save the data byte at the tail
 		STA	TX_BUFF,Y
 		JSR	BUMP_TX		; Work out the next offset
@@ -750,6 +1074,9 @@ UART_TX:
 		STY	TX_TAIL
 		LDA	#$05		; Ensure TX interrupt enabled
 		STA	ACIA_CMND
+		
+		LDY	IO_TEMP
+		PLA
 		RTS			; Done
 
 ;
@@ -772,6 +1099,7 @@ UART_RX:
 ;		 ENDIF
 ;		ENDIF
 
+		STY	IO_TEMP
 		LDY	RX_HEAD		; Wait until there is some data
 		REPEAT
 		 CPY	RX_TAIL
@@ -779,6 +1107,7 @@ UART_RX:
 		LDA	RX_BUFF,Y	; Then extract the head byte
 		JSR	BUMP_RX		; Update the offset
 		STY	RX_HEAD
+		LDY	IO_TEMP
 		RTS			; Done
 
 ;
