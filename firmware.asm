@@ -7,7 +7,7 @@
 ;                                         
 ; A Firmware for a Three Chip 6502/65C02 Single Board Computer
 ;-------------------------------------------------------------------------------
-; Copyright (C)2014-2016 Andrew John Jacobs
+; Copyright (C)2014-2017 Andrew John Jacobs
 ; All rights reserved.
 ;
 ; This work is made available under the terms of the Creative Commons
@@ -46,6 +46,7 @@
                 endif
                 
 ;===============================================================================
+; Constants
 ;-------------------------------------------------------------------------------
 
 BOOT_ADDR       equ     h'1000'                 ; Dummy reset address
@@ -109,17 +110,46 @@ TXD_TRIS        equ     TRISC
 TXD_PIN         equ     .6
 RXD_TRIS        equ     TRISC
 RXD_PIN         equ     .7
-
-UART_BAUD       equ     .9600
-
-UART_BRG        equ     FOSC / (.16 * UART_BAUD) - .1
+        
+BRG_50          equ     FOSC / (.16 *     .50) - .1
+BRG_75          equ     FOSC / (.16 *     .75) - .1
+BRG_110         equ     FOSC / (.16 *    .110) - .1
+BRG_134         equ     FOSC / (.16 *    .134) - .1
+BRG_150         equ     FOSC / (.16 *    .150) - .1
+BRG_300         equ     FOSC / (.16 *    .300) - .1
+BRG_600         equ     FOSC / (.16 *    .600) - .1
+BRG_1200        equ     FOSC / (.16 *   .1200) - .1
+BRG_1800        equ     FOSC / (.16 *   .1800) - .1
+BRG_2400        equ     FOSC / (.16 *   .2400) - .1
+BRG_3600        equ     FOSC / (.16 *   .3600) - .1
+BRG_4800        equ     FOSC / (.16 *   .4800) - .1
+BRG_7200        equ     FOSC / (.16 *   .7200) - .1
+BRG_9600        equ     FOSC / (.16 *   .9600) - .1
+BRG_19200       equ     FOSC / (.16 *  .19200) - .1
+BRG_115200      equ     FOSC / (.16 * .115200) - .1
         
 ; SPI Signal Pins
+      
+SPI_1MHZ        equ     FOSC / (.4 *  .1000000) - .1
+SPI_2MHZ        equ     FOSC / (.4 *  .2000000) - .1
+SPI_4MHZ        equ     FOSC / (.4 *  .4000000) - .1
+SPI_5MHZ        equ     FOSC / (.4 *  .5000000) - .1
+SPI_8MHZ        equ     FOSC / (.4 *  .8000000) - .1
+SPI_10MHZ       equ     FOSC / (.4 * .10000000) - .1
+SPI_11MHZ       equ     FOSC / (.4 * .11000000) - .1
+SPI_12MHZ       equ     FOSC / (.4 * .12000000) - .1
         
-
-
-
+SEL_TRIS        equ     TRISC
+SEL_PIN         equ     .2
+SCK_TRIS        equ     TRISC
+SCK_PIN         equ     .3
+SDI_TRIS        equ     TRISC
+SDI_PIN         equ     .4
+SDO_TRIS        equ     TRISC
+SDO_PIN         equ     .5
+        
 ;===============================================================================
+; Data Areas
 ;-------------------------------------------------------------------------------
 
                 udata_acs
@@ -135,11 +165,12 @@ SCRATCH         res     .1                      ; Scratch area
 
 INT_MASK        res     .1                      ; Hardware interrupt mask
 
-ACIA_CMD        res     .1
-ACIA_CTL        res     .1
-
-SPI_DIV         res     .1
-SPI_SEL         res     .1
+ACIA_CMD        res     .1                      ; ACIA Command Register
+ACIA_CTL        res     .1                      ; ACIA Control Register
+        
+SPI_CTL         res     .1                      ; SPI Command Register
+SPI_DIV         res     .1                      ; SPI Divisor Register
+SPI_SEL         res     .1                      ; SPI Select Register
 
 ;===============================================================================
 ; Power On Reset
@@ -187,11 +218,12 @@ WaitTillStable:
 
 ;-------------------------------------------------------------------------------
 
-                bcf     TRISC,TXD_PIN           ; Make TXD an output    
-
-                movlw   low UART_BRG            ; Configure UART
+                bcf     TXD_TRIS,TXD_PIN        ; Make TXD an output    
+                bsf     RXD_TRIS,RXD_PIN        ; .. and RXD in input
+                
+                movlw   low BRG_9600            ; Configure UART
                 movwf   SPBRG1
-                movlw   high UART_BRG
+                movlw   high BRG_9600
                 movwf   SPBRGH1
                 movlw   M(BRG16)
                 movwf   BAUDCON1
@@ -204,6 +236,11 @@ WaitTillStable:
                 movf    RCREG1,W
 
 ;-------------------------------------------------------------------------------
+                
+                bcf     SCK_TRIS,SCK_PIN
+                bcf     SDO_TRIS,SDO_PIN
+                bsf     SDI_TRIS,SDI_PIN
+                bcf     SEL_TRIS,SEL_PIN
 
 ;-------------------------------------------------------------------------------
 
@@ -325,7 +362,7 @@ ForceAddress:
 
 R6502:
                 rcall   StringOut
-                db      "SB-6502 [16.05]",CR,LF,.0
+                db      "SB-6502 [17.02]",CR,LF,.0
 
                 movlw   low ROM6502             ; Point table pointer at ROM
                 movwf   TBLPTRL
@@ -336,7 +373,7 @@ R6502:
 
 WDC65C02:
                 rcall   StringOut
-                db      "SB-65C02 [16.05]",CR,LF,.0
+                db      "SB-65C02 [17.02]",CR,LF,.0
 
                 movlw   low ROM65C02            ; Point table pointer at ROM
                 movwf   TBLPTRL
@@ -461,8 +498,12 @@ HiPhaseWrite:
 Execute:
                 clrf    INT_MASK                ; No interrupts enabled
 
-        ; Setup ACIA
-        ; Setup SPI65
+                clrf    ACIA_CMD                ; Clear emulated registers
+                clrf    ACIA_CTL
+                
+                clrf    SPI_CTL
+                clrf    SPI_DIV
+                clrf    SPI_SEL
 
 NormalLo:
                 bcf     PHI0_LAT,PHI0_PIN       ; Make PHI0 low
@@ -485,37 +526,14 @@ NormalHi:
                 xorlw   h'fe' & ADRH_MASK       ; I/O page?
                 bnz     RamAccess
 
-                if      0
-                rcall   NewLine
-
-                movlw   'R'
-                btfss   RW_PORT,RW_PIN
-                movlw   'W'
-                rcall   UartTx
-
-                movf    ADRH_PORT,W
-                rcall   DumpByte
-                movf    ADRL_PORT,W
-                rcall   DumpByte
-
-                movlw   ' '
-                rcall   UartTx
-                endif
-                
-                movlw   high(DeviceJump)
-                movwf   PCLATH
                 movf    ADRL_PORT,W             ; Read low part of address
                 andlw   h'07'                   
                 btfss   RW_PORT,RW_PIN          ; Read access?
                 iorlw   h'08'
                 
-                rlncf   WREG,F                  ; Work out jump address
-                addlw   low(DeviceJump)
-                btfsc   STATUS,C
-                incf    PCLATH,F
-                movwf   PCL
-
-DeviceJump:
+                mullw   .2                      ; Work out jump offset
+                rcall   ComputedJump            ; And go there
+                
                 bra     AciaRdData              ; ACIA read
                 bra     AciaRdStat
                 bra     AciaRdCmnd
@@ -544,44 +562,51 @@ RamAccess:
 
 AciaRdData:
                 movf    RCREG1,W                ; Read UART
-                clrf    DATA_TRIS
+                clrf    DATA_TRIS               ; Place on data bus
                 movwf   DATA_LAT
                 nop
                 nop
-                bra    NormalLo
+                bra    NormalLo         
 
 AciaWrData:
-                movf    DATA_PORT,W             ; Write UART
-                movwf   TXREG1
+                movf    DATA_PORT,W             ; Read the data bus
+                movwf   TXREG1                  ; And load UART
                 nop
                 nop
                 bra    NormalLo
 
 AciaRdStat:
                 clrf    WREG                    ; Build status byte
-                btfsc   PIR1,RC1IF
+                btfsc   PIR1,RC1IF              ; Test for receive data full
                 iorlw   M(.7)|M(.3)
-                btfsc   PIR1,TX1IF
+                btfsc   PIR1,TX1IF              ; Test for transmit data empty
                 iorlw   M(.7)|M(.4)
-                clrf    DATA_TRIS
+                btfsc   RC1STA,OERR             ; Test for overrun error
+                iorlw   M(.2)
+                btfsc   RC1STA,FERR             ; Test for framing error
+                iorlw   M(.1)
+                clrf    DATA_TRIS               ; Place on data bus
                 movwf   DATA_LAT
                 nop
                 nop
-                bra     NormalLo
+                bra     NormalLo                ; Continue
         
 AciaWrStat:
-                nop                             ; Ignore for now
+                clrf    ACIA_CMD                ; Reset register
+                clrf    ACIA_CTL
+                bcf     INT_MASK,RC1IF          ; All interrupts
+                bcf     INT_MASK,TX1IF          ; .. turned off
                 nop
                 nop
-                bra    NormalLo
+                bra    NormalLo                 ; Continue
 
 AciaRdCmnd:
-                movf    ACIA_CMD
-                clrf    DATA_TRIS
+                movf    ACIA_CMD                ; Fetch command bits
+                clrf    DATA_TRIS               ; Place on data bus
                 movwf   DATA_LAT
                 nop
                 nop
-                bra    NormalLo
+                bra    NormalLo                 ; Continue
 
 AciaWrCmnd:
                 movf    DATA_PORT,W             ; Save native value
@@ -596,22 +621,118 @@ AciaWrCmnd:
                 xorlw   h'04'                   ; TX enabled?
                 btfsc   STATUS,Z
                 bsf     INT_MASK,TX1IF          ; Yes               
-                bra     NormalLo
+                bra     NormalLo                ; Continue
 
 AciaRdCtrl:
-                movf    ACIA_CTL
-                clrf    DATA_TRIS
+                movf    ACIA_CTL                ; Fetch control bits
+                clrf    DATA_TRIS               ; Place on data bus
                 movwf   DATA_LAT
                 nop
                 nop
-                bra    NormalLo
+                bra    NormalLo                 ; Continue
 
 AciaWrCtrl:
                 movf    DATA_PORT,W             ; Save native value
                 movwf   ACIA_CTL
-                nop                             ; Translate to PIC
-                nop
-                bra    NormalLo
+                
+                andlw   h'0f'
+                mullw   .10
+                
+                movlw   low BRG_115200          ; 0 = 115K
+                movwf   SPBRG1
+                movlw   high BRG_115200
+                movwf   SPBRGH1
+                bra     NormalLo                ; Continue
+                
+                movlw   low BRG_50              ; 1 = 50
+                movwf   SPBRG1
+                movlw   high BRG_50
+                movwf   SPBRGH1
+                bra     NormalLo                ; Continue
+
+                movlw   low BRG_75              ; 2 = 75
+                movwf   SPBRG1
+                movlw   high BRG_75
+                movwf   SPBRGH1
+                bra     NormalLo                ; Continue
+
+                movlw   low BRG_110             ; 3 = 110
+                movwf   SPBRG1
+                movlw   high BRG_110
+                movwf   SPBRGH1
+                bra     NormalLo                ; Continue
+
+                movlw   low BRG_134             ; 4 = 134
+                movwf   SPBRG1
+                movlw   high BRG_134
+                movwf   SPBRGH1
+                bra     NormalLo                ; Continue
+
+                movlw   low BRG_150             ; 5 = 150
+                movwf   SPBRG1
+                movlw   high BRG_150
+                movwf   SPBRGH1
+                bra     NormalLo                ; Continue
+
+                movlw   low BRG_300             ; 6 = 300
+                movwf   SPBRG1
+                movlw   high BRG_300
+                movwf   SPBRGH1
+                bra     NormalLo                ; Continue
+
+                movlw   low BRG_600             ; 7 = 600
+                movwf   SPBRG1
+                movlw   high BRG_600
+                movwf   SPBRGH1
+                bra     NormalLo                ; Continue
+
+                movlw   low BRG_1200            ; 8 = 1200
+                movwf   SPBRG1
+                movlw   high BRG_1200
+                movwf   SPBRGH1
+                bra     NormalLo                ; Continue
+
+                movlw   low BRG_1800            ; 9 = 1800
+                movwf   SPBRG1
+                movlw   high BRG_1800
+                movwf   SPBRGH1
+                bra     NormalLo                ; Continue
+
+                movlw   low BRG_2400            ; A = 2400
+                movwf   SPBRG1
+                movlw   high BRG_2400
+                movwf   SPBRGH1
+                bra     NormalLo                ; Continue
+
+                movlw   low BRG_3600            ; B = 3600
+                movwf   SPBRG1
+                movlw   high BRG_3600
+                movwf   SPBRGH1
+                bra     NormalLo                ; Continue
+
+                movlw   low BRG_4800            ; C = 4800
+                movwf   SPBRG1
+                movlw   high BRG_4800
+                movwf   SPBRGH1
+                bra     NormalLo                ; Continue
+
+                movlw   low BRG_7200            ; D = 7200
+                movwf   SPBRG1
+                movlw   high BRG_7200
+                movwf   SPBRGH1
+                bra     NormalLo                ; Continue
+
+                movlw   low BRG_9600            ; E = 9600
+                movwf   SPBRG1
+                movlw   high BRG_9600
+                movwf   SPBRGH1
+                bra     NormalLo                ; Continue
+
+                movlw   low BRG_19200           ; F = 19200
+                movwf   SPBRG1
+                movlw   high BRG_19200
+                movwf   SPBRGH1
+                bra     NormalLo                ; Continue
 
 ;===============================================================================
 ; SPI65 Emulation
@@ -633,12 +754,21 @@ SpiWrData:
                 bra     NormalLo 
 
 SpiRdStat:
+                movlw   SPI_CTL                 ; Combine control bits
+                btfsc   SSP1STAT,BF             ; .. with buffer full
+                iorlw   M(.7)
+                btfsc   SSP1STAT,R_NOT_W        ; .. and busy flag
+                iorlw   M(.5)
+                clrf    DATA_TRIS               ; Then set as output
+                movwf   DATA_LAT
                 nop
                 nop
                 nop
                 bra     NormalLo
                 
 SpiWrCtrl:
+                andlw   h'5f'
+                movwf   SPI_CTL
                 nop
                 nop
                 nop
@@ -676,6 +806,17 @@ SpiWrSlct:
                 nop
                 bra     NormalLo
 
+;===============================================================================
+; Computed Jump
+;-------------------------------------------------------------------------------
+                
+ComputedJump:
+                movf    PRODL,W                 ; Add PROD to return address
+                addwf   TOSL,F
+                movf    PRODH,W
+                addwfc  TOSH,F
+                return                          ; And go there
+                
 ;===============================================================================
 ; Uart Interface
 ;-------------------------------------------------------------------------------

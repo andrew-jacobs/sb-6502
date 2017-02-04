@@ -37,7 +37,7 @@ OP_ADC		.EQU	$02
 OP_AND		.EQU	$04
 OP_ASL		.EQU	$06
 		.IF	__65C02__
-OP_BBR		.EQU	$09
+OP_BBR		.EQU	$08
 OP_BBS		.EQU	$0A
 		.ENDIF
 OP_BCC		.EQU	$0C
@@ -377,10 +377,11 @@ MODES:
 ;-------------------------------------------------------------------------------
 
 SQUEEZE		.MACRO	CH1,CH2,CH3
-		.WORD	((((CH1 & $1F) << 5)|(CH2 & $1F)) << 5)|(CH3 & $1F)
+		.WORD	((((CH3 & $1F) << 5)|(CH2 & $1F)) << 5)|(CH1 & $1F)
 		.ENDM
 
 MNEMONICS:
+		SQUEEZE '?','?','?'
 		SQUEEZE 'A','D','C'
 		SQUEEZE 'A','N','D'
 		SQUEEZE 'A','S','L'
@@ -497,6 +498,27 @@ REGISTERS:
 		JSR	SHOW_STR
 		LDA	Y_REG
 		JSR	HEX2
+		
+		LDX	#P_STR
+		JSR	SHOW_STR
+		LDX	#7
+		REPEAT
+		 LDY	#'.'
+		 LDA	BITS,X
+		 BIT	P_REG
+		 IF	NE
+		  LDY	FLAG,X
+		 ENDIF
+		 TYA
+		 JSR	UART_TX
+		 DEX
+		UNTIL MI		  
+		
+		LDX	#SP_STR
+		JSR	SHOW_STR
+		TSX
+		TXA
+		JSR	HEX2
 
 COMMAND:
 		.IF	__65C02__
@@ -519,7 +541,8 @@ PROMPT:
 		 JSR	UART_TX
 		 INX
 		FOREVER
-
+		
+		JSR	XON
 		REPEAT
 		 JSR	UART_RX		; Wait for some user input
 		 
@@ -566,6 +589,7 @@ SQUAWK:		  LDA	#BEL		; Yes, squawk!
 		 INX			; Bump the count
 		 JSR	UART_TX		; And echo to terminal
 		FOREVER
+		JSR	XOFF
 
 		STX	CMD_LEN		; Save the command length
 		LDX	#0		; Set character offset to start
@@ -586,6 +610,31 @@ SQUAWK:		  LDA	#BEL		; Yes, squawk!
 
 		CMP	#'D'
 		IF	EQ
+		 JSR	GET_WORD
+		 IF	CC
+		  JSR	SET_ADDR_S
+		  JSR	SET_ADDR_E
+		  JSR	GET_WORD
+		  IF	CC
+		   JSR	SET_ADDR_E
+		  ELSE
+		   INC	ADDR_E+1
+		  ENDIF
+		  
+		  REPEAT
+		   JSR	CRLF		; Print the memory address
+		   LDA	ADDR_S+1
+		   JSR	HEX2
+		   LDA	ADDR_S+0
+		   JSR	HEX2
+		   
+		   JSR	DISASSEMBLE
+		   JSR	BUMP_ADDR		   
+		   JSR	CHECK_END
+		  UNTIL	PL
+		  JMP	COMMAND
+		 ENDIF
+		 JMP	ERROR		
 		ENDIF
 		
 ;===============================================================================
@@ -934,6 +983,192 @@ IS_PRINTABLE:
 		RTS
 		
 ;===============================================================================
+;-------------------------------------------------------------------------------
+
+DISASSEMBLE:
+		JSR	SPACE
+		LDY	#0		; Fetch the opcode
+		LDA	(ADDR_S),Y
+		TAX
+		JSR	HEX2		; And display it
+		
+		JSR	SPACE
+		LDA	MODES,X
+		PHA
+		PHA
+		AND	#MB_REL|MB_ABS
+		IF	NE
+		 LDY	#1
+		 LDA	(ADDR_S),Y
+		 JSR	HEX2
+		ELSE
+		 JSR	SPACE2
+		ENDIF
+		
+		JSR	SPACE
+		PLA
+		TAY
+		AND	#MB_REL|MB_ZPG
+		CMP	#MB_REL|MB_ZPG
+		IF	NE
+		 TYA
+		 AND	#MB_ABS
+		 CMP	#MB_ABS
+		ENDIF
+		IF	EQ
+		 LDY	#2
+		 LDA	(ADDR_S),Y
+		 JSR	HEX2
+		ELSE
+		 JSR	SPACE2
+		ENDIF
+		
+		INY			; Save the byte count
+		TYA
+		PHA
+
+		JSR	SPACE
+		LDY	#0		; Fetch the opcode
+		LDA	(ADDR_S),Y
+		TAX
+		LDA	OPCODES,X
+		TAX
+		LDA	MNEMONICS+1,X
+		STA	TEMP
+		LDA	MNEMONICS+0,X
+		JSR	EXTRACT_LETTER
+		JSR	EXTRACT_LETTER
+		JSR	EXTRACT_LETTER
+		JSR	SPACE
+		
+		PLA
+		PHA
+		AND	#MB_BIT
+		IF	NE
+		 LDY	#0
+		 LDA	(ADDR_S),Y
+		 AND	#7
+		 ORA	#'0'
+		 JSR	UART_TX
+		 LDA	#','
+		 JSR	UART_TX
+		ENDIF
+		
+		PLA
+		PHA
+		IF	MI
+		 LDA	#'('
+		 JSR	UART_TX
+		ENDIF
+		
+		PLA
+		PHA
+		AND	#MB_ABS
+		IF	NE
+		 PHA
+		 CMP	#MB_IMM
+		 IF	EQ
+		  LDA	#'#'
+		  JSR	UART_TX
+		 ENDIF
+		 LDA	#'$'
+		 JSR	UART_TX
+		 PLA
+		 CMP	#MB_ABS
+		 IF	EQ
+		  LDY	#2
+		  LDA	(ADDR_S),Y
+		  JSR	HEX2
+		 ENDIF
+		 LDY	#1
+		 LDA	(ADDR_S),Y
+		 JSR	HEX2
+		ENDIF
+		
+		PLA
+		PHA
+		AND	#MB_BIT|MB_REL
+		CMP	#MB_BIT|MB_REL
+		IF	EQ
+		 LDA	#','
+		 JSR	UART_TX
+		ENDIF
+		
+		PLA
+		PHA
+		TAY
+		AND	#MB_REL
+		IF	NE
+		 LDA	#'$'
+		 JSR	UART_TX
+		 TYA
+		 LDY	#1
+		 AND	#MB_BIT
+		 IF	NE
+		  INY
+		 ENDIF
+		 
+		 LDA	#'r'
+		 JSR	UART_RX
+		ENDIF
+		
+		PLA
+		PHA
+		AND	#MB_ACC
+		IF 	NE
+		 LDA	#'A'
+		 JSR	UART_TX
+		ENDIF
+		
+		PLA
+		PHA
+		AND	#MB_XRG
+		IF 	NE
+		 LDA	#','
+		 JSR	UART_TX
+		 LDA	#'X'
+		 JSR	UART_TX
+		ENDIF
+		
+		PLA
+		PHA
+		IF	MI
+		 LDA	#')'
+		 JSR	UART_TX
+		ENDIF
+		
+		PLA
+		AND	#MB_YRG
+		IF 	NE
+		 LDA	#','
+		 JSR	UART_TX
+		 LDA	#'Y'
+		 JSR	UART_TX
+		ENDIF
+		
+		PLA			; Return the number of bytes
+		RTS
+		
+EXTRACT_LETTER:
+		PHA
+		AND	#$1F
+		ORA	#'@'
+		JSR	UART_TX
+		PLA
+		LSR	TEMP
+		ROR	A
+		LSR	TEMP
+		ROR	A
+		LSR	TEMP
+		ROR	A
+		LSR	TEMP
+		ROR	A
+		LSR	TEMP
+		ROR	A
+		RTS
+		
+		
+;===============================================================================
 ; Display Utilities
 ;-------------------------------------------------------------------------------
 
@@ -964,6 +1199,11 @@ TO_HEX		AND	#$0F		; Isolate the lo nybble
 		ADC	#$40
 		CLD
 		RTS
+
+; Output two spaces.
+
+SPACE2:
+		JSR	SPACE
 		
 ; Output a single space. The values in A & Y are destroyed.
 
@@ -1012,7 +1252,7 @@ Y_STR		.EQU	.-STRINGS
 		.BYTE	" Y=",0
 ERR_STR		.EQU	.-STRINGS
 		.BYTE	CR,LF,"?",0
-HLP_STR		.EQu	.-STRINGS
+HLP_STR		.EQU	.-STRINGS
 		.BYTE	CR,LF,"A xxxx opcode [args]\tAssemble"
 		.BYTE 	CR,LF,"D xxxx yyyy\t\tDisassemble"
 		.BYTE	CR,LF,"G [xxxx]\t\tGoto"
@@ -1022,6 +1262,9 @@ HLP_STR		.EQu	.-STRINGS
 		.BYTE	CR,LF,"T [xxxx]\t\tTrace"
 		.BYTE	CR,LF,"W xxxx yy\t\tWrite Memory"
 		.BYTE 	0
+		
+FLAG		.BYTE	"CZID11VN"
+BITS		.BYTE	$01,$02,$04,$08,$10,$20,$40,$80
 		
 ;==============================================================================
 ; I/O Page
@@ -1057,6 +1300,13 @@ RESET:
 ;===============================================================================
 ; UART Interface
 ;-------------------------------------------------------------------------------
+
+XON:
+		LDA	#DC1
+		BNE	UART_TX
+
+XOFF:
+		LDA	#DC3
 
 ; Inserts the byte in A into the transmit buffer. If the buffer is full then
 ; wait until some space is available. Registers are preserved.

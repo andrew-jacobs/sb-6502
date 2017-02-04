@@ -8,7 +8,7 @@ Sections:
                    000000FE - 000000FF in monitor-6502.obj
                    00000100 - 000001FF in monitor-6502.obj
 .bss             : 00000200 - 000002FF in monitor-6502.obj
-.code            : 0000F000 - 0000F5EF in monitor-6502.obj
+.code            : 0000F000 - 0000F785 in monitor-6502.obj
                    0000FE00 - 0000FEFF in monitor-6502.obj
-                   0000FF00 - 0000FFA8 in monitor-6502.obj
+                   0000FF00 - 0000FFAE in monitor-6502.obj
                    0000FFFA - 0000FFFF in monitor-6502.obj

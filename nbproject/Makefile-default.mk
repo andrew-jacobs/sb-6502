@@ -38,6 +38,12 @@ DEBUGGABLE_SUFFIX=cof
 FINAL_IMAGE=dist/${CND_CONF}/${IMAGE_TYPE}/sb-6502.${IMAGE_TYPE}.${OUTPUT_SUFFIX}
 endif
 
+ifeq ($(COMPARE_BUILD), true)
+COMPARISON_BUILD=
+else
+COMPARISON_BUILD=
+endif
+
 # Object Directory
 OBJECTDIR=build/${CND_CONF}/${IMAGE_TYPE}
 
@@ -86,7 +92,7 @@ ${OBJECTDIR}/firmware.o: firmware.asm  nbproject/Makefile-${CND_CONF}.mk
 	@${MKDIR} "${OBJECTDIR}" 
 	@${RM} ${OBJECTDIR}/firmware.o.d 
 	@${RM} ${OBJECTDIR}/firmware.o 
-	@${FIXDEPS} dummy.d -e "${OBJECTDIR}/firmware.err" $(SILENT) -c ${MP_AS} $(MP_EXTRA_AS_PRE) -d__DEBUG -d__MPLAB_DEBUGGER_PK3=1 -q -p$(MP_PROCESSOR_OPTION)  -l\"${OBJECTDIR}/firmware.lst\" -e\"${OBJECTDIR}/firmware.err\" $(ASM_OPTIONS)   -o\"${OBJECTDIR}/firmware.o\" \"firmware.asm\" 
+	@${FIXDEPS} dummy.d -e "${OBJECTDIR}/firmware.err" $(SILENT) -c ${MP_AS} $(MP_EXTRA_AS_PRE) -d__DEBUG -d__MPLAB_DEBUGGER_PK3=1 -q -p$(MP_PROCESSOR_OPTION)  -l\"${OBJECTDIR}/firmware.lst\" -e\"${OBJECTDIR}/firmware.err\" $(ASM_OPTIONS)    -o\"${OBJECTDIR}/firmware.o\" \"firmware.asm\" 
 	@${DEP_GEN} -d "${OBJECTDIR}/firmware.o"
 	@${FIXDEPS} "${OBJECTDIR}/firmware.o.d" $(SILENT) -rsi ${MP_AS_DIR} -c18 
 	
@@ -95,7 +101,7 @@ ${OBJECTDIR}/firmware.o: firmware.asm  nbproject/Makefile-${CND_CONF}.mk
 	@${MKDIR} "${OBJECTDIR}" 
 	@${RM} ${OBJECTDIR}/firmware.o.d 
 	@${RM} ${OBJECTDIR}/firmware.o 
-	@${FIXDEPS} dummy.d -e "${OBJECTDIR}/firmware.err" $(SILENT) -c ${MP_AS} $(MP_EXTRA_AS_PRE) -q -p$(MP_PROCESSOR_OPTION)  -l\"${OBJECTDIR}/firmware.lst\" -e\"${OBJECTDIR}/firmware.err\" $(ASM_OPTIONS)   -o\"${OBJECTDIR}/firmware.o\" \"firmware.asm\" 
+	@${FIXDEPS} dummy.d -e "${OBJECTDIR}/firmware.err" $(SILENT) -c ${MP_AS} $(MP_EXTRA_AS_PRE) -q -p$(MP_PROCESSOR_OPTION)  -l\"${OBJECTDIR}/firmware.lst\" -e\"${OBJECTDIR}/firmware.err\" $(ASM_OPTIONS)    -o\"${OBJECTDIR}/firmware.o\" \"firmware.asm\" 
 	@${DEP_GEN} -d "${OBJECTDIR}/firmware.o"
 	@${FIXDEPS} "${OBJECTDIR}/firmware.o.d" $(SILENT) -rsi ${MP_AS_DIR} -c18 
 	

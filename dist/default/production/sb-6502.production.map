@@ -1,5 +1,5 @@
 MPLINK 5.08, LINKER
-Linker Map File - Created Mon May 16 23:53:25 2016
+Linker Map File - Created Fri Feb 03 23:53:19 2017
 
                                  Section Info
                   Section       Type    Address   Location Size(Bytes)
@@ -7,7 +7,7 @@ Linker Map File - Created Mon May 16 23:53:25 2016
              .ResetVector       code   0x000000    program   0x000004
                    .cinit    romdata   0x000004    program   0x000002
                  .BootROM       code   0x000006    program   0x002000
-                    .code       code   0x002006    program   0x000318
+                    .code       code   0x002006    program   0x0003ea
 .config_300001_BUILD/DEFAULT/PRODUCTION/FIRMWAR    romdata   0x300001    program   0x000001
 .config_300002_BUILD/DEFAULT/PRODUCTION/FIRMWAR    romdata   0x300002    program   0x000001
 .config_300003_BUILD/DEFAULT/PRODUCTION/FIRMWAR    romdata   0x300003    program   0x000001
@@ -19,65 +19,65 @@ Linker Map File - Created Mon May 16 23:53:25 2016
 .config_30000B_BUILD/DEFAULT/PRODUCTION/FIRMWAR    romdata   0x30000b    program   0x000001
 .config_30000C_BUILD/DEFAULT/PRODUCTION/FIRMWAR    romdata   0x30000c    program   0x000001
 .config_30000D_BUILD/DEFAULT/PRODUCTION/FIRMWAR    romdata   0x30000d    program   0x000001
-               .udata_acs      udata   0x000000       data   0x000009
+               .udata_acs      udata   0x000000       data   0x00000a
 
 
 
                               Program Memory Usage 
                                Start         End      
                            ---------   ---------      
-                            0x000000    0x00231d      
+                            0x000000    0x0023ef      
                             0x300001    0x300003      
                             0x300005    0x300006      
                             0x300008    0x30000d      
-            9001 out of 66584 program addresses used, program memory utilization is 13%
+            9211 out of 66584 program addresses used, program memory utilization is 13%
 
 
 
                               Symbols - Sorted by Name
                      Name    Address   Location    Storage File                     
                 ---------  ---------  ---------  --------- ---------                
-               AciaRdCmnd   0x002254    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-               AciaRdCtrl   0x00227a    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-               AciaRdData   0x002222    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-               AciaRdStat   0x002238    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-               AciaWrCmnd   0x002260    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-               AciaWrCtrl   0x002286    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-               AciaWrData   0x00222e    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-               AciaWrStat   0x00224c    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-               DeviceJump   0x0021fe    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-                  Execute   0x0021ca    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-             ForceAddress   0x0020e0    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-              HiPhaseLoad   0x0021a4    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-              HiPhaseRead   0x0021b2    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-             HiPhaseWrite   0x0021be    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-                  LoPhase   0x002198    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-                LoadImage   0x002134    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-                  NewLine   0x0022ee    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-              NoExtraRead   0x00218e    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-                 NormalHi   0x0021de    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-                 NormalLo   0x0021cc    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+               AciaRdCmnd   0x00226c    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+               AciaRdCtrl   0x002292    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+               AciaRdData   0x00222c    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+               AciaRdStat   0x002242    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+               AciaWrCmnd   0x002278    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+               AciaWrCtrl   0x00229e    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+               AciaWrData   0x002238    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+               AciaWrStat   0x00225e    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+             ComputedJump   0x0023ae    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+                  Execute   0x0021d4    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+             ForceAddress   0x0020ea    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+              HiPhaseLoad   0x0021ae    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+              HiPhaseRead   0x0021bc    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+             HiPhaseWrite   0x0021c8    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+                  LoPhase   0x0021a2    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+                LoadImage   0x00213e    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+                  NewLine   0x0023c0    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+              NoExtraRead   0x002198    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+                 NormalHi   0x0021f2    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+                 NormalLo   0x0021e0    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
              PowerOnReset   0x002006    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-               PulseClock   0x002058    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-                    R6502   0x0020ee    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+               PulseClock   0x002062    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+                    R6502   0x0020f8    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
                   ROM6502   0x000006    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
                  ROM65C02   0x001006    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-                RamAccess   0x00221e    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-                SpiRdData   0x002290    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-                SpiRdDvsr   0x0022b6    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-                SpiRdSlct   0x0022cc    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-                SpiRdStat   0x0022a6    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-                SpiWrCtrl   0x0022ae    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-                SpiWrData   0x00229c    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-                SpiWrDvsr   0x0022c2    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-                SpiWrSlct   0x0022d8    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-                StartLoad   0x00212e    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-                  StrDone   0x00230c    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-                  StrLoop   0x002302    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-                StringOut   0x0022f6    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-                   UartTx   0x0022e6    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-                 WDC65C02   0x00210e    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-             WaitForReset   0x00207e    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+                RamAccess   0x002228    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+                SpiRdData   0x002346    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+                SpiRdDvsr   0x00237e    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+                SpiRdSlct   0x002394    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+                SpiRdStat   0x00235c    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+                SpiWrCtrl   0x002372    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+                SpiWrData   0x002352    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+                SpiWrDvsr   0x00238a    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+                SpiWrSlct   0x0023a0    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+                StartLoad   0x002138    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+                  StrDone   0x0023de    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+                  StrLoop   0x0023d4    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+                StringOut   0x0023c8    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+                   UartTx   0x0023b8    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+                 WDC65C02   0x002118    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+             WaitForReset   0x002088    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
            WaitTillStable   0x00202c    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
                  ACIA_CMD   0x000005       data     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
                  ACIA_CTL   0x000006       data     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
@@ -86,8 +86,9 @@ Linker Map File - Created Mon May 16 23:53:25 2016
                    DEVICE   0x000000       data     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
                  INT_MASK   0x000004       data     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
                   SCRATCH   0x000003       data     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-                  SPI_DIV   0x000007       data     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-                  SPI_SEL   0x000008       data     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+                  SPI_CTL   0x000007       data     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+                  SPI_DIV   0x000008       data     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+                  SPI_SEL   0x000009       data     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
 
 
 
@@ -98,44 +99,44 @@ Linker Map File - Created Mon May 16 23:53:25 2016
                  ROM65C02   0x001006    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
              PowerOnReset   0x002006    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
            WaitTillStable   0x00202c    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-               PulseClock   0x002058    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-             WaitForReset   0x00207e    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-             ForceAddress   0x0020e0    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-                    R6502   0x0020ee    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-                 WDC65C02   0x00210e    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-                StartLoad   0x00212e    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-                LoadImage   0x002134    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-              NoExtraRead   0x00218e    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-                  LoPhase   0x002198    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-              HiPhaseLoad   0x0021a4    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-              HiPhaseRead   0x0021b2    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-             HiPhaseWrite   0x0021be    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-                  Execute   0x0021ca    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-                 NormalLo   0x0021cc    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-                 NormalHi   0x0021de    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-               DeviceJump   0x0021fe    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-                RamAccess   0x00221e    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-               AciaRdData   0x002222    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-               AciaWrData   0x00222e    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-               AciaRdStat   0x002238    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-               AciaWrStat   0x00224c    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-               AciaRdCmnd   0x002254    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-               AciaWrCmnd   0x002260    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-               AciaRdCtrl   0x00227a    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-               AciaWrCtrl   0x002286    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-                SpiRdData   0x002290    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-                SpiWrData   0x00229c    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-                SpiRdStat   0x0022a6    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-                SpiWrCtrl   0x0022ae    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-                SpiRdDvsr   0x0022b6    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-                SpiWrDvsr   0x0022c2    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-                SpiRdSlct   0x0022cc    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-                SpiWrSlct   0x0022d8    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-                   UartTx   0x0022e6    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-                  NewLine   0x0022ee    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-                StringOut   0x0022f6    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-                  StrLoop   0x002302    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-                  StrDone   0x00230c    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+               PulseClock   0x002062    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+             WaitForReset   0x002088    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+             ForceAddress   0x0020ea    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+                    R6502   0x0020f8    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+                 WDC65C02   0x002118    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+                StartLoad   0x002138    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+                LoadImage   0x00213e    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+              NoExtraRead   0x002198    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+                  LoPhase   0x0021a2    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+              HiPhaseLoad   0x0021ae    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+              HiPhaseRead   0x0021bc    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+             HiPhaseWrite   0x0021c8    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+                  Execute   0x0021d4    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+                 NormalLo   0x0021e0    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+                 NormalHi   0x0021f2    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+                RamAccess   0x002228    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+               AciaRdData   0x00222c    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+               AciaWrData   0x002238    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+               AciaRdStat   0x002242    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+               AciaWrStat   0x00225e    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+               AciaRdCmnd   0x00226c    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+               AciaWrCmnd   0x002278    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+               AciaRdCtrl   0x002292    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+               AciaWrCtrl   0x00229e    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+                SpiRdData   0x002346    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+                SpiWrData   0x002352    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+                SpiRdStat   0x00235c    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+                SpiWrCtrl   0x002372    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+                SpiRdDvsr   0x00237e    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+                SpiWrDvsr   0x00238a    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+                SpiRdSlct   0x002394    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+                SpiWrSlct   0x0023a0    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+             ComputedJump   0x0023ae    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+                   UartTx   0x0023b8    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+                  NewLine   0x0023c0    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+                StringOut   0x0023c8    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+                  StrLoop   0x0023d4    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+                  StrDone   0x0023de    program     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
                    DEVICE   0x000000       data     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
                     ADDRL   0x000001       data     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
                     ADDRH   0x000002       data     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
@@ -143,7 +144,8 @@ Linker Map File - Created Mon May 16 23:53:25 2016
                  INT_MASK   0x000004       data     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
                  ACIA_CMD   0x000005       data     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
                  ACIA_CTL   0x000006       data     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-                  SPI_DIV   0x000007       data     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
-                  SPI_SEL   0x000008       data     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+                  SPI_CTL   0x000007       data     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+                  SPI_DIV   0x000008       data     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
+                  SPI_SEL   0x000009       data     static C:\OpenSource\MPLABX\sb-6502\firmware.asm
 
 
