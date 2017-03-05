@@ -28,7 +28,6 @@ include	../MakeDefns
 #-------------------------------------------------------------------------------
 	
 TARGETS	= \
-	boot-6502.bin boot-6502.hex ../../boot-6502.asm \
 	boot-65c02.bin boot-65c02.hex ../../boot-65c02.asm
 
 LK65_FLAGS = \
@@ -36,21 +35,12 @@ LK65_FLAGS = \
 	
 all:	$(TARGETS)
 
-boot-6502.bin: boot-6502.obj
-	$(LK65) $(LK65_FLAGS) -bin -output $@ boot-6502.obj
-	
 boot-65c02.bin: boot-65c02.obj
 	$(LK65) $(LK65_FLAGS) -bin -output $@ boot-65c02.obj
-	
-boot-6502.hex: boot-6502.obj
-	$(LK65) $(LK65_FLAGS) -hex -output $@ boot-6502.obj
 	
 boot-65c02.hex: boot-65c02.obj
 	$(LK65) $(LK65_FLAGS) -hex -output $@ boot-65c02.obj
 	
-../../boot-6502.asm: boot-6502.hex
-	java -cp $(6502_JAR) uk.co.demon.obelisk.util.Hex2Mpasm < boot-6502.hex > ../../boot-6502.asm
-
 ../../boot-65c02.asm: boot-65c02.hex
 	java -cp $(6502_JAR) uk.co.demon.obelisk.util.Hex2Mpasm < boot-65c02.hex > ../../boot-65c02.asm
 
@@ -65,9 +55,6 @@ clean:
 #===============================================================================
 # Dependencies
 #-------------------------------------------------------------------------------
-
-boot-6502.obj: \
-	boot-6502.asm boot.asm
 
 boot-65c02.obj: \
 	boot-65c02.asm boot.asm

@@ -132,6 +132,17 @@ Portable 65xx Assembler [16.06]
                              ;-------------------------------------------------------------------------------
                              
                                              .page0
+                                             .org    $00d0
+                             
+00:00D0  00000000          : LBA             .space  4               ; LBA in little endian order
+00:00D4  00000000          : START           .space  4
+00:00D8  00000000          : LIMIT           .space  4
+00:00DC  0000              : BLKPTR          .space  2
+                             
+00:00DE  00000000          : ADDR            .space  4               ; Calculated byte sector address
+                             
+                             ;-------------------------------------------------------------------------------
+                             
                                              .org    $00f0
                              
                              ; Communications buffer offsets
@@ -140,6 +151,8 @@ Portable 65xx Assembler [16.06]
 00:00F1  00                : RX_TAIL         .space  1
 00:00F2  00                : TX_HEAD         .space  1               ; UART transmit buffer offsets
 00:00F3  00                : TX_TAIL         .space  1
+                             
+                             ; RTCC
                              
 00:00F4  00                : TM_TK           .space  1
 00:00F5  00                : TM_SC           .space  1
@@ -156,22 +169,29 @@ Portable 65xx Assembler [16.06]
 00:00FF  00                : IO_TEMP         .space  1               ;
                              
                              ;-------------------------------------------------------------------------------
-                             
-                             
-                             ;===============================================================================
-                             ; UART Buffers
-                             ;-------------------------------------------------------------------------------
-                             
-                                             .bss
-                                             .org    $ef00
-                             
-00:EF00  0000000000000000> : BUFFER          .space  CMD_SIZE
-                             
-00:EF80  0000000000000000> : RX_BUFF         .space  RX_SIZE         ; UART receive buffer
-00:EFC0  0000000000000000> : TX_BUFF         .space  TX_SIZE         ; UART transmit buffer
 
 Portable 65xx Assembler [16.06]
 
+                             
+                             
+                             ;===============================================================================
+                             ; Data Areas
+                             ;-------------------------------------------------------------------------------
+                             
+                                             .bss
+                             
+                                             .org    $e000
+                             
+00:E000  0000000000000000> : WRKE            .space  256
+00:E100  0000000000000000> : WRKO            .space  256
+                             
+                             ;-------------------------------------------------------------------------------
+                             ; UART Buffers
+                             
+                                             .org    $ef00
+                             
+00:EF00  0000000000000000> : RX_BUFF         .space  RX_SIZE         ; UART receive buffer
+00:EF40  0000000000000000> : TX_BUFF         .space  TX_SIZE         ; UART transmit buffer
                              
                              ;===============================================================================
                              ;-------------------------------------------------------------------------------
@@ -197,23 +217,18 @@ Portable 65xx Assembler [16.06]
                              RESET:
 00:F00C  78                :                 sei                     ; Ensure interrupts disabled
 00:F00D  D8                :                 cld                     ; Ensure binary mode
-00:F00E  A2FF              :                 ldx     #$FF            ; Reset the stack
+00:F00E  A2FF              :                 ldx     #$ff            ; Reset the stack
 00:F010  9A                :                 txs
                              
-                                             .if     __65C02__
 00:F011  64F0              :                 stz     RX_HEAD         ; Clear buffer offsets
 00:F013  64F1              :                 stz     RX_TAIL
 00:F015  64F2              :                 stz     TX_HEAD
 00:F017  64F3              :                 stz     TX_TAIL
-                                             .else
-                           -                 inx                     ; Clear buffer offsets
-                           -                 stx     RX_HEAD
-                           -                 stx     RX_TAIL
-                           -                 stx     TX_HEAD
-                           -                 stx     TX_TAIL
-                                             .endif
                              
 00:F019  A91F              :                 lda     #%00011111      ; 8 bits, 1 stop bit, 19200 baud
+
+Portable 65xx Assembler [16.06]
+
 00:F01B  8D03FE            :                 sta     ACIA_CTRL
 00:F01E  A9C9              :                 lda     #%11001001      ; No parity, no interrupt
 00:F020  8D02FE            :                 sta     ACIA_CMND
@@ -221,431 +236,500 @@ Portable 65xx Assembler [16.06]
                              
 00:F026  A901              :                 lda     #%00000001      ; Configure SPI
 00:F028  8D11FE            :                 sta     SPI_CTRL
-00:F02B  203FFF            :                 jsr     SpiCSHi         ; And /CS Hi
+00:F02B  2032FF            :                 jsr     SpiCSHi         ; And /CS Hi
                              
 00:F02E  58                :                 cli                     ; Allow interrupts
                              
-00:F02F  2066F2            :                 jsr     UartLn
-
-Portable 65xx Assembler [16.06]
-
+00:F02F  20F9F2            :                 jsr     UartLn
 00:F032  A200              :                 ldx     #BOOT_STR
-00:F034  2068F2            :                 jsr     UartStr
+00:F034  20FBF2            :                 jsr     UartStr
                              
                              ;===============================================================================
                              ; SD Card Initialisation
                              ;-------------------------------------------------------------------------------
                              
-00:F037  2032FF            :                 jsr     SpiSlow         ; Set SPI to slow speed
-00:F03A  A214              :                 ldx     #20
+00:F037  A93F              :                 lda     #63             ; Set SPI to slow speed
+00:F039  2029FF            :                 jsr     SpiSetSpeed
+00:F03C  A214              :                 ldx     #20
                                              repeat
-00:F03C  2047FF            :                  jsr    SpiIdle         ; Send clock pulses
-00:F03F  CA                :                  dex
-00:F040  D0FA              :                 until   eq
-                                             
+00:F03E  203AFF            :                  jsr    SpiIdle         ; Send clock pulses
+00:F041  CA                :                  dex
+00:F042  D0FA              :                 until   eq
+                             
                              ;-------------------------------------------------------------------------------
                              
                              .SendCmd0
-00:F042  A903              :                 lda     #3              ; Load retry counter
+00:F044  A903              :                 lda     #3              ; Load retry counter
                                              repeat
-00:F044  48                :                  pha
-00:F045  A200              :                  ldx    #SD_CMD0        ; Send CMD0
-00:F047  2011F2            :                  jsr    SpiCommand
-00:F04A  A010              :                  ldy    #16             ; Set byte count
+00:F046  48                :                  pha
+00:F047  A200              :                  ldx    #SD_CMD0        ; Send CMD0
+00:F049  20A4F2            :                  jsr    SpiCommand
+00:F04C  A010              :                  ldy    #16             ; Set byte count
                                               repeat
-00:F04C  2047FF            :                   jsr   SpiIdle         ; Send idle data
-00:F04F  48                :         pha
-00:F050  2051F2            :         jsr     Hex2
-00:F053  68                :         pla
-00:F054  C901              :                   cmp   #$01            ; Received a reply?
-00:F056  F00D              :                   beq   .DoneCmd0       ; Send next command
-00:F058  88                :                   dey
-00:F059  D0F1              :                  until  eq              ; Out of bytes?
-00:F05B  203FFF            :                  jsr    SpiCSHi         ; Yes, set CS idle
-00:F05E  68                :                  pla                    ; Any retries left?
-                                             .if     __65C02__
-00:F05F  3A                :                  dec    a
-                                             .else
-                           -                  sec
-                           -                  sbc    #1
-                                             .endif
-00:F060  D0E2              :                 until   eq              
-00:F062  4C09F2            :                 jmp     NoCard          ; No
+00:F04E  203AFF            :                   jsr   SpiIdle         ; Send idle data
+00:F051  C901              :                   cmp   #$01            ; Received a reply?
+00:F053  F00D              :                   beq   .DoneCmd0       ; Send next command
+00:F055  88                :                   dey
+00:F056  D0F6              :                  until  eq              ; Out of bytes?
+00:F058  2032FF            :                  jsr    SpiCSHi         ; Yes, set CS idle
+00:F05B  68                :                  pla                    ; Any retries left?
+00:F05C  3A                :                  dec    a
+00:F05D  D0E7              :                 until   eq
+00:F05F  4C9CF2            :                 jmp     NoCard          ; No
                              
                              .DoneCmd0:
-00:F065  68                :                 pla
-00:F066  203FFF            :                 jsr     SpiCSHi
-00:F069  2047FF            :                 jsr     SpiIdle
+00:F062  68                :                 pla
+00:F063  2032FF            :                 jsr     SpiCSHi
+00:F066  203AFF            :                 jsr     SpiIdle
                              
                              ;-------------------------------------------------------------------------------
+
+Portable 65xx Assembler [16.06]
+
                              
                              .SendCmd8:
-00:F06C  A92A              :         lda     #'*'
-00:F06E  2000FF            :         jsr     UartTx
-00:F071  A903              :                 lda     #3
-
-Portable 65xx Assembler [16.06]
-
+00:F069  A903              :                 lda     #3
                                              repeat
-00:F073  48                :                  pha
-00:F074  A20C              :                  ldx    #SD_CMD8        ; Send CMD8
-00:F076  2011F2            :                  jsr    SpiCommand
-00:F079  A0FF              :                  ldy    #255
+00:F06B  48                :                  pha
+00:F06C  A20C              :                  ldx    #SD_CMD8        ; Send CMD8
+00:F06E  20A4F2            :                  jsr    SpiCommand
+00:F071  A0FF              :                  ldy    #255
                                               repeat
-00:F07B  2047FF            :                   jsr   SpiIdle         ; Send idle data
-00:F07E  48                :         pha
-00:F07F  2051F2            :         jsr     Hex2
-00:F082  68                :         pla
-00:F083  C901              :                   cmp   #$01            ; Received a reply?
-00:F085  F00D              :                   beq   .DoneCmd8       ; Yes
-00:F087  88                :                   dey
-00:F088  D0F1              :                  until  eq              ; Out of bytes?
-00:F08A  203FFF            :                  jsr    SpiCSHi         ; Yes, set CS idle
-00:F08D  68                :                  pla                    ; Any retries left?
-                                             .if     __65C02__
-00:F08E  3A                :                  dec    a
-                                             .else
-                           -                  sec
-                           -                  sbc    #1
-                                             .endif
-00:F08F  D0E2              :                 until   eq
-00:F091  4C09F2            :                 jmp     NoCard          ; No
+00:F073  203AFF            :                   jsr   SpiIdle         ; Send idle data
+00:F076  C901              :                   cmp   #$01            ; Received a reply?
+00:F078  F00D              :                   beq   .DoneCmd8       ; Yes
+00:F07A  88                :                   dey
+00:F07B  D0F6              :                  until  eq              ; Out of bytes?
+00:F07D  2032FF            :                  jsr    SpiCSHi         ; Yes, set CS idle
+00:F080  68                :                  pla                    ; Any retries left?
+00:F081  3A                :                  dec    a
+00:F082  D0E7              :                 until   eq
+00:F084  4C9CF2            :                 jmp     NoCard          ; No
                              
                              .DoneCmd8:
-00:F094  68                :                 pla                     ; Drop retry count
-00:F095  BA                :                 tsx
-00:F096  2047FF            :                 jsr     SpiIdle         ; Read the result
-00:F099  48                :                 pha
-00:F09A  48                :         pha
-00:F09B  2051F2            :         jsr     Hex2
-00:F09E  68                :         pla
-00:F09F  2047FF            :                 jsr     SpiIdle
-00:F0A2  48                :                 pha
-00:F0A3  48                :         pha
-00:F0A4  2051F2            :         jsr     Hex2
-00:F0A7  68                :         pla
-00:F0A8  2047FF            :                 jsr     SpiIdle
-00:F0AB  48                :                 pha
-00:F0AC  48                :         pha
-00:F0AD  2051F2            :         jsr     Hex2
-00:F0B0  68                :         pla
-00:F0B1  2047FF            :                 jsr     SpiIdle
-00:F0B4  48                :                 pha
-00:F0B5  48                :         pha
-00:F0B6  2051F2            :         jsr     Hex2
-00:F0B9  68                :         pla
-00:F0BA  203FFF            :                 jsr     SpiCSHi
-00:F0BD  2047FF            :                 jsr     SpiIdle
-00:F0C0  68                :                 pla
-00:F0C1  C9AA              :                 cmp     #$aa
-00:F0C3  D00B              :                 if      eq
-00:F0C5  68                :                  pla
-
-Portable 65xx Assembler [16.06]
-
-00:F0C6  C901              :                  cmp    #$01
-00:F0C8  D006              :                  if     eq
-00:F0CA  68                :                   pla
-00:F0CB  D003              :                   if    eq
-00:F0CD  68                :                    pla
-00:F0CE  F001              :                    beq  .SendACmd41A
+00:F087  68                :                 pla                     ; Drop retry count
+00:F088  BA                :                 tsx
+00:F089  203AFF            :                 jsr     SpiIdle         ; Read the result
+00:F08C  48                :                 pha
+00:F08D  203AFF            :                 jsr     SpiIdle
+00:F090  48                :                 pha
+00:F091  203AFF            :                 jsr     SpiIdle
+00:F094  48                :                 pha
+00:F095  203AFF            :                 jsr     SpiIdle
+00:F098  48                :                 pha
+00:F099  2032FF            :                 jsr     SpiCSHi
+00:F09C  203AFF            :                 jsr     SpiIdle
+00:F09F  68                :                 pla
+00:F0A0  C9AA              :                 cmp     #$aa
+00:F0A2  D00B              :                 if      eq
+00:F0A4  68                :                  pla
+00:F0A5  C901              :                  cmp    #$01
+00:F0A7  D006              :                  if     eq
+00:F0A9  68                :                   pla
+00:F0AA  D003              :                   if    eq
+00:F0AC  68                :                    pla
+00:F0AD  F001              :                    beq  .SendACmd41A
                                                endif
                                               endif
                                              endif
-00:F0D0  9A                :                 txs
+00:F0AF  9A                :                 txs
                              
                              ;-------------------------------------------------------------------------------
                              
                              .SendACmd41A
-00:F0D1  A92B              :         lda     #'+'
-00:F0D3  2000FF            :         jsr     UartTx
-00:F0D6  A903              :                 lda     #3              ; Load retry counter
+00:F0B0  A903              :                 lda     #3              ; Load retry counter
                                              repeat
-00:F0D8  48                :                  pha
-00:F0D9  A218              :                  ldx    #SD_CMD55       ; Send CMD55
-00:F0DB  2011F2            :                  jsr    SpiCommand
-00:F0DE  2047FF            :                  jsr    SpiIdle
-00:F0E1  2047FF            :                  jsr    SpiIdle
-00:F0E4  2047FF            :                  jsr    SpiIdle
-00:F0E7  2047FF            :                  jsr    SpiIdle
-00:F0EA  A224              :                  ldx    #SD_ACMD41A     ; Send CMD41
-00:F0EC  2011F2            :                  jsr    SpiCommand
-00:F0EF  A010              :                  ldy    #16
-                                              repeat
-00:F0F1  2047FF            :                   jsr   SpiIdle
-00:F0F4  48                :         pha
-00:F0F5  2051F2            :         jsr     Hex2
-00:F0F8  68                :         pla
-00:F0F9  C900              :                   cmp   #$00
-00:F0FB  F011              :                   beq   .DoneACmd41A
-00:F0FD  C901              :                   cmp   #$01
-00:F0FF  F003              :                   break eq
-00:F101  88                :                   dey
-00:F102  D0ED              :                  until  eq
-00:F104  203FFF            :                  jsr    SpiCSHi         ; Yes, set CS idle
-00:F107  68                :                  pla                    ; Any retries left?
-                                             .if     __65C02__
-00:F108  3A                :                  dec    a
-                                             .else
-                           -                  sec
-                           -                  sbc    #1
-                                             .endif
-00:F109  D0CD              :                 until   eq
-00:F10B  4C18F1            :                 jmp     .SendACmd41B    ; No
-                                             
-                                                
-                             .DoneACmd41A:
-00:F10E  68                :                 pla
-00:F10F  203FFF            :                 jsr     SpiCSHi
+00:F0B2  48                :                  pha
 
 Portable 65xx Assembler [16.06]
 
-00:F112  2047FF            :                 jsr     SpiIdle
-00:F115  4C92F1            :                 jmp     .SendCmd58
+00:F0B3  A218              :                  ldx    #SD_CMD55       ; Send CMD55
+00:F0B5  20A4F2            :                  jsr    SpiCommand
+00:F0B8  203AFF            :                  jsr    SpiIdle
+00:F0BB  203AFF            :                  jsr    SpiIdle
+00:F0BE  203AFF            :                  jsr    SpiIdle
+00:F0C1  203AFF            :                  jsr    SpiIdle
+00:F0C4  A224              :                  ldx    #SD_ACMD41A     ; Send CMD41
+00:F0C6  20A4F2            :                  jsr    SpiCommand
+00:F0C9  A010              :                  ldy    #16
+                                              repeat
+00:F0CB  203AFF            :                   jsr   SpiIdle
+00:F0CE  C900              :                   cmp   #$00
+00:F0D0  F011              :                   beq   .DoneACmd41A
+00:F0D2  C901              :                   cmp   #$01
+00:F0D4  F003              :                   break eq
+00:F0D6  88                :                   dey
+00:F0D7  D0F2              :                  until  eq
+00:F0D9  2032FF            :                  jsr    SpiCSHi         ; Yes, set CS idle
+00:F0DC  68                :                  pla                    ; Any retries left?
+00:F0DD  3A                :                  dec    a
+00:F0DE  D0D2              :                 until   eq
+00:F0E0  4CEDF0            :                 jmp     .SendACmd41B    ; No
+                             
+                             .DoneACmd41A:
+00:F0E3  68                :                 pla
+00:F0E4  2032FF            :                 jsr     SpiCSHi
+00:F0E7  203AFF            :                 jsr     SpiIdle
+00:F0EA  4C53F1            :                 jmp     .SendCmd58
                              
                              ;-------------------------------------------------------------------------------
                              
                              .SendACmd41B:
-00:F118  A92D              :         lda     #'-'
-00:F11A  2000FF            :         jsr     UartTx
-00:F11D  A903              :                 lda     #3              ; Load retry counter
+00:F0ED  A903              :                 lda     #3              ; Load retry counter
                                              repeat
-00:F11F  48                :                  pha
-00:F120  A218              :                  ldx    #SD_CMD55       ; Send CMD55
-00:F122  2011F2            :                  jsr    SpiCommand
-00:F125  2047FF            :                  jsr    SpiIdle
-00:F128  2047FF            :                  jsr    SpiIdle
-00:F12B  2047FF            :                  jsr    SpiIdle
-00:F12E  2047FF            :                  jsr    SpiIdle
-00:F131  A22A              :                  ldx    #SD_ACMD41B     ; Send CMD41
-00:F133  2011F2            :                  jsr    SpiCommand
-00:F136  A010              :                  ldy    #16
+00:F0EF  48                :                  pha
+00:F0F0  A218              :                  ldx    #SD_CMD55       ; Send CMD55
+00:F0F2  20A4F2            :                  jsr    SpiCommand
+00:F0F5  203AFF            :                  jsr    SpiIdle
+00:F0F8  203AFF            :                  jsr    SpiIdle
+00:F0FB  203AFF            :                  jsr    SpiIdle
+00:F0FE  203AFF            :                  jsr    SpiIdle
+00:F101  A22A              :                  ldx    #SD_ACMD41B     ; Send CMD41
+00:F103  20A4F2            :                  jsr    SpiCommand
+00:F106  A010              :                  ldy    #16
                                               repeat
-00:F138  2047FF            :                   jsr   SpiIdle
-00:F13B  48                :         pha
-00:F13C  2051F2            :         jsr     Hex2
-00:F13F  68                :         pla
-00:F140  C900              :                   cmp   #$00
-00:F142  F011              :                   beq   .DoneACmd41B
-00:F144  C901              :                   cmp   #$01
-00:F146  F003              :                   break eq
-00:F148  88                :                   dey
-00:F149  D0ED              :                  until  eq
-00:F14B  203FFF            :                  jsr    SpiCSHi         ; Yes, set CS idle
-00:F14E  68                :                  pla                    ; Any retries left?
-                                             .if     __65C02__
-00:F14F  3A                :                  dec    a
-                                             .else
-                           -                  sec
-                           -                  sbc    #1
-                                             .endif
-00:F150  D0CD              :                 until   eq
-00:F152  4C5CF1            :                 jmp     .SendCmd1       ; No
-                                             
+00:F108  203AFF            :                   jsr   SpiIdle
+00:F10B  C900              :                   cmp   #$00
+00:F10D  F011              :                   beq   .DoneACmd41B
+00:F10F  C901              :                   cmp   #$01
+00:F111  F003              :                   break eq
+00:F113  88                :                   dey
+00:F114  D0F2              :                  until  eq
+00:F116  2032FF            :                  jsr    SpiCSHi         ; Yes, set CS idle
+00:F119  68                :                  pla                    ; Any retries left?
+
+Portable 65xx Assembler [16.06]
+
+00:F11A  3A                :                  dec    a
+00:F11B  D0D2              :                 until   eq
+00:F11D  4C27F1            :                 jmp     .SendCmd1       ; No
+                             
                              .DoneACmd41B:
-00:F155  68                :                 pla
-00:F156  203FFF            :                 jsr     SpiCSHi
-00:F159  2047FF            :                 jsr     SpiIdle
+00:F120  68                :                 pla
+00:F121  2032FF            :                 jsr     SpiCSHi
+00:F124  203AFF            :                 jsr     SpiIdle
                              
                              ;-------------------------------------------------------------------------------
                              
                              .SendCmd1:
-00:F15C  A93D              :         lda     #'='
-00:F15E  2000FF            :         jsr     UartTx
-00:F161  A903              :                 lda     #3              ; Load retry counter
+00:F127  A903              :                 lda     #3              ; Load retry counter
                                              repeat
-
-Portable 65xx Assembler [16.06]
-
-00:F163  48                :                  pha
-00:F164  A206              :                  ldx    #SD_CMD1        ; Send CMD1
-00:F166  2011F2            :                  jsr    SpiCommand
-00:F169  A010              :                  ldy    #16
+00:F129  48                :                  pha
+00:F12A  A206              :                  ldx    #SD_CMD1        ; Send CMD1
+00:F12C  20A4F2            :                  jsr    SpiCommand
+00:F12F  A010              :                  ldy    #16
                                               repeat
-00:F16B  2047FF            :                   jsr   SpiIdle         ; Send idle data
-00:F16E  48                :         pha
-00:F16F  2051F2            :         jsr     Hex2
-00:F172  68                :         pla
-00:F173  C900              :                   cmp   #$00            ; Received a reply?
-00:F175  F011              :                   beq   .DoneCmd1       ; Yes
-00:F177  C901              :                   cmp   #$01
-00:F179  F003              :                   break eq
-00:F17B  88                :                   dey
-00:F17C  D0ED              :                  until  eq
-00:F17E  203FFF            :                  jsr SpiCSHi
-00:F181  68                :                  pla
-                                             .if     __65C02__
-00:F182  3A                :                  dec    a
-                                             .else
-                           -                  sec
-                           -                  sbc    #1
-                                             .endif
-00:F183  D0DE              :                 until   eq
-00:F185  4C09F2            :                 jmp     NoCard
+00:F131  203AFF            :                   jsr   SpiIdle         ; Send idle data
+00:F134  C900              :                   cmp   #$00            ; Received a reply?
+00:F136  F011              :                   beq   .DoneCmd1       ; Yes
+00:F138  C901              :                   cmp   #$01
+00:F13A  F003              :                   break eq
+00:F13C  88                :                   dey
+00:F13D  D0F2              :                  until  eq
+00:F13F  2032FF            :                  jsr SpiCSHi
+00:F142  68                :                  pla
+00:F143  3A                :                  dec    a
+00:F144  D0E3              :                 until   eq
+00:F146  4C9CF2            :                 jmp     NoCard
                              
                              .DoneCmd1:
-00:F188  68                :                 pla
-00:F189  203FFF            :                 jsr     SpiCSHi
-00:F18C  2047FF            :                 jsr     SpiIdle
-00:F18F  4CDFF1            :                 jmp     .SendCmd16
+00:F149  68                :                 pla
+00:F14A  2032FF            :                 jsr     SpiCSHi
+00:F14D  203AFF            :                 jsr     SpiIdle
+00:F150  4C82F1            :                 jmp     .SendCmd16
                              
                              ;-------------------------------------------------------------------------------
                              
                              .SendCmd58:
-00:F192  A95E              :         lda     #'^'
-00:F194  2000FF            :         jsr     UartTx
-00:F197  A21E              :                 ldx     #SD_CMD58       ; Send CMD58
-00:F199  2011F2            :                 jsr     SpiCommand
-00:F19C  A010              :                 ldy     #16
+00:F153  A21E              :                 ldx     #SD_CMD58       ; Send CMD58
+00:F155  20A4F2            :                 jsr     SpiCommand
+00:F158  A010              :                 ldy     #16
                                              repeat
-00:F19E  2047FF            :                  jsr    SpiIdle         ; Send idle data
-00:F1A1  48                :         pha
-00:F1A2  2051F2            :         jsr     Hex2
-00:F1A5  68                :         pla
-00:F1A6  C900              :                  cmp    #$00            ; Received a reply?
-00:F1A8  F009              :                  beq    .DoneCmd58      ; Yes
-00:F1AA  88                :                  dey
-00:F1AB  D0F1              :                 until   eq
-00:F1AD  203FFF            :                 jsr     SpiCSHi
-00:F1B0  4C09F2            :                 jmp     NoCard
-                                             
+00:F15A  203AFF            :                  jsr    SpiIdle         ; Send idle data
+00:F15D  C900              :                  cmp    #$00            ; Received a reply?
+00:F15F  F009              :                  beq    .DoneCmd58      ; Yes
+00:F161  88                :                  dey
+00:F162  D0F6              :                 until   eq
+00:F164  2032FF            :                 jsr     SpiCSHi
+00:F167  4C9CF2            :                 jmp     NoCard
+                             
                              .DoneCmd58:
-00:F1B3  2047FF            :                 jsr     SpiIdle
 
 Portable 65xx Assembler [16.06]
 
-00:F1B6  AA                :                 tax                     ; Save CCS bit
-00:F1B7  48                :         pha
-00:F1B8  2051F2            :         jsr     Hex2
-00:F1BB  68                :         pla
-00:F1BC  2047FF            :                 jsr     SpiIdle
-00:F1BF  48                :         pha
-00:F1C0  2051F2            :         jsr     Hex2
-00:F1C3  68                :         pla
-00:F1C4  2047FF            :                 jsr     SpiIdle
-00:F1C7  48                :         pha
-00:F1C8  2051F2            :         jsr     Hex2
-00:F1CB  68                :         pla
-00:F1CC  2047FF            :                 jsr     SpiIdle
-00:F1CF  48                :         pha
-00:F1D0  2051F2            :         jsr     Hex2
-00:F1D3  68                :         pla
-00:F1D4  203FFF            :                 jsr     SpiCSHi
-00:F1D7  2047FF            :                 jsr     SpiIdle
-                                             
-00:F1DA  8A                :                 txa                     ; Test CCS bit in OCR
-00:F1DB  2940              :                 and     #$40
-00:F1DD  D021              :                 bne     .DoneCmd16
+00:F16A  203AFF            :                 jsr     SpiIdle
+00:F16D  AA                :                 tax                     ; Save CCS bit
+00:F16E  203AFF            :                 jsr     SpiIdle
+00:F171  203AFF            :                 jsr     SpiIdle
+00:F174  203AFF            :                 jsr     SpiIdle
+00:F177  2032FF            :                 jsr     SpiCSHi
+00:F17A  203AFF            :                 jsr     SpiIdle
+                             
+00:F17D  8A                :                 txa                     ; Test CCS bit in OCR
+00:F17E  2940              :                 and     #$40
+00:F180  D017              :                 bne     .DoneCmd16
                              
                              ;-------------------------------------------------------------------------------
                              
                              .SendCmd16:
-00:F1DF  A923              :         lda     #'#'
-00:F1E1  2000FF            :         jsr     UartTx
-00:F1E4  A212              :                 ldx     #SD_CMD16       ; Send CMD16
-00:F1E6  2011F2            :                 jsr     SpiCommand
-00:F1E9  A000              :                 ldy     #0              ; Load retry counter
+00:F182  A212              :                 ldx     #SD_CMD16       ; Send CMD16
+00:F184  20A4F2            :                 jsr     SpiCommand
+00:F187  A000              :                 ldy     #0              ; Load retry counter
                                              repeat
-00:F1EB  2047FF            :                  jsr    SpiIdle         ; Send idle data
-00:F1EE  48                :         pha
-00:F1EF  2051F2            :         jsr     Hex2
-00:F1F2  68                :         pla
-00:F1F3  C900              :                  cmp    #$00            ; Received a reply?
-00:F1F5  F009              :                  beq    .DoneCmd16
-00:F1F7  88                :                  dey
-00:F1F8  D0F1              :                 until   eq
-00:F1FA  203FFF            :                 jsr     SpiCSHi
-00:F1FD  4C09F2            :                 jmp     NoCard
+00:F189  203AFF            :                  jsr    SpiIdle         ; Send idle data
+00:F18C  C900              :                  cmp    #$00            ; Received a reply?
+00:F18E  F009              :                  beq    .DoneCmd16
+00:F190  88                :                  dey
+00:F191  D0F6              :                 until   eq
+00:F193  2032FF            :                 jsr     SpiCSHi
+00:F196  4C9CF2            :                 jmp     NoCard
                              
                              .DoneCmd16:
-00:F200  203FFF            :                 jsr     SpiCSHi         ; Yes
-00:F203  2047FF            :                 jsr     SpiIdle
+00:F199  2032FF            :                 jsr     SpiCSHi         ; Yes
+00:F19C  203AFF            :                 jsr     SpiIdle
                              
                              ;-------------------------------------------------------------------------------
                              
-00:F206  4C06F2            :                 jmp     $
+00:F19F  A903              :                 lda     #3              ; Switch SPI to higher speed
+00:F1A1  2029FF            :                 jsr     SpiSetSpeed
+00:F1A4  64DE              :                 stz     ADDR+0          ; Read the Master Boot Record
+00:F1A6  64DF              :                 stz     ADDR+1
+00:F1A8  64E0              :                 stz     ADDR+2
+00:F1AA  64E1              :                 stz     ADDR+3
+00:F1AC  A9E0              :                 lda     #>WRKE
+00:F1AE  20D6F1            :                 jsr     SdRead
+                             
+00:F1B1  A203              :                 ldx     #3              
+                                             repeat
+00:F1B3  BDC6E1            :                  lda    WRKE+$01c6,x    ; Extract the first partition start
+00:F1B6  95D4              :                  sta    START,x
+00:F1B8  BDCAE1            :                  lda    WRKE+$01ca,x    ; .. and size
+00:F1BB  95D8              :                  sta    LIMIT,x
+00:F1BD  CA                :                  dex
+00:F1BE  10F3              :                  until  mi
+                                     
+00:F1C0  A2D4              :                 ldx     #START          ; Read the boot sector
+00:F1C2  208AF2            :                 jsr     Lba2Addr
+00:F1C5  A9E0              :                 lda     #>WRKE
+
+Portable 65xx Assembler [16.06]
+
+00:F1C7  20D6F1            :                 jsr     SdRead
+                                     
+00:F1CA  E6DF              :         inc     ADDR+1
+00:F1CC  E6DF              :         inc     ADDR+1
+00:F1CE  A9E0              :         lda     #>WRKE
+00:F1D0  20D6F1            :         jsr     SdRead
+                             
+00:F1D3  4CD3F1            :                 jmp     $
+                             
+                             
+                             
+                             ;===============================================================================
+                             ; Sector Access
+                             ;-------------------------------------------------------------------------------
+                             
+                             SdRead:
+00:F1D6  64DC              :                 stz     BLKPTR+0
+00:F1D8  85DD              :                 sta     BLKPTR+1
+                             
+                             .SendCmd17:
+00:F1DA  A903              :                 lda     #3
+                                             repeat
+00:F1DC  48                :                  pha
+00:F1DD  20F9F2            :         jsr     UartLn
+00:F1E0  A93C              :         lda     #'<'
+00:F1E2  2000FF            :         jsr     UartTx
+00:F1E5  A5E1              :         lda     ADDR+3
+00:F1E7  20E4F2            :         jsr     Hex2
+00:F1EA  A5E0              :         lda     ADDR+2
+00:F1EC  20E4F2            :         jsr     Hex2
+00:F1EF  A5DF              :         lda     ADDR+1
+00:F1F1  20E4F2            :         jsr     Hex2
+00:F1F4  A5DE              :         lda     ADDR+0
+00:F1F6  20E4F2            :         jsr     Hex2
+00:F1F9  202DFF            :                  jsr    SpiCSLo
+00:F1FC  A951              :                  lda    #$40|17
+00:F1FE  203CFF            :                  jsr    SpiSend
+00:F201  A203              :                  ldx    #3
+                                              repeat
+00:F203  B5DE              :                   lda   ADDR,x
+00:F205  203CFF            :                   jsr   SpiSend
+00:F208  CA                :                   dex
+00:F209  10F8              :                  until  mi
+00:F20B  8A                :                  txa
+00:F20C  203CFF            :                  jsr    SpiSend
+                             
+00:F20F  A000              :                  ldy    #0
+                                              repeat
+00:F211  203AFF            :                   jsr   SpiIdle
+00:F214  C9FE              :                   cmp   #$fe
+00:F216  F00F              :                   beq   .SaveData
+00:F218  88                :                   dey
+00:F219  D0F6              :                  until  eq
+00:F21B  2032FF            :                  jsr    SpiCSHi
+
+Portable 65xx Assembler [16.06]
+
+00:F21E  203AFF            :                  jsr    SpiIdle
+00:F221  68                :                  pla
+00:F222  3A                :                  dec    a
+00:F223  D0B7              :                 until   eq
+00:F225  38                :                 sec
+00:F226  60                :                 rts
+                             
+                             .SaveData:
+00:F227  68                :                 pla
+00:F228  A000              :                 ldy     #0
+                                             repeat
+00:F22A  98                :         tya
+00:F22B  291F              :         and #$1f
+00:F22D  D011              :         if eq
+00:F22F  20F9F2            :          jsr UartLn
+00:F232  A930              :          lda #'0'
+00:F234  2000FF            :          jsr UartTx
+00:F237  98                :          tya
+00:F238  20E4F2            :          jsr Hex2
+00:F23B  A93A              :          lda #':'
+00:F23D  2000FF            :          jsr UartTx
+                                     endif
+00:F240  203AFF            :                  jsr    SpiIdle
+00:F243  91DC              :                  sta    (BLKPTR),y
+00:F245  48                :         pha
+00:F246  20E4F2            :         jsr     Hex2
+00:F249  68                :         pla
+00:F24A  C8                :                  iny
+00:F24B  D0DD              :                 until   eq
+00:F24D  E6DD              :                 inc     BLKPTR+1
+                                             repeat
+00:F24F  98                :         tya
+00:F250  291F              :         and #$1f
+00:F252  D011              :         if eq
+00:F254  20F9F2            :          jsr UartLn
+00:F257  A931              :          lda #'1'
+00:F259  2000FF            :          jsr UartTx
+00:F25C  98                :          tya
+00:F25D  20E4F2            :          jsr Hex2
+00:F260  A93A              :          lda #':'
+00:F262  2000FF            :          jsr UartTx
+                                     endif
+00:F265  203AFF            :                  jsr    SpiIdle
+00:F268  91DC              :                  sta    (BLKPTR),y
+00:F26A  48                :         pha
+00:F26B  20E4F2            :         jsr     Hex2
+00:F26E  68                :         pla
+00:F26F  C8                :                  iny
+00:F270  D0DD              :                 until   eq
+00:F272  203AFF            :                 jsr     SpiIdle
+00:F275  48                :         pha
+00:F276  20E4F2            :         jsr     Hex2
+00:F279  68                :         pla
+00:F27A  203AFF            :                 jsr     SpiIdle
+
+Portable 65xx Assembler [16.06]
+
+00:F27D  48                :         pha
+00:F27E  20E4F2            :         jsr     Hex2
+00:F281  68                :         pla
+00:F282  2032FF            :                 jsr     SpiCSHi
+00:F285  203AFF            :                 jsr     SpiIdle
+                             
+00:F288  18                :                 clc
+00:F289  60                :                 rts
+                             
+                             ; Multiply an LBA by 512 ($0200) to convert it to an sector address 
+                             
+                             Lba2Addr:
+00:F28A  64DE              :                 stz     ADDR+0
+00:F28C  B500              :                 lda     0,x
+00:F28E  0A                :                 asl     a
+00:F28F  85DF              :                 sta     ADDR+1
+00:F291  B501              :                 lda     1,x
+00:F293  2A                :                 rol     a
+00:F294  85E0              :                 sta     ADDR+2
+00:F296  B502              :                 lda     2,x
+00:F298  2A                :                 rol     a
+00:F299  85E1              :                 sta     ADDR+3
+00:F29B  60                :                 rts
                              
                              NoCard:
-00:F209  A215              :                 ldx     #NO_SDCARD_STR
-00:F20B  2068F2            :                 jsr     UartStr
-
-Portable 65xx Assembler [16.06]
-
-00:F20E  4C0EF2            :                 jmp     $
+00:F29C  A215              :                 ldx     #NO_SDCARD_STR
+00:F29E  20FBF2            :                 jsr     UartStr
+00:F2A1  4CA1F2            :                 jmp     $
                              
-                                             
+                             
                              SpiCommand:
-00:F211  203AFF            :                 jsr     SpiCSLo
-00:F214  A006              :                 ldy     #6
+00:F2A4  202DFF            :                 jsr     SpiCSLo
+00:F2A7  A006              :                 ldy     #6
                                              repeat
-00:F216  BD21F2            :                  lda    SD_CMDS,X
-00:F219  E8                :                  inx
-00:F21A  2049FF            :                  jsr    SpiSend
-00:F21D  88                :                  dey
-00:F21E  D0F6              :                 until   eq
-00:F220  60                :                 rts
+00:F2A9  BDB4F2            :                  lda    SD_CMDS,X
+00:F2AC  E8                :                  inx
+00:F2AD  203CFF            :                  jsr    SpiSend
+00:F2B0  88                :                  dey
+00:F2B1  D0F6              :                 until   eq
+00:F2B3  60                :                 rts
                              
-                                             
+                             
                              SD_CMDS:
          00000000          = SD_CMD0         .equ    .-SD_CMDS
-00:F221  400000000095      :                 .byte   $40| 0,$00,$00,$00,$00,$95
+00:F2B4  400000000095      :                 .byte   $40| 0,$00,$00,$00,$00,$95
          00000006          = SD_CMD1         .equ    .-SD_CMDS
-00:F227  4100000000FF      :                 .byte   $40| 1,$00,$00,$00,$00,$ff
+00:F2BA  4100000000FF      :                 .byte   $40| 1,$00,$00,$00,$00,$ff
          0000000C          = SD_CMD8         .equ    .-SD_CMDS
-00:F22D  48000001AA87      :                 .byte   $40| 8,$00,$00,$01,$aa,$87
+00:F2C0  48000001AA87      :                 .byte   $40| 8,$00,$00,$01,$aa,$87
          00000012          = SD_CMD16        .equ    .-SD_CMDS
-00:F233  5000000200FF      :                 .byte   $40|16,$00,$00,$02,$00,$ff
+00:F2C6  5000000200FF      :                 .byte   $40|16,$00,$00,$02,$00,$ff
          00000018          = SD_CMD55        .equ    .-SD_CMDS
-00:F239  7700000000FF      :                 .byte   $40|55,$00,$00,$00,$00,$ff
+00:F2CC  7700000000FF      :                 .byte   $40|55,$00,$00,$00,$00,$ff
          0000001E          = SD_CMD58        .equ    .-SD_CMDS
-00:F23F  7A00000000FF      :                 .byte   $40|58,$00,$00,$00,$00,$ff
-         00000024          = SD_ACMD41A      .equ    .-SD_CMDS
-00:F245  6940000000FF      :                 .byte   $40|41,$40,$00,$00,$00,$ff
-         0000002A          = SD_ACMD41B      .equ    .-SD_CMDS
-00:F24B  6900000000FF      :                 .byte   $40|41,$00,$00,$00,$00,$ff
-                             
-                             
-                             
-                             ;===============================================================================
-                             ;-------------------------------------------------------------------------------
-                             
-                             
-                             
-                             
-                             ;===============================================================================
-                             ;-------------------------------------------------------------------------------
-                             
-00:F251  48                : Hex2:           pha
-00:F252  4A                :                 lsr     a
-00:F253  4A                :                 lsr     a
-00:F254  4A                :                 lsr     a
-00:F255  4A                :                 lsr     a
-00:F256  205AF2            :                 jsr     Hex
-00:F259  68                :                 pla
-                             
-00:F25A  290F              : Hex:            and     #$0f
-00:F25C  F8                :                 sed
 
 Portable 65xx Assembler [16.06]
 
-00:F25D  18                :                 clc
-00:F25E  6990              :                 adc     #$90
-00:F260  6940              :                 adc     #$40
-00:F262  D8                :                 cld
-00:F263  4C00FF            :                 jmp     UartTx
+00:F2D2  7A00000000FF      :                 .byte   $40|58,$00,$00,$00,$00,$ff
+         00000024          = SD_ACMD41A      .equ    .-SD_CMDS
+00:F2D8  6940000000FF      :                 .byte   $40|41,$40,$00,$00,$00,$ff
+         0000002A          = SD_ACMD41B      .equ    .-SD_CMDS
+00:F2DE  6900000000FF      :                 .byte   $40|41,$00,$00,$00,$00,$ff
+                             
+                             
+                             
+                             ;===============================================================================
+                             ;-------------------------------------------------------------------------------
+                             
+                             
+                             
+                             
+                             ;===============================================================================
+                             ;-------------------------------------------------------------------------------
+                             
+00:F2E4  48                : Hex2:           pha
+00:F2E5  4A                :                 lsr     a
+00:F2E6  4A                :                 lsr     a
+00:F2E7  4A                :                 lsr     a
+00:F2E8  4A                :                 lsr     a
+00:F2E9  20EDF2            :                 jsr     Hex
+00:F2EC  68                :                 pla
+                             
+00:F2ED  290F              : Hex:            and     #$0f
+00:F2EF  F8                :                 sed
+00:F2F0  18                :                 clc
+00:F2F1  6990              :                 adc     #$90
+00:F2F3  6940              :                 adc     #$40
+00:F2F5  D8                :                 cld
+00:F2F6  4C00FF            :                 jmp     UartTx
                              
                              
                              UartLn:
-00:F266  A212              :                 ldx     #CRLF_STR
+00:F2F9  A212              :                 ldx     #CRLF_STR
                              UartStr:
                                              repeat
-00:F268  BD74F2            :                  lda    STRINGS,X
-00:F26B  D001              :                  if     eq
-00:F26D  60                :                   rts
+00:F2FB  BD07F3            :                  lda    STRINGS,x
+00:F2FE  D001              :                  if     eq
+00:F300  60                :                   rts
                                               endif
-00:F26E  2000FF            :                  jsr    UartTx
-00:F271  E8                :                  inx
-00:F272  80F4              :                 forever
+00:F301  2000FF            :                  jsr    UartTx
+00:F304  E8                :                  inx
+00:F305  80F4              :                 forever
                              
                              ;===============================================================================
                              ; String table
@@ -653,23 +737,23 @@ Portable 65xx Assembler [16.06]
                              
                              STRINGS:
          00000000          = BOOT_STR        .equ    $-STRINGS
-                                             .if     __6502__
-                           -                 .byte   CR,LF,"OS/6502 [17.02]"
-                                             .endif
-                                             .if     __65C02__
-00:F274  0D0A4F532F363543> :                 .byte   CR,LF,"OS/65C02 [17.02]"
-                                             .endif
+00:F307  0D0A4F532F363543> :                 .byte   CR,LF,"OS/65C02 [17.03]"
                              
+
+Portable 65xx Assembler [16.06]
+
          00000012          = CRLF_STR        .equ    $-STRINGS
-00:F286  0D0A00            :                 .byte   CR,LF,0
+00:F319  0D0A00            :                 .byte   CR,LF,0
                              
          00000015          = NO_SDCARD_STR   .equ    $-STRINGS
-00:F289  4E6F205344206361> :                 .byte   "No SD card found",0
+00:F31C  4E6F205344206361> :                 .byte   "No SD card found",0
                              
-00:F29A  643C3C18          : TIME_LIMIT:     .byte   100,60,60,24
-00:F29E  1F1C1F1E1F1E1F1F> : MONTH_LIMIT:    .byte   31,28,31,30, 31,30,31,31, 30,31,30,31
+                             ;-------------------------------------------------------------------------------
                              
-                             ;==============================================================================
+00:F32D  643C3C18          : TIME_LIMIT:     .byte   100,60,60,24
+00:F331  1F1C1F1E1F1E1F1F> : MONTH_LIMIT:    .byte   31,28,31,30, 31,30,31,31, 30,31,30,31
+                             
+                             ;===============================================================================
                              ; I/O Page
                              ;-------------------------------------------------------------------------------
                              
@@ -682,42 +766,44 @@ Portable 65xx Assembler [16.06]
                              
                              ; Inserts the byte in A into the transmit buffer. If the buffer is full then
                              ; wait until some space is available. Registers are preserved.
-
-Portable 65xx Assembler [16.06]
-
                              
                              UartTx:
-00:FF00  48                :                 pha
-00:FF01  84FF              :                 sty     IO_TEMP
+00:FF00  5A                :                 phy
+00:FF01  48                :                 pha
                              
-00:FF03  A4F3              :                 ldy     TX_TAIL         ; Save the data byte at the tail
-00:FF05  99C0EF            :                 sta     TX_BUFF,Y
-00:FF08  20DCFF            :                 jsr     BumpTx          ; Work out the next offset
+00:FF02  A4F3              :                 ldy     TX_TAIL         ; Save the data byte at the tail
+00:FF04  9940EF            :                 sta     TX_BUFF,y
+00:FF07  20CFFF            :                 jsr     BumpTx          ; Work out the next offset
                                              repeat                  ; And wait until save to store
-00:FF0B  C4F2              :                  cpy    TX_HEAD
-00:FF0D  F0FC              :                 until   ne
-00:FF0F  84F3              :                 sty     TX_TAIL
-00:FF11  A905              :                 lda     #$05            ; Ensure TX interrupt enabled
-00:FF13  8D02FE            :                 sta     ACIA_CMND
+00:FF0A  C4F2              :                  cpy    TX_HEAD
+00:FF0C  F0FC              :                 until   ne
+00:FF0E  84F3              :                 sty     TX_TAIL
+00:FF10  A905              :                 lda     #$05            ; Ensure TX interrupt enabled
+00:FF12  8D02FE            :                 sta     ACIA_CMND
                              
-00:FF16  A4FF              :                 ldy     IO_TEMP
-00:FF18  68                :                 pla
-00:FF19  60                :                 rts                     ; Done
+00:FF15  68                :                 pla
+00:FF16  7A                :                 ply
+00:FF17  60                :                 rts                     ; Done
                              
                              ;
                              ;
                              
                              UartRx:
-00:FF1A  84FF              :                 sty     IO_TEMP
-00:FF1C  A4F0              :                 ldy     RX_HEAD         ; Wait until there is some data
+00:FF18  5A                :                 phy
+                             
+00:FF19  A4F0              :                 ldy     RX_HEAD         ; Wait until there is some data
                                              repeat
-00:FF1E  C4F1              :                  cpy    RX_TAIL
-00:FF20  F0FC              :                 until   ne
-00:FF22  B980EF            :                 lda     RX_BUFF,Y       ; Then extract the head byte
-00:FF25  20DCFF            :                 jsr     BumpRx          ; Update the offset
-00:FF28  84F0              :                 sty     RX_HEAD
-00:FF2A  A4FF              :                 ldy     IO_TEMP
-00:FF2C  60                :                 rts                     ; Done
+00:FF1B  C4F1              :                  cpy    RX_TAIL
+00:FF1D  F0FC              :                 until   ne
+00:FF1F  B900EF            :                 lda     RX_BUFF,y       ; Then extract the head byte
+
+Portable 65xx Assembler [16.06]
+
+00:FF22  20CFFF            :                 jsr     BumpRx          ; Update the offset
+00:FF25  84F0              :                 sty     RX_HEAD
+                             
+00:FF27  7A                :                 ply
+00:FF28  60                :                 rts                     ; Done
                              
                              ;===============================================================================
                              ; SPI Handler
@@ -725,52 +811,39 @@ Portable 65xx Assembler [16.06]
                              
                              ; Set the SPI divisor for high or low speed transfer.
                              
-                             SpiFast:
-00:FF2D  48                :                 pha
-00:FF2E  A901              :                 lda     #1              ; Set SPI clock to 8MHz
-00:FF30  D003              :                 bne     SpiSetSpeed
-                             
-                             SpiSlow:
-00:FF32  48                :                 pha
-00:FF33  A93F              :                 lda     #63             ; Set SPI clock to 200KHz
-                             
                              SpiSetSpeed:
-00:FF35  8D12FE            :                 sta     SPI_DVSR
-00:FF38  68                :                 pla
-00:FF39  60                :                 rts
+00:FF29  8D12FE            :                 sta     SPI_DVSR
+00:FF2C  60                :                 rts
                              
-
-Portable 65xx Assembler [16.06]
-
                              ; Set the chip select line to the make the SD card busy or idle.
                              
                              SpiCSLo:
-00:FF3A  48                :                 pha
-00:FF3B  A900              :                 lda     #0<<2           ; Set /CS lo
-00:FF3D  F003              :                 beq     SpiSelect
+00:FF2D  48                :                 pha
+00:FF2E  A900              :                 lda     #0<<2           ; Set /CS lo
+00:FF30  F003              :                 beq     SpiSelect
                              
                              SpiCSHi:
-00:FF3F  48                :                 pha
-00:FF40  A904              :                 lda     #1<<2           ; Set /CS hi
+00:FF32  48                :                 pha
+00:FF33  A904              :                 lda     #1<<2           ; Set /CS hi
                              
                              SpiSelect:
-00:FF42  8D13FE            :                 sta     SPI_SLCT
-00:FF45  68                :                 pla
-00:FF46  60                :                 rts
+00:FF35  8D13FE            :                 sta     SPI_SLCT
+00:FF38  68                :                 pla
+00:FF39  60                :                 rts
                              
                              SpiIdle:
-00:FF47  A9FF              :                 lda     #$ff
+00:FF3A  A9FF              :                 lda     #$ff
                              
                              ; Send a byte of data to the SPI slave and return the byte of data received in
                              ; reply. Update the CRC while waiting.
                              
                              SpiSend:
-00:FF49  8D10FE            :                 sta     SPI_DATA        ; Transmit the byte in A
+00:FF3C  8D10FE            :                 sta     SPI_DATA        ; Transmit the byte in A
                                              repeat
-00:FF4C  AD11FE            :                  lda    SPI_STAT        ; Wait until transfer is complete
-00:FF4F  10FB              :                 until   mi
-00:FF51  AD10FE            :                 lda     SPI_DATA        ; Read the incoming data
-00:FF54  60                :                 rts
+00:FF3F  AD11FE            :                  lda    SPI_STAT        ; Wait until transfer is complete
+00:FF42  10FB              :                 until   mi
+00:FF44  AD10FE            :                 lda     SPI_DATA        ; Read the incoming data
+00:FF47  60                :                 rts
                              
                              ;===============================================================================
                              ; IRQ Handler
@@ -780,127 +853,107 @@ Portable 65xx Assembler [16.06]
                              ; buffer full.
                              
                              IRQ:
-00:FF55  48                :                 pha                     ; Save users registers
-                                             .if     __65C02__
-00:FF56  DA                :                 phx
-00:FF57  5A                :                 phy
-                                             .else
-                           -                 txa
-                           -                 pha
-                           -                 tya
-                           -                 pha
-                           -                 cld
-                                             .endif
-                             
-00:FF58  BA                :                 tsx                     ; Check for BRK
-00:FF59  BD0401            :                 lda     STACK+4,X
-00:FF5C  2910              :                 and     #$10
-00:FF5E  F003              :                 if      ne
 
 Portable 65xx Assembler [16.06]
 
-00:FF60  6CF8FF            :                  jmp    (BRKV)          ; Redirect thru pseudo vector
+00:FF48  48                :                 pha                     ; Save users registers
+00:FF49  DA                :                 phx
+00:FF4A  5A                :                 phy
+                             
+00:FF4B  BA                :                 tsx                     ; Check for BRK
+00:FF4C  BD0401            :                 lda     STACK+4,x
+00:FF4F  2910              :                 and     #$10
+00:FF51  F003              :                 if      ne
+00:FF53  6CF8FF            :                  jmp    (BRKV)          ; Redirect thru pseudo vector
                                              endif
                              
                              ;-------------------------------------------------------------------------------
                              
-00:FF63  AD01FE            :                 lda     ACIA_STAT       ; ACIA is the source?
-00:FF66  1033              :                 if      mi
+00:FF56  AD01FE            :                 lda     ACIA_STAT       ; ACIA is the source?
+00:FF59  1033              :                 if      mi
                              
-00:FF68  48                :                  pha
-00:FF69  2910              :                  and    #$10            ; TX Buffer empty?
-00:FF6B  F018              :                  if     ne
-00:FF6D  A4F2              :                   ldy   TX_HEAD         ; Any data to send?
-00:FF6F  C4F3              :                   cpy   TX_TAIL
-00:FF71  F00D              :                   if    ne
-00:FF73  B9C0EF            :                    lda  TX_BUFF,y       ; Yes, extract and send it
-00:FF76  8D00FE            :                    sta  ACIA_DATA
-00:FF79  20DCFF            :                    jsr  BumpTx
-00:FF7C  84F2              :                    sty  TX_HEAD
-00:FF7E  8005              :                   else
-00:FF80  A901              :                    lda  #$01            ; No, disable TX interrupt
-00:FF82  8D02FE            :                    sta  ACIA_CMND
+00:FF5B  48                :                  pha
+00:FF5C  2910              :                  and    #$10            ; TX Buffer empty?
+00:FF5E  F018              :                  if     ne
+00:FF60  A4F2              :                   ldy   TX_HEAD         ; Any data to send?
+00:FF62  C4F3              :                   cpy   TX_TAIL
+00:FF64  F00D              :                   if    ne
+00:FF66  B940EF            :                    lda  TX_BUFF,y       ; Yes, extract and send it
+00:FF69  8D00FE            :                    sta  ACIA_DATA
+00:FF6C  20CFFF            :                    jsr  BumpTx
+00:FF6F  84F2              :                    sty  TX_HEAD
+00:FF71  8005              :                   else
+00:FF73  A901              :                    lda  #$01            ; No, disable TX interrupt
+00:FF75  8D02FE            :                    sta  ACIA_CMND
                                                endif
                                               endif
                              
-00:FF85  68                :                  pla
-00:FF86  2908              :                  and    #$08            ; RX Buffer full?
-00:FF88  F011              :                  if     ne
-00:FF8A  AD00FE            :                   lda   ACIA_DATA       ; Yes, fetch the character
-00:FF8D  A4F1              :                   ldy   RX_TAIL         ; .. and save it
-00:FF8F  9980EF            :                   sta   RX_BUFF,y
-00:FF92  20DCFF            :                   jsr   BumpRx
-00:FF95  C4F0              :                   cpy   RX_HEAD         ; Is buffer completely full?
-00:FF97  F002              :                   if    ne
-00:FF99  84F1              :                    sty  RX_TAIL         ; No, update tail offset
+00:FF78  68                :                  pla
+00:FF79  2908              :                  and    #$08            ; RX Buffer full?
+00:FF7B  F011              :                  if     ne
+00:FF7D  AD00FE            :                   lda   ACIA_DATA       ; Yes, fetch the character
+00:FF80  A4F1              :                   ldy   RX_TAIL         ; .. and save it
+00:FF82  9900EF            :                   sta   RX_BUFF,y
+00:FF85  20CFFF            :                   jsr   BumpRx
+00:FF88  C4F0              :                   cpy   RX_HEAD         ; Is buffer completely full?
+00:FF8A  F002              :                   if    ne
+00:FF8C  84F1              :                    sty  RX_TAIL         ; No, update tail offset
                                                endif
                                               endif
                                              endif
                              
                              ;-------------------------------------------------------------------------------
                              
-00:FF9B  A200              :                 ldx     #0
+00:FF8E  A200              :                 ldx     #0
                                              repeat
-00:FF9D  F6F4              :                  inc    TM_TK,x         ; Bump time component
-00:FF9F  B5F4              :                  lda    TM_TK,x
-00:FFA1  DD9AF2            :                  cmp    TIME_LIMIT,x    ; Reached limit?
-00:FFA4  D032              :                  bne    .Done           ; No.
-                                             .if     __65C02__
-00:FFA6  74F4              :                  stz    TM_TK,x
-                                             .else
-                           -                  lda    #0
-                           -                  sta    TM_TK,x         ; Yes, reset
-                                             .endif
-00:FFA8  E8                :                  inx                    ; And move to next
-00:FFA9  E004              :                  cpx    #4
+00:FF90  F6F4              :                  inc    TM_TK,x         ; Bump time component
+00:FF92  B5F4              :                  lda    TM_TK,x
+00:FF94  DD2DF3            :                  cmp    TIME_LIMIT,x    ; Reached limit?
+00:FF97  D032              :                  bne    .Done           ; No.
 
 Portable 65xx Assembler [16.06]
 
-00:FFAB  D0F0              :                 until   eq
+00:FF99  74F4              :                  stz    TM_TK,x
+00:FF9B  E8                :                  inx                    ; And move to next
+00:FF9C  E004              :                  cpx    #4
+00:FF9E  D0F0              :                 until   eq
                              
-00:FFAD  A6F9              :                 ldx     TM_MO           ; February?
-00:FFAF  E002              :                 cpx     #2
-00:FFB1  18                :                 clc
-00:FFB2  D007              :                 if      eq
-00:FFB4  A5FA              :                  lda    TM_YR           ; Leap year?
-00:FFB6  2903              :                  and    #3
-00:FFB8  D001              :                  if     eq
-00:FFBA  38                :                   sec                   ; Yes set carry
+00:FFA0  A6F9              :                 ldx     TM_MO           ; February?
+00:FFA2  E002              :                 cpx     #2
+00:FFA4  18                :                 clc
+00:FFA5  D007              :                 if      eq
+00:FFA7  A5FA              :                  lda    TM_YR           ; Leap year?
+00:FFA9  2903              :                  and    #3
+00:FFAB  D001              :                  if     eq
+00:FFAD  38                :                   sec                   ; Yes set carry
                                               endif
                                              endif
-00:FFBB  BD9DF2            :                 lda     MONTH_LIMIT-1,x ; get day count
-00:FFBE  6900              :                 adc     #0
+00:FFAE  BD30F3            :                 lda     MONTH_LIMIT-1,x ; get day count
+00:FFB1  6900              :                 adc     #0
                              
-00:FFC0  E6F8              :                 inc     TM_DY
-00:FFC2  C5F8              :                 cmp     TM_DY
-00:FFC4  B012              :                 if      cc
-00:FFC6  A901              :                  lda    #1
-00:FFC8  85F8              :                  sta    TM_DY
-00:FFCA  E6F9              :                  inc    TM_MO
-00:FFCC  A5F9              :                  lda    TM_MO
-00:FFCE  C90D              :                  cmp    #13
-00:FFD0  9006              :                  if     cs
-00:FFD2  A901              :                   lda    #1
-00:FFD4  85F9              :                   sta   TM_MO
-00:FFD6  E6FA              :                   inc   TM_YR
+00:FFB3  E6F8              :                 inc     TM_DY
+00:FFB5  C5F8              :                 cmp     TM_DY
+00:FFB7  B012              :                 if      cc
+00:FFB9  A901              :                  lda    #1
+00:FFBB  85F8              :                  sta    TM_DY
+00:FFBD  E6F9              :                  inc    TM_MO
+00:FFBF  A5F9              :                  lda    TM_MO
+00:FFC1  C90D              :                  cmp    #13
+00:FFC3  9006              :                  if     cs
+00:FFC5  A901              :                   lda    #1
+00:FFC7  85F9              :                   sta   TM_MO
+00:FFC9  E6FA              :                   inc   TM_YR
                                               endif
                                              endif
                              .Done:
                              
                              ;-------------------------------------------------------------------------------
                              
-                                             .if     __65C02__
-00:FFD8  7A                :                 ply                     ; Restore user registers
-00:FFD9  FA                :                 plx
-                                             .else
-                           -                 pla                     ; Restore user registers
-                           -                 tay
-                           -                 pla
-                           -                 tax
-                                             .endif
-00:FFDA  68                :                 pla
+00:FFCB  7A                :                 ply                     ; Restore user registers
+00:FFCC  FA                :                 plx
+00:FFCD  68                :                 pla
                              NMI:
-00:FFDB  40                :                 rti                     ; Done
+00:FFCE  40                :                 rti                     ; Done
                              
                              ;-------------------------------------------------------------------------------
                              
@@ -910,24 +963,24 @@ Portable 65xx Assembler [16.06]
                                              .if     RX_SIZE != TX_SIZE
                            -                 iny                     ; Increase the index
                            -                 cpy     #RX_SIZE        ; Reached the limit?
-
-Portable 65xx Assembler [16.06]
-
                            -                 if      eq
                            -                  ldy    #0              ; Yes, wrap around
                            -                 endif
                            -                 rts                     ; Done
+
+Portable 65xx Assembler [16.06]
+
                                              .endif
                              
                              ; Bump and wrap a transmit buffer index value.
                              
                              BumpTx:
-00:FFDC  C8                :                 iny                     ; Increase the index
-00:FFDD  C040              :                 cpy     #TX_SIZE        ; Reached the limit?
-00:FFDF  D002              :                 if      eq
-00:FFE1  A000              :                  ldy    #0              ; Yes, wrap around
+00:FFCF  C8                :                 iny                     ; Increase the index
+00:FFD0  C040              :                 cpy     #TX_SIZE        ; Reached the limit?
+00:FFD2  D002              :                 if      eq
+00:FFD4  A000              :                  ldy    #0              ; Yes, wrap around
                                              endif
-00:FFE3  60                :                 rts                     ; Done
+00:FFD6  60                :                 rts                     ; Done
                              
                              ;===============================================================================
                              ; Vector Locations
@@ -935,10 +988,10 @@ Portable 65xx Assembler [16.06]
                              
                                              .org    $FFF8
                              
-00:FFF8  DBFF              : BRKV:           .word   NMI             ; BRK
-00:FFFA  DBFF              :                 .word   NMI             ; NMI
+00:FFF8  CEFF              : BRKV:           .word   NMI             ; BRK
+00:FFFA  CEFF              :                 .word   NMI             ; NMI
 00:FFFC  0CF0              :                 .word   RESET           ; RESET
-00:FFFE  55FF              :                 .word   IRQ             ; IRQ/BRK
+00:FFFE  48FF              :                 .word   IRQ             ; IRQ/BRK
                              
                                              .end
 
@@ -951,114 +1004,122 @@ ACIA_CMND                        0000FE02  | BOOT_STR                         00
 ACIA_CTRL                        0000FE03  | NUL                              00000000 
 ACIA_DATA                        0000FE00  | SD_CMD0                          00000000 
 ACIA_STAT                        0000FE01  | __6501__                         00000000 
-BEL                              00000007  | __6502__                         00000000 
-BOOT_STR                         00000000  | __65816__                        00000000 
-BRKV                             0000FFF8  | __65832__                        00000000 
-BS                               00000008  | __65SC02__                       00000000 
-BUFFER                           0000EF00  | __65C02__                        00000001 
-BumpRx                           0000FFDC  | SD_CMD1                          00000006 
-BumpTx                           0000FFDC  | BEL                              00000007 
-CMD_SIZE                         00000080  | BS                               00000008 
-CR                               0000000D  | HT                               00000009 
-CRLF_STR                         00000012  | LF                               0000000A 
-DC1                              00000011  | SD_CMD8                          0000000C 
-DC3                              00000013  | CR                               0000000D 
-DEL                              0000007F  | DC1                              00000011 
-ESC                              0000001B  | CRLF_STR                         00000012 
-HT                               00000009  | SD_CMD16                         00000012 
-Hex                              0000F25A  | DC3                              00000013 
-Hex2                             0000F251  | NO_SDCARD_STR                    00000015 
-IO_TEMP                          000000FF  | SD_CMD55                         00000018 
-IRQ                              0000FF55  | ESC                              0000001B 
-IRQ.Done                         0000FFD8  | SD_CMD58                         0000001E 
-LF                               0000000A  | SD_ACMD41A                       00000024 
-MONTH_LIMIT                      0000F29E  | SD_ACMD41B                       0000002A 
-NMI                              0000FFDB  | RX_SIZE                          00000040 
-NO_SDCARD_STR                    00000015  | TX_SIZE                          00000040 
-NUL                              00000000  | DEL                              0000007F 
-NoCard                           0000F209  | CMD_SIZE                         00000080 
-RESET                            0000F00C  | RX_HEAD                          000000F0 
-RESET.DoneACmd41A                0000F10E  | RX_TAIL                          000000F1 
-RESET.DoneACmd41B                0000F155  | TX_HEAD                          000000F2 
-RESET.DoneCmd0                   0000F065  | TX_TAIL                          000000F3 
-RESET.DoneCmd1                   0000F188  | TM_TK                            000000F4 
-RESET.DoneCmd16                  0000F200  | TM_SC                            000000F5 
-RESET.DoneCmd58                  0000F1B3  | TM_MN                            000000F6 
-RESET.DoneCmd8                   0000F094  | TM_HR                            000000F7 
-RESET.SendACmd41A                0000F0D1  | TM_DY                            000000F8 
-RESET.SendACmd41B                0000F118  | TM_MO                            000000F9 
-RESET.SendCmd0                   0000F042  | TM_YR                            000000FA 
-RESET.SendCmd1                   0000F15C  | IO_TEMP                          000000FF 
-RESET.SendCmd16                  0000F1DF  | STACK                            00000100 
-RESET.SendCmd58                  0000F192  | BUFFER                           0000EF00 
-RESET.SendCmd8                   0000F06C  | RX_BUFF                          0000EF80 
-RTC_ALM0                         0000FE26  | TX_BUFF                          0000EFC0 
-RTC_ALM1                         0000FE27  | RESET                            0000F00C 
-RTC_ALM2                         0000FE27  | RESET.SendCmd0                   0000F042 
-RTC_ALM3                         0000FE28  | RESET.DoneCmd0                   0000F065 
-RTC_CTLA                         0000FE2A  | RESET.SendCmd8                   0000F06C 
-RTC_CTLB                         0000FE2B  | RESET.DoneCmd8                   0000F094 
-RTC_SEC0                         0000FE22  | RESET.SendACmd41A                0000F0D1 
+ADDR                             000000DE  | __6502__                         00000000 
+BEL                              00000007  | __65816__                        00000000 
+BLKPTR                           000000DC  | __65832__                        00000000 
+BOOT_STR                         00000000  | __65SC02__                       00000000 
+BRKV                             0000FFF8  | __65C02__                        00000001 
+BS                               00000008  | SD_CMD1                          00000006 
+BumpRx                           0000FFCF  | BEL                              00000007 
+BumpTx                           0000FFCF  | BS                               00000008 
+CMD_SIZE                         00000080  | HT                               00000009 
+CR                               0000000D  | LF                               0000000A 
+CRLF_STR                         00000012  | SD_CMD8                          0000000C 
+DC1                              00000011  | CR                               0000000D 
+DC3                              00000013  | DC1                              00000011 
+DEL                              0000007F  | CRLF_STR                         00000012 
+ESC                              0000001B  | SD_CMD16                         00000012 
+HT                               00000009  | DC3                              00000013 
+Hex                              0000F2ED  | NO_SDCARD_STR                    00000015 
+Hex2                             0000F2E4  | SD_CMD55                         00000018 
+IO_TEMP                          000000FF  | ESC                              0000001B 
+IRQ                              0000FF48  | SD_CMD58                         0000001E 
+IRQ.Done                         0000FFCB  | SD_ACMD41A                       00000024 
+LBA                              000000D0  | SD_ACMD41B                       0000002A 
+LF                               0000000A  | RX_SIZE                          00000040 
+LIMIT                            000000D8  | TX_SIZE                          00000040 
+Lba2Addr                         0000F28A  | DEL                              0000007F 
+MONTH_LIMIT                      0000F331  | CMD_SIZE                         00000080 
+NMI                              0000FFCE  | LBA                              000000D0 
+NO_SDCARD_STR                    00000015  | START                            000000D4 
+NUL                              00000000  | LIMIT                            000000D8 
+NoCard                           0000F29C  | BLKPTR                           000000DC 
+RESET                            0000F00C  | ADDR                             000000DE 
+RESET.DoneACmd41A                0000F0E3  | RX_HEAD                          000000F0 
+RESET.DoneACmd41B                0000F120  | RX_TAIL                          000000F1 
+RESET.DoneCmd0                   0000F062  | TX_HEAD                          000000F2 
+RESET.DoneCmd1                   0000F149  | TX_TAIL                          000000F3 
+RESET.DoneCmd16                  0000F199  | TM_TK                            000000F4 
+RESET.DoneCmd58                  0000F16A  | TM_SC                            000000F5 
+RESET.DoneCmd8                   0000F087  | TM_MN                            000000F6 
+RESET.SendACmd41A                0000F0B0  | TM_HR                            000000F7 
+RESET.SendACmd41B                0000F0ED  | TM_DY                            000000F8 
+RESET.SendCmd0                   0000F044  | TM_MO                            000000F9 
+RESET.SendCmd1                   0000F127  | TM_YR                            000000FA 
+RESET.SendCmd16                  0000F182  | IO_TEMP                          000000FF 
+RESET.SendCmd58                  0000F153  | STACK                            00000100 
+RESET.SendCmd8                   0000F069  | WRKE                             0000E000 
+RTC_ALM0                         0000FE26  | WRKO                             0000E100 
+RTC_ALM1                         0000FE27  | RX_BUFF                          0000EF00 
+RTC_ALM2                         0000FE27  | TX_BUFF                          0000EF40 
 
 Portable 65xx Assembler [16.06]
 
-RTC_SEC1                         0000FE23  | RESET.DoneACmd41A                0000F10E 
-RTC_SEC2                         0000FE24  | RESET.SendACmd41B                0000F118 
-RTC_SEC3                         0000FE25  | RESET.DoneACmd41B                0000F155 
-RTC_STAT                         0000FE2C  | RESET.SendCmd1                   0000F15C 
-RTC_SUB0                         0000FE20  | RESET.DoneCmd1                   0000F188 
-RTC_SUB1                         0000FE21  | RESET.SendCmd58                  0000F192 
-RX_BUFF                          0000EF80  | RESET.DoneCmd58                  0000F1B3 
-RX_HEAD                          000000F0  | RESET.SendCmd16                  0000F1DF 
-RX_SIZE                          00000040  | RESET.DoneCmd16                  0000F200 
-RX_TAIL                          000000F1  | NoCard                           0000F209 
-SD_ACMD41A                       00000024  | SpiCommand                       0000F211 
-SD_ACMD41B                       0000002A  | SD_CMDS                          0000F221 
-SD_CMD0                          00000000  | Hex2                             0000F251 
-SD_CMD1                          00000006  | Hex                              0000F25A 
-SD_CMD16                         00000012  | UartLn                           0000F266 
-SD_CMD55                         00000018  | UartStr                          0000F268 
-SD_CMD58                         0000001E  | STRINGS                          0000F274 
-SD_CMD8                          0000000C  | TIME_LIMIT                       0000F29A 
-SD_CMDS                          0000F221  | MONTH_LIMIT                      0000F29E 
-SPI_CTRL                         0000FE11  | ACIA_DATA                        0000FE00 
-SPI_DATA                         0000FE10  | ACIA_STAT                        0000FE01 
-SPI_DVSR                         0000FE12  | ACIA_CMND                        0000FE02 
-SPI_SLCT                         0000FE13  | ACIA_CTRL                        0000FE03 
-SPI_STAT                         0000FE11  | SPI_DATA                         0000FE10 
-STACK                            00000100  | SPI_CTRL                         0000FE11 
-STRINGS                          0000F274  | SPI_STAT                         0000FE11 
-SpiCSHi                          0000FF3F  | SPI_DVSR                         0000FE12 
-SpiCSLo                          0000FF3A  | SPI_SLCT                         0000FE13 
-SpiCommand                       0000F211  | RTC_SUB0                         0000FE20 
-SpiFast                          0000FF2D  | RTC_SUB1                         0000FE21 
-SpiIdle                          0000FF47  | RTC_SEC0                         0000FE22 
-SpiSelect                        0000FF42  | RTC_SEC1                         0000FE23 
-SpiSend                          0000FF49  | RTC_SEC2                         0000FE24 
-SpiSetSpeed                      0000FF35  | RTC_SEC3                         0000FE25 
-SpiSlow                          0000FF32  | RTC_ALM0                         0000FE26 
-TIME_LIMIT                       0000F29A  | RTC_ALM1                         0000FE27 
-TM_DY                            000000F8  | RTC_ALM2                         0000FE27 
-TM_HR                            000000F7  | RTC_ALM3                         0000FE28 
-TM_MN                            000000F6  | RTC_CTLA                         0000FE2A 
-TM_MO                            000000F9  | RTC_CTLB                         0000FE2B 
-TM_SC                            000000F5  | RTC_STAT                         0000FE2C 
-TM_TK                            000000F4  | UartTx                           0000FF00 
-TM_YR                            000000FA  | UartRx                           0000FF1A 
-TX_BUFF                          0000EFC0  | SpiFast                          0000FF2D 
-TX_HEAD                          000000F2  | SpiSlow                          0000FF32 
-TX_SIZE                          00000040  | SpiSetSpeed                      0000FF35 
-TX_TAIL                          000000F3  | SpiCSLo                          0000FF3A 
-UartLn                           0000F266  | SpiCSHi                          0000FF3F 
-UartRx                           0000FF1A  | SpiSelect                        0000FF42 
-UartStr                          0000F268  | SpiIdle                          0000FF47 
-UartTx                           0000FF00  | SpiSend                          0000FF49 
-__6501__                         00000000  | IRQ                              0000FF55 
-__6502__                         00000000  | IRQ.Done                         0000FFD8 
-__65816__                        00000000  | NMI                              0000FFDB 
+RTC_ALM3                         0000FE28  | RESET                            0000F00C 
+RTC_CTLA                         0000FE2A  | RESET.SendCmd0                   0000F044 
+RTC_CTLB                         0000FE2B  | RESET.DoneCmd0                   0000F062 
+RTC_SEC0                         0000FE22  | RESET.SendCmd8                   0000F069 
+RTC_SEC1                         0000FE23  | RESET.DoneCmd8                   0000F087 
+RTC_SEC2                         0000FE24  | RESET.SendACmd41A                0000F0B0 
+RTC_SEC3                         0000FE25  | RESET.DoneACmd41A                0000F0E3 
+RTC_STAT                         0000FE2C  | RESET.SendACmd41B                0000F0ED 
+RTC_SUB0                         0000FE20  | RESET.DoneACmd41B                0000F120 
+RTC_SUB1                         0000FE21  | RESET.SendCmd1                   0000F127 
+RX_BUFF                          0000EF00  | RESET.DoneCmd1                   0000F149 
+RX_HEAD                          000000F0  | RESET.SendCmd58                  0000F153 
+RX_SIZE                          00000040  | RESET.DoneCmd58                  0000F16A 
+RX_TAIL                          000000F1  | RESET.SendCmd16                  0000F182 
+SD_ACMD41A                       00000024  | RESET.DoneCmd16                  0000F199 
+SD_ACMD41B                       0000002A  | SdRead                           0000F1D6 
+SD_CMD0                          00000000  | SdRead.SendCmd17                 0000F1DA 
+SD_CMD1                          00000006  | SdRead.SaveData                  0000F227 
+SD_CMD16                         00000012  | Lba2Addr                         0000F28A 
+SD_CMD55                         00000018  | NoCard                           0000F29C 
+SD_CMD58                         0000001E  | SpiCommand                       0000F2A4 
+SD_CMD8                          0000000C  | SD_CMDS                          0000F2B4 
+SD_CMDS                          0000F2B4  | Hex2                             0000F2E4 
+SPI_CTRL                         0000FE11  | Hex                              0000F2ED 
+SPI_DATA                         0000FE10  | UartLn                           0000F2F9 
+SPI_DVSR                         0000FE12  | UartStr                          0000F2FB 
+SPI_SLCT                         0000FE13  | STRINGS                          0000F307 
+SPI_STAT                         0000FE11  | TIME_LIMIT                       0000F32D 
+STACK                            00000100  | MONTH_LIMIT                      0000F331 
+START                            000000D4  | ACIA_DATA                        0000FE00 
+STRINGS                          0000F307  | ACIA_STAT                        0000FE01 
+SdRead                           0000F1D6  | ACIA_CMND                        0000FE02 
+SdRead.SaveData                  0000F227  | ACIA_CTRL                        0000FE03 
+SdRead.SendCmd17                 0000F1DA  | SPI_DATA                         0000FE10 
+SpiCSHi                          0000FF32  | SPI_CTRL                         0000FE11 
+SpiCSLo                          0000FF2D  | SPI_STAT                         0000FE11 
+SpiCommand                       0000F2A4  | SPI_DVSR                         0000FE12 
+SpiIdle                          0000FF3A  | SPI_SLCT                         0000FE13 
+SpiSelect                        0000FF35  | RTC_SUB0                         0000FE20 
+SpiSend                          0000FF3C  | RTC_SUB1                         0000FE21 
+SpiSetSpeed                      0000FF29  | RTC_SEC0                         0000FE22 
+TIME_LIMIT                       0000F32D  | RTC_SEC1                         0000FE23 
+TM_DY                            000000F8  | RTC_SEC2                         0000FE24 
+TM_HR                            000000F7  | RTC_SEC3                         0000FE25 
+TM_MN                            000000F6  | RTC_ALM0                         0000FE26 
+TM_MO                            000000F9  | RTC_ALM1                         0000FE27 
+TM_SC                            000000F5  | RTC_ALM2                         0000FE27 
+TM_TK                            000000F4  | RTC_ALM3                         0000FE28 
+TM_YR                            000000FA  | RTC_CTLA                         0000FE2A 
+TX_BUFF                          0000EF40  | RTC_CTLB                         0000FE2B 
+TX_HEAD                          000000F2  | RTC_STAT                         0000FE2C 
+TX_SIZE                          00000040  | UartTx                           0000FF00 
+TX_TAIL                          000000F3  | UartRx                           0000FF18 
+UartLn                           0000F2F9  | SpiSetSpeed                      0000FF29 
 
 Portable 65xx Assembler [16.06]
 
-__65832__                        00000000  | BumpRx                           0000FFDC 
-__65C02__                        00000001  | BumpTx                           0000FFDC 
+UartRx                           0000FF18  | SpiCSLo                          0000FF2D 
+UartStr                          0000F2FB  | SpiCSHi                          0000FF32 
+UartTx                           0000FF00  | SpiSelect                        0000FF35 
+WRKE                             0000E000  | SpiIdle                          0000FF3A 
+WRKO                             0000E100  | SpiSend                          0000FF3C 
+__6501__                         00000000  | IRQ                              0000FF48 
+__6502__                         00000000  | IRQ.Done                         0000FFCB 
+__65816__                        00000000  | NMI                              0000FFCE 
+__65832__                        00000000  | BumpRx                           0000FFCF 
+__65C02__                        00000001  | BumpTx                           0000FFCF 
 __65SC02__                       00000000  | BRKV                             0000FFF8 

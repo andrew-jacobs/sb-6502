@@ -5,7 +5,7 @@ uses only three chips, namely:
 
 - A MOS 6502 or WDC 65C02 microprocessor
 - A 128K SRAM memory chip (of which 64K is used)
-- A 16F45K22 PIC Microcontroller
+- A 16F45K22 PIC micro-controller
 
 In order to make a working system the PIC must act as the source of the
 microprocessor's clock signal and decode it's control signals to either enable
@@ -45,7 +45,7 @@ into
 
 Once the PIC knows what type of microprocessor is installed it can generate
 the instructions needed to create an appropriate ROM image in the memory. The ROM is
-tranferred by generating a pair of byte load and store (e.g. LDA #$xx STA $yyyy)
+transferred by generating a pair of byte load and store (e.g. LDA #$xx STA $yyyy)
 instructions for each byte. The PIC enables the SRAM chip during the cycle when
 the microprocessor writes the byte value to store it in the memory.
 
@@ -63,26 +63,49 @@ Most of the time the microprocessor will be accessing the SRAM memory chip but
 if the address is in the $FE00-$FEFF range then address is interpreted as a
 virtual peripheral access.
 
-The PIC code implements two virtual peripherals, an 6551 ACIA and an SPI65
-(a SPI controller implemented in a CPLD designed by members of the 6502.org
-web forum). The features of these two chips are mapped to the PICs hardware.
+The PIC code implements three virtual peripherals, an 6551 ACIA, a DS1318 RTS
+and a 65SPI (a SPI controller implemented in a CPLD designed by members of the
+6502.org web forum). The features of these two chips are mapped to the PICs
+hardware.
 
 In program code the following addresses should be used to access the peripheral
 registers.
 
 ```
-ACIA_DATA	.EQU	$FE00
-ACIA_STAT	.EQU	$FE01
-ACIA_CMND	.EQU	$FE02
-ACIA_CTRL	.EQU	$FE03
+; Emulated 6551 ACIA
 
-SPI_DATA	.EQU	$FE04
-SPI_STAT	.EQU	$FE05
-SPI_CTRL	.EQU	$FE05
-SPI_DVSR	.EQU	$FE06
-SPI_SLCT	.EQU	$FE07
+ACIA_DATA       .equ    $fe00           ; R/W
+ACIA_STAT       .equ    $fe01           ; R/W
+ACIA_CMND       .equ    $fe02           ; R/W
+ACIA_CTRL       .equ    $fe03           ; R/W
+
+; Emulated 65SPI
+
+SPI_DATA        .equ    $fe10           ; R/W
+SPI_STAT        .equ    $fe11           ; R/O
+SPI_CTRL        .equ    $fe11           ; W/O
+SPI_DVSR        .equ    $fe12           ; R/W
+SPI_SLCT        .equ    $fe13           ; R/W
+
+; Emulated DS1318 RTC
+
+RTC_SUB0        .equ    $fe20           ; R/W
+RTC_SUB1        .equ    $fe21           ; R/W
+RTC_SEC0        .equ    $fe22           ; R/W
+RTC_SEC1        .equ    $fe23           ; R/W
+RTC_SEC2        .equ    $fe24           ; R/W
+RTC_SEC3        .equ    $fe25           ; R/W
+RTC_ALM0        .equ    $fe26           ; R/W
+RTC_ALM1        .equ    $fe27           ; R/W
+RTC_ALM2        .equ    $fe27           ; R/W
+RTC_ALM3        .equ    $fe28           ; R/W
+RTC_CTLA        .equ    $fe2a           ; R/W
+RTC_CTLB        .equ    $fe2b           ; R/W
+RTC_STAT        .equ    $fe2c           ; R/W
 ```
 
+Accessing some of these registers takes an extended period of time during
+which the 65(C)02 experiences clock stretching.
 
 # Notes
 

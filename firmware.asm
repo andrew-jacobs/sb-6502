@@ -316,6 +316,9 @@ WaitTillStable:
                 movlw   M(SSPEN)|b'1010'        ; Configure SPI
                 movwf   SSP1CON1
                 
+                movf    SSP1BUF,W
+                movf    SSP1BUF,W
+                
 ;-------------------------------------------------------------------------------
 
                 movlw   TMR2_PR                 ; Configure Timer2
@@ -834,7 +837,7 @@ AciaWrStat:
                 bcf     INT_MASK,TX1IF          ; .. turned off
                 nop
                 nop
-                bra    NormalLo                 ; Continue
+                bra     NormalLo                ; Continue
 
 AciaRdCmnd:
                 movf    ACIA_CMD                ; Fetch command bits
@@ -842,7 +845,7 @@ AciaRdCmnd:
                 movwf   DATA_LAT
                 nop
                 nop
-                bra    NormalLo                 ; Continue
+                bra     NormalLo                ; Continue
 
 AciaWrCmnd:
                 movf    DATA_PORT,W             ; Save native value
@@ -991,7 +994,7 @@ SpiWrData:
                 bra     NormalLo 
 
 SpiRdStat:
-                movlw   SPI_CTL                 ; Combine control bits
+                movf    SPI_CTL,W               ; Combine control bits
                 btfsc   SSP1STAT,BF             ; .. with buffer full
                 iorlw   M(.7)
                 btfsc   SSP1STAT,R_NOT_W        ; .. and busy flag
@@ -1004,8 +1007,17 @@ SpiRdStat:
                 bra     NormalLo
                 
 SpiWrCtrl:
+                movf    DATA_PORT,W
                 andlw   h'5f'
                 movwf   SPI_CTL
+                bcf     SSP1CON1,SSPEN
+                bcf     SSP1STAT,CKE            ; Map CPOL
+                btfsc   WREG,.1
+                bsf     SSP1STAT,CKE
+                bcf     SSP1STAT,SMP            ; Map CPHA
+                btfsc   WREG,.0
+                bsf     SSP1STAT,SMP
+                bsf     SSP1CON1,SSPEN
                 nop
                 nop
                 nop
