@@ -1,7 +1,7 @@
 #===============================================================================
-# Portable 6502/65C02/65816 Assembler Definitions
+# OS/65 Build Definitions
 #-------------------------------------------------------------------------------
-# Copyright (C)2010-2014 Andrew John Jacobs.
+# Copyright (C)2016-2017 HandCoded Software Ltd.
 # All rights reserved.
 #
 # This work is made available under the terms of the Creative Commons
@@ -18,38 +18,42 @@
 #===============================================================================
 # Revision History:
 #
-# 2014-01-03 AJ Initial version
-#-------------------------------------------------------------------------------
-# $Id$
+# 2016-03-06 AJ Initial version
 #-------------------------------------------------------------------------------
 
-# Update the followiung line to reflect where you have installed the ZIP file
-# containing the JAVA classes relative to where the assembler is invoked.
-
-6502_DIR	=	..
+include	../../../MakeDefns
 
 #===============================================================================
-
-6502_JAR	=	$(6502_DIR)/Dev65.jar
-
-AS65_CLASS	=	uk.co.demon.obelisk.w65xx.As65
-
-LK65_CLASS	=	uk.co.demon.obelisk.w65xx.Lk65
-
-LB65_CLASS	=	uk.co.demon.obelisk.w65xx.Lb65
-
-AS65		=	java -cp $(6502_JAR) $(AS65_CLASS)
-
-LK65		=	java -cp $(6502_JAR) $(LK65_CLASS)
-
-LB65		=	java -cp $(6502_JAR) $(LB65_CLASS)
-
-RM			=	erase
-
-#===============================================================================
-# Rules
+# Targets
 #-------------------------------------------------------------------------------
 
-.asm.obj:
-	$(AS65) $(AS65_FLAGS) $<
+TARGET	=	os65.lib
 
+SRCS	=	heap.c file.c
+
+OBJS	=	$(SRCS:.c=.obj)
+
+$(TARGET):	$(OBJS)
+		$(RM) $(TARGET)
+		$(AR) -A $(TARGET) $(OBJS)
+
+#-------------------------------------------------------------------------------
+
+install:	$(TARGET)
+		$(CP) $(TARGET) ..\..\..\lib
+
+clean:
+		$(RM) $(TARGET)
+		$(RM) $(OBJS)
+		$(RM) *.lst
+		$(RM) *.map
+
+#===============================================================================
+# Dependencies
+#-------------------------------------------------------------------------------
+
+heap.obj:	\
+			heap.c
+
+file.obj:	\
+			file.c

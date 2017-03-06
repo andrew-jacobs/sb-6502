@@ -1,2 +1,2 @@
-..\nmake %*
-pause
+@..\nmake %*
+@pause

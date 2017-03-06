@@ -1,3 +1,4 @@
 /build
 /debug
 /code/monitor/*.obj
+/code/os65/src/bin/cat/*.map
