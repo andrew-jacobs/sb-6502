@@ -1,1 +1,1 @@
-..\nmake clean
+@..\nmake clean

@@ -1,7 +1,7 @@
 #===============================================================================
-# Portable 6502/65C02/65816 Assembler Definitions
+# OS/65 Build Definitions
 #-------------------------------------------------------------------------------
-# Copyright (C)2010-2017 Andrew John Jacobs.
+# Copyright (C)2016-2017 HandCoded Software Ltd.
 # All rights reserved.
 #
 # This work is made available under the terms of the Creative Commons
@@ -18,32 +18,37 @@
 #===============================================================================
 # Revision History:
 #
-# 2014-01-03 AJ Initial version
+# 2016-03-06 AJ Initial version
 #-------------------------------------------------------------------------------
+
+include	../../../MakeDefns
 
 #===============================================================================
-# Java Class Paths
+# Targets
 #-------------------------------------------------------------------------------
 
-DEV65_JAR	=	$(DEV65_DIR)/Dev65.jar
+TARGET	=	cat.prg
 
-AS65_CLASS	=	uk.co.demon.obelisk.w65xx.As65
+SRCS	=	cat.c
 
-LK65_CLASS	=	uk.co.demon.obelisk.w65xx.Lk65
+OBJS	=	$(SRCS:.c=.obj)
 
-LB65_CLASS	=	uk.co.demon.obelisk.w65xx.Lb65
+LIBS	=	-LC ..\..\..\lib\os65.lib
 
-AS65		=	java -cp $(DEV65_JAR) $(AS65_CLASS)
+$(TARGET):	$(OBJS)
+		$(LD) $(LDFLAGS) -O $@ $(OBJS) $(LIBS)
 
-LK65		=	java -cp $(DEV65_JAR) $(LK65_CLASS)
-
-LB65		=	java -cp $(DEV65_JAR) $(LB65_CLASS)
-
-RM			=	erase
-
+#-------------------------------------------------------------------------------
+	
+clean:
+	$(RM) $(TARGET)
+	$(RM) $(OBJS)
+	$(RM) *.lst
+	$(RM) *.map
+	
 #===============================================================================
-# Rules
+# Dependencies
 #-------------------------------------------------------------------------------
-
-.asm.obj:
-	$(AS65) $(AS65_FLAGS) $<
+	
+cat.obj:	\
+			cat.c
