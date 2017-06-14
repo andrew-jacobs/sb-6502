@@ -1,0 +1,12 @@
+Global Symbol Map
+
+
+
+Sections:
+
+.page0           : 000000F0 - 000000F3 in forth.obj
+                   000000FF - 000000FF in forth.obj
+.bss             : 0000EF00 - 0000EF7F in forth.obj
+.code            : 0000F000 - 0000F0F0 in forth.obj
+                   0000FE00 - 0000FF7B in forth.obj
+                   0000FFF8 - 0000FFFF in forth.obj

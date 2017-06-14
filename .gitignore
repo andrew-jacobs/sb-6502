@@ -1,3 +1,11 @@
 /build
 /debug
 /code/monitor/*.obj
+/code/boot/*.obj
+/code/boot/*.map
+/code/boot/*.hex
+/code/boot/*.bin
+/disassembly
+/code/forth/forth.hex
+/code/forth/forth.bin
+/code/forth/forth.obj
