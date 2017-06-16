@@ -1,4 +1,6 @@
 
+		.ifndef	KERNEL
+		
 		.extern	_DO_LITERAL	; (LITERAL)
 		.extern	_DO_USER	; (USER)
 		
@@ -9,9 +11,14 @@
 		.extern	_DROP		; DROP
 		.extern	_HEX		; HEX
 
+		.endif
 
 DSTK		.equ	$0000
 RSTK		.equ	$0100
+
+USER_AREA	.equ	$00F8
+
+BASE_OFFSET	.equ	0
 
 ;===============================================================================
 ;-------------------------------------------------------------------------------

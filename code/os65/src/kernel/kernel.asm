@@ -11,6 +11,11 @@ KERNEL		.equ	1
 ;-------------------------------------------------------------------------------
 
 		.org	$e000
+		
+		.extern	_FETCH
+		.extern	_C_FETCH
+		.extern	_DECIMAL
+		.extern	_HEX
 
 		jmp	_FETCH
 		jmp	_C_FETCH
