@@ -1,1 +1,1 @@
-nmake clean
+start /b /wait /d monitor clean

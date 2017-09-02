@@ -28,28 +28,28 @@ include	../MakeDefns
 #===============================================================================
 # Targets
 #-------------------------------------------------------------------------------
-	
+
 TARGETS	= \
 	monitor-6502.bin monitor-6502.hex ../../boot-6502.asm \
 	monitor-65c02.bin monitor-65c02.hex ../../boot-65c02.asm
 
 LK65_FLAGS = \
 	-bss $$0200-$$EFFF -code $$F000-$$FFFF
-	
+
 all:	$(TARGETS)
 
 monitor-6502.bin: monitor-6502.obj
 	$(LK65) $(LK65_FLAGS) -bin -output $@ monitor-6502.obj
-	
+
 monitor-65c02.bin: monitor-65c02.obj
 	$(LK65) $(LK65_FLAGS) -bin -output $@ monitor-65c02.obj
-	
+
 monitor-6502.hex: monitor-6502.obj
 	$(LK65) $(LK65_FLAGS) -hex -output $@ monitor-6502.obj
-	
+
 monitor-65c02.hex: monitor-65c02.obj
 	$(LK65) $(LK65_FLAGS) -hex -output $@ monitor-65c02.obj
-	
+
 ../../boot-6502.asm: monitor-6502.hex
 	java -cp $(DEV65_JAR) uk.co.demon.obelisk.util.Hex2Mpasm < monitor-6502.hex > ../../boot-6502.asm
 
@@ -62,8 +62,7 @@ clean:
 	$(RM) *.bin
 	$(RM) *.lst
 	$(RM) *.map
-	$(RM) ../../boot-65*.asm
-	
+
 #===============================================================================
 # Dependencies
 #-------------------------------------------------------------------------------

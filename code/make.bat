@@ -1,2 +1,1 @@
-nmake
-if errorlevel 1 pause
+start /b /wait /d monitor make

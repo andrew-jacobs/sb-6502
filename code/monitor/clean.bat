@@ -1,1 +1,2 @@
 ..\nmake clean
+exit
