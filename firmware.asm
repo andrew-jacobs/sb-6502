@@ -294,7 +294,7 @@ WaitTillStable:
 ;-------------------------------------------------------------------------------
 
                 bcf     TXD_TRIS,TXD_PIN        ; Make TXD an output    
-                bsf     RXD_TRIS,RXD_PIN        ; .. and RXD in input
+                bsf     RXD_TRIS,RXD_PIN        ; .. and RXD an input
                                 
                 movlw   M(BRG16)                ; Configure UART
                 movwf   BAUDCON1
@@ -615,7 +615,7 @@ NormalLo:
                 bsf     NRAM_LAT,NRAM_PIN       ; Disable RAM
 
                 movf    PIR1,W                  ; Any hardware interrupts
-                andlw   M(RC1IF)|M(TX1IF)|M(SSP1IF)
+                andlw   M(INT_HW_RXD)|M(INT_HW_TXD)|M(INT_HW_SPI)
                 iorwf   INT_FLAG,W              ; .. or software interrupts
                 andwf   INT_MASK,W              ; .. to service?
                 btfss   STATUS,Z
@@ -833,8 +833,8 @@ AciaRdStat:
 AciaWrStat:
                 clrf    ACIA_CMD                ; Reset register
                 clrf    ACIA_CTL
-                bcf     INT_MASK,RC1IF          ; All interrupts
-                bcf     INT_MASK,TX1IF          ; .. turned off
+                bcf     INT_MASK,INT_HW_RXD     ; All interrupts
+                bcf     INT_MASK,INT_HW_TXD     ; .. turned off
                 nop
                 nop
                 bra     NormalLo                ; Continue
@@ -850,16 +850,16 @@ AciaRdCmnd:
 AciaWrCmnd:
                 movf    DATA_PORT,W             ; Save native value
                 movwf   ACIA_CMD
-                bcf     INT_MASK,RC1IF          ; Assume all interrupts
-                bcf     INT_MASK,TX1IF          ; .. turned off
+                bcf     INT_MASK,INT_HW_RXD     ; Assume all interrupts
+                bcf     INT_MASK,INT_HW_TXD     ; .. turned off
                 btfss   ACIA_CMD,.0             ; DTR clear?
                 bra     NormalLo                ; Yes, all off
                 btfss   ACIA_CMD,.1             ; IRD enabled?
-                bsf     INT_MASK,RC1IF          ; Yes
+                bsf     INT_MASK,INT_HW_RXD     ; Yes
                 andlw   h'0c'                   ; Extract TIC
                 xorlw   h'04'                   ; TX enabled?
                 btfsc   STATUS,Z
-                bsf     INT_MASK,TX1IF          ; Yes               
+                bsf     INT_MASK,INT_HW_TXD     ; Yes               
                 bra     NormalLo                ; Continue
 
 AciaRdCtrl:
