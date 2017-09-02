@@ -1,7 +1,7 @@
 #===============================================================================
 # Software Makefile
 #-------------------------------------------------------------------------------
-# Copyright (C)2014-2016 Andrew John Jacobs
+# Copyright (C)2014-2017 Andrew John Jacobs
 # All rights reserved.
 #
 # This work is made available under the terms of the Creative Commons
@@ -27,7 +27,7 @@ all:		monitor
 
 clean:
 		start /wait /d monitor $(MAKEDIR)\$(MAKE) clean
-		
+
 #===============================================================================
 
 monitor:

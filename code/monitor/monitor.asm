@@ -1291,8 +1291,11 @@ RESET:
 		STX	TX_TAIL
 ;		STX	FLAGS		; And flow control flags
 
-		LDA	#$01		; Enable ACIA RX interrupt
-		STA	ACIA_CMND
+                lda     #%00011111	; 8 bits, 1 stop bit, 19200 baud
+                sta     ACIA_CTRL
+                lda     #%11001001	; No parity, no interrupt
+                sta     ACIA_CMND
+                lda     ACIA_DATA	; Clear receive buffer
 
 		CLI			; Allow interrupts
 		BRK
@@ -1385,7 +1388,7 @@ NMI:
 ; IRQ Handler
 ;-------------------------------------------------------------------------------
 
-; Handle interrupts, currently just UART transmit buffer empty and recieve
+; Handle interrupts, currently just UART transmit buffer empty and receive
 ; buffer full.
 
 IRQ:
