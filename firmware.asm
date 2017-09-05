@@ -58,14 +58,44 @@
 
                 endif
                 
+;-------------------------------------------------------------------------------
+                
+                ifdef   __DEBUG
+CYCLE_DEBUG     equ     0                       ; 1 if debugging at cycle level
+ADRH_MASK       equ     h'3f'                   ; 3f when ICSP is enabled
+                else
+CYCLE_DEBUG     equ     0                       ; 1 if debugging at cycle level
+ADRH_MASK       equ     h'ff'                   ; ff when PORTB is full byte
+                endif
+                
+;===============================================================================
+; Debugging Macros
+;-------------------------------------------------------------------------------
+                
+TRACE_NEWL      macro
+                if      CYCLE_DEBUG
+                rcall   NewLine
+                endif
+                endm
+                
+TRACE_ADDR      macro
+                if      CYCLE_DEBUG
+                rcall   ShowAddr
+                endif
+                endm
+     
+TRACE_DATA      macro
+                if      CYCLE_DEBUG
+                rcall   ShowData
+                endif
+                endm
+
 ;===============================================================================
 ; Constants
 ;-------------------------------------------------------------------------------
 
 BOOT_ADDR       equ     h'1000'                 ; Dummy reset address
 ROM_BASE        equ     h'f000'                 ; Base address of ROM image
-
-ADRH_MASK       equ     h'3f'                   ; 3f when debugging ff otherwise
 
 ; ASCII Control Characters
        
@@ -156,8 +186,9 @@ TMR2_PR         equ     FOSC / (.4 * TMR2_HZ * TMR2_PRE * TMR2_POST) - .1
 
                 udata_acs
 
-DEVICE          res     .1                      ; h'00' if 6502, h'ff' if 65C02
-
+EXTRA_CYCLE     res     .1                      ; 'ff' if JMP (aa) is longer
+CAPTURE         res     .1
+         
 ADDRL           res     .1                      ; Address next ROM byte to force
 ADDRH           res     .1                      ; .. load
 
@@ -295,6 +326,13 @@ WaitTillStable:
 
                 bcf     TXD_TRIS,TXD_PIN        ; Make TXD an output    
                 bsf     RXD_TRIS,RXD_PIN        ; .. and RXD an input
+                
+                if      CYCLE_DEBUG
+                movlw   low UART_BRG(.19200)    ; F = 19200
+                movwf   SPBRG1
+                movlw   high UART_BRG(.19200)
+                movwf   SPBRGH1
+                endif
                                 
                 movlw   M(BRG16)                ; Configure UART
                 movwf   BAUDCON1
@@ -331,9 +369,7 @@ WaitTillStable:
                 
 ;-------------------------------------------------------------------------------
 
-                clrf    WREG
-                clrf    DEVICE                  ; Assume a 6502
-                bsf     INTCON,GIE
+                clrf    EXTRA_CYCLE             ; Assume a 6502 or 65C802
 
 ;===============================================================================
 ; Start Regular Clock Pulses
@@ -362,6 +398,21 @@ PulseClock:
                 nop
                 nop
                 nop
+                
+                if      CYCLE_DEBUG
+                rcall   NewLine
+                rcall   NewLine
+                movlw   'R'
+                rcall   UartTx
+                movlw   'e'
+                rcall   UartTx
+                movlw   's'
+                rcall   UartTx
+                movlw   'e'
+                rcall   UartTx
+                movlw   't'
+                rcall   UartTx
+                endif
 
 ;===============================================================================
 ; Allow device to reset
@@ -369,10 +420,12 @@ PulseClock:
 
 WaitForReset:
                 rcall   LoPhase
+                TRACE_NEWL
 
                 bsf     PHI0_LAT,PHI0_PIN       ; Make PHI0 high
                 nop
-
+                TRACE_ADDR
+                
                 movf    ADRL_PORT,W             ; Address is $FFFC?
                 xorlw   h'fc'
                 bnz     WaitForReset            ; No
@@ -388,10 +441,14 @@ WaitForReset:
                 movwf   DATA_LAT
                 nop
                 nop
+                TRACE_DATA
 
                 rcall   LoPhase
+                TRACE_NEWL
+                
                 bsf     PHI0_LAT,PHI0_PIN       ; Make PHI0 high
                 nop               
+                TRACE_ADDR
 
                 movf    ADRL_PORT,W             ; Address is $FFFD?
                 xorlw   h'fd'
@@ -408,41 +465,72 @@ WaitForReset:
                 movwf   DATA_LAT
                 nop
                 nop
+                TRACE_DATA
 
 ;-------------------------------------------------------------------------------
 
-                rcall   LoPhase                 ; Execute a JMP ($00FF)
+; Feed the microprocessor a JMP (%FFFF) instruction and check which addresses
+; are read.
+                
+                rcall   LoPhase                 ; Send Opcode
+                TRACE_NEWL
+                TRACE_ADDR
                 movlw   h'6c'
                 rcall   HiPhaseLoad
-                rcall   LoPhase
+                TRACE_DATA
+                
+                rcall   LoPhase                 ; Send address lo byte
+                TRACE_NEWL
+                TRACE_ADDR
                 movlw   h'ff'
                 rcall   HiPhaseLoad
+                TRACE_DATA
+                
+                rcall   LoPhase                 ; Send address hi byte
+                TRACE_NEWL
+                TRACE_ADDR
+                movlw   h'ff'
+                rcall   HiPhaseLoad
+                TRACE_DATA
+                
                 rcall   LoPhase
-                movlw   h'00'
-                rcall   HiPhaseLoad
+                TRACE_NEWL
+                TRACE_ADDR
+                
+                movf    ADRH_PORT,W             ; Rereading the high byte?
+                xorlw   h'10'
+                bnz     NoReread
+                decf    EXTRA_CYCLE,F           ; Yes, must be a 65C02
+                movlw   h'ff'                   ; Send the address hi byte
+                rcall   HiPhaseLoad             ; .. again
+                TRACE_DATA
 
-                rcall   LoPhase                 ; Is next read from $00FF?   
-                comf    ADRL_PORT,W             
-                btfsc   STATUS,Z                ; No, 65C02
-                bra     ForceAddress            ; Yes, 6502
-
-                decf    DEVICE,F                ; Change device type
-                movlw   h'00'                   ; Repeat address MSB
+                rcall   LoPhase                 ; Send lo byte of boot address
+                TRACE_NEWL
+                TRACE_ADDR
+NoReread:
+                movlw   low BOOT_ADDR
                 rcall   HiPhaseLoad
+                TRACE_DATA
+
                 rcall   LoPhase
-
-ForceAddress:
-                movlw   low BOOT_ADDR           ; Force boot address
+                TRACE_NEWL
+                TRACE_ADDR
+                
+                movf    ADRH_PORT,W             ; Capture hi byte of address       
+                movwf   CAPTURE
+                
+                movlw   high BOOT_ADDR          ; Send hi byte of boot address
                 rcall   HiPhaseLoad
-                rcall   LoPhase
-                movlw   high BOOT_ADDR
-                rcall   HiPhaseLoad
+                TRACE_DATA
 
-;-------------------------------------------------------------------------------
+                ;-------------------------------------------------------------------------------
 
-                btfsc   DEVICE,.7               ; Determine device
-                bra     WDC65C02
-
+                btfsc   EXTRA_CYCLE,.7          ; Determine device
+                bra     W65C02
+                movf    CAPTURE,W
+                bz      W65C802
+ 
 R6502:
                 movlw   low ROM6502             ; Point table pointer at ROM
                 movwf   TBLPTRL
@@ -451,10 +539,18 @@ R6502:
                 clrf    TBLPTRU
                 bra     StartLoad
 
-WDC65C02:
+W65C02:
                 movlw   low ROM65C02            ; Point table pointer at ROM
                 movwf   TBLPTRL
                 movlw   high ROM65C02
+                movwf   TBLPTRH
+                clrf    TBLPTRU
+                bra     StartLoad
+                      
+W65C802:
+                movlw   low ROM65C802           ; Point table pointer at ROM
+                movwf   TBLPTRL
+                movlw   high ROM65C802
                 movwf   TBLPTRH
                 clrf    TBLPTRU
 
@@ -468,58 +564,103 @@ StartLoad:
 LoadImage:
                 tblrd   *+
                 rcall   LoPhase                 ; Force LDA #data
+                TRACE_NEWL
+                TRACE_ADDR
                 movlw   h'a9'
                 rcall   HiPhaseLoad
+                TRACE_DATA
                 rcall   LoPhase
+                TRACE_NEWL
+                TRACE_ADDR
                 movf    TABLAT,W
                 rcall   HiPhaseLoad
+                TRACE_DATA
                 rcall   LoPhase
+                TRACE_NEWL
+                TRACE_ADDR
                 movlw   h'8d'                   ; Force STA abs
                 rcall   HiPhaseLoad
+                TRACE_DATA
                 rcall   LoPhase
+                TRACE_NEWL
+                TRACE_ADDR
                 movf    ADDRL,W
                 rcall   HiPhaseLoad
+                TRACE_DATA
                 rcall   LoPhase
+                TRACE_NEWL
+                TRACE_ADDR
                 movf    ADDRH,W
                 rcall   HiPhaseLoad
+                TRACE_DATA
                 rcall   LoPhase
+                TRACE_NEWL
+                TRACE_ADDR
                 rcall   HiPhaseWrite
+                TRACE_DATA
 
                 incf    ADDRL,F                 ; Next address
                 bnz     LoadImage
 
                 rcall   LoPhase                 ; Jump back to boot addr
+                TRACE_NEWL
+                TRACE_ADDR
                 movlw   h'4c'                   ; .. every page
                 rcall   HiPhaseLoad
+                TRACE_DATA
                 rcall   LoPhase
+                TRACE_NEWL
+                TRACE_ADDR
                 movlw   low BOOT_ADDR
                 rcall   HiPhaseLoad
+                TRACE_DATA
                 rcall   LoPhase
+                TRACE_NEWL
+                TRACE_ADDR
                 movlw   high BOOT_ADDR
                 rcall   HiPhaseLoad
+                TRACE_DATA
 
                 incf    ADDRH,F                 ; Until complete
                 bnz     LoadImage
 
                 rcall   LoPhase                 ; Restart using real ROM
+                TRACE_NEWL
+                TRACE_ADDR
                 movlw   h'6c'                   ; .. image
                 rcall   HiPhaseLoad
+                TRACE_DATA
                 rcall   LoPhase
+                TRACE_NEWL
+                TRACE_ADDR
                 movlw   h'fc'
                 rcall   HiPhaseLoad
+                TRACE_DATA
                 rcall   LoPhase
+                TRACE_NEWL
+                TRACE_ADDR
                 movlw   h'ff'
                 rcall   HiPhaseLoad
-                btfss   DEVICE,.7               ; Extra read for 65C02?
-                bra     NoExtraRead             ; No, 6502
+                TRACE_DATA
+                btfss   EXTRA_CYCLE,.7          ; Extra read for 65C02?
+                bra     NoExtraRead             ; No, 6502 or 65C802
                 rcall   LoPhase                 ; Yes
+                TRACE_NEWL
+                TRACE_ADDR
                 movlw   h'ff'
                 rcall   HiPhaseLoad
+                TRACE_DATA
 NoExtraRead:
                 rcall   LoPhase
+                TRACE_NEWL
+                TRACE_ADDR
                 rcall   HiPhaseRead
+                TRACE_DATA
                 rcall   LoPhase
+                TRACE_NEWL
+                TRACE_ADDR
                 rcall   HiPhaseRead
+                TRACE_DATA
 
                 bra     Execute                 ; And start real execution
 
@@ -613,7 +754,8 @@ NormalLo:
 
                 setf    DATA_TRIS               ; Tristate data bus
                 bsf     NRAM_LAT,NRAM_PIN       ; Disable RAM
-
+                TRACE_NEWL
+                TRACE_ADDR
                 movf    PIR1,W                  ; Any hardware interrupts
                 andlw   M(INT_HW_RXD)|M(INT_HW_TXD)|M(INT_HW_SPI)
                 iorwf   INT_FLAG,W              ; .. or software interrupts
@@ -631,6 +773,7 @@ NormalHi:
                 xorlw   h'fe' & ADRH_MASK       ; I/O page?
                 bz      IOAccess
                 bcf     NRAM_LAT,NRAM_PIN       ; No, RAM access
+                TRACE_DATA
                 bra     NormalLo
                 
 IOAccess:
@@ -1278,12 +1421,53 @@ ComputedJump:
 ; Uart Interface
 ;-------------------------------------------------------------------------------
 
+                if      CYCLE_DEBUG
+
+ShowAddr:
+                movf    ADRH_PORT,W             ; Output full 16-bit
+                rcall   Hex2                    ; .. address value
+                movf    ADRL_PORT,W             
+                rcall   Hex2
+                movlw   ' '
+                rcall   UartTx
+                movlw   'R'                     ; And R/W direction
+                btfss   RW_PORT,RW_PIN
+                movlw   'W'
+                bra     UartTx
+                
+ShowData:
+                movlw   ' '
+                rcall   UartTx
+                movf    DATA_PORT,W
+                btfss   RW_PORT,RW_PIN
+                movf    DATA_LAT,W
+             
+Hex2:
+                movwf   PRODL                   ; Save byte
+                swapf   WREG,W                  ; Switch nybbles
+                rcall   Hex
+                movf    PRODL,W
+Hex:
+                andlw   h'0f'
+                addlw   .6
+                btfsc   STATUS,DC
+                addlw   .7
+                addlw   '0'-.6
+                bra     UartTx
+                
+NewLine:
+                movlw   '\r'                    ; Output CR/LF
+                rcall   UartTx
+                movlw   '\n'
+
 UartTx:
                 btfss   PIR1,TX1IF              ; Wait until able to TX
                 bra     UartTx
                 movwf   TXREG1                  ; Then send the character
                 return
 
+                endif
+              
 ;===============================================================================
 ; Boot ROM Images
 ;-------------------------------------------------------------------------------
@@ -1295,5 +1479,8 @@ ROM6502:
 
 ROM65C02:
                 include "boot-65c02.asm"
+
+ROM65C802:
+                include "boot-65c802.asm"
 
                 end

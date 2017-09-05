@@ -31,7 +31,8 @@ include	../MakeDefns
 
 TARGETS	= \
 	monitor-6502.bin monitor-6502.hex ../../boot-6502.asm \
-	monitor-65c02.bin monitor-65c02.hex ../../boot-65c02.asm
+	monitor-65c02.bin monitor-65c02.hex ../../boot-65c02.asm \
+	monitor-65c802.bin monitor-65c802.hex ../../boot-65c802.asm
 
 LK65_FLAGS = \
 	-bss $$0200-$$EFFF -code $$F000-$$FFFF
@@ -44,17 +45,26 @@ monitor-6502.bin: monitor-6502.obj
 monitor-65c02.bin: monitor-65c02.obj
 	$(LK65) $(LK65_FLAGS) -bin -output $@ monitor-65c02.obj
 
+monitor-65c802.bin: monitor-65c802.obj
+	$(LK65) $(LK65_FLAGS) -bin -output $@ monitor-65c802.obj
+
 monitor-6502.hex: monitor-6502.obj
 	$(LK65) $(LK65_FLAGS) -hex -output $@ monitor-6502.obj
 
 monitor-65c02.hex: monitor-65c02.obj
 	$(LK65) $(LK65_FLAGS) -hex -output $@ monitor-65c02.obj
 
+monitor-65c802.hex: monitor-65c802.obj
+	$(LK65) $(LK65_FLAGS) -hex -output $@ monitor-65c802.obj
+
 ../../boot-6502.asm: monitor-6502.hex
 	java -cp $(DEV65_JAR) uk.co.demon.obelisk.util.Hex2Mpasm < monitor-6502.hex > ../../boot-6502.asm
 
 ../../boot-65c02.asm: monitor-65c02.hex
 	java -cp $(DEV65_JAR) uk.co.demon.obelisk.util.Hex2Mpasm < monitor-65c02.hex > ../../boot-65c02.asm
+
+../../boot-65c802.asm: monitor-65c802.hex
+	java -cp $(DEV65_JAR) uk.co.demon.obelisk.util.Hex2Mpasm < monitor-65c802.hex > ../../boot-65c802.asm
 
 clean:
 	$(RM) *.obj
@@ -72,3 +82,6 @@ monitor-6502.obj: \
 
 monitor-65c02.obj: \
 	monitor-65c02.asm monitor.asm
+
+monitor-65c802.obj: \
+	monitor-65c802.asm monitor.asm

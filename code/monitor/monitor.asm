@@ -36,7 +36,7 @@ OP_ERR		.EQU	$00
 OP_ADC		.EQU	$02
 OP_AND		.EQU	$04
 OP_ASL		.EQU	$06
-		.IF	__65C02__
+		.IF	__65C02__ | __65816__
 OP_BBR		.EQU	$08
 OP_BBS		.EQU	$0A
 		.ENDIF
@@ -47,7 +47,7 @@ OP_BIT		.EQU	$12
 OP_BNE		.EQU	$14
 OP_BMI		.EQU	$16
 OP_BPL		.EQU	$18
-		.IF	__65C02__
+		.IF	__65C02__ | __65816__
 OP_BRA		.EQU	$1A
 		.ENDIF
 OP_BRK		.EQU	$1C
@@ -77,13 +77,13 @@ OP_NOP		.EQU	$4A
 OP_ORA		.EQU	$4C
 OP_PHA		.EQU	$4E
 OP_PHP		.EQU	$50
-		.IF	__65C02__
+		.IF	__65C02__ | __65816__
 OP_PHX		.EQU	$52
 OP_PHY		.EQU	$54
 		.ENDIF
 OP_PLA		.EQU	$56
 OP_PLP		.EQU	$58
-		.IF	__65C02__
+		.IF	__65C02__ | __65816__
 OP_PLX		.EQU	$5A
 OP_PLY		.EQU	$5C
 OP_RMB		.EQU	$5E
@@ -96,21 +96,21 @@ OP_SBC		.EQU	$68
 OP_SEC		.EQU	$6A
 OP_SED		.EQU	$6C
 OP_SEI		.EQU	$6E
-		.IF	__65C02__
+		.IF	__65C02__ | __65816__
 OP_SMB		.EQU	$70
 		.ENDIF
 OP_STA		.EQU	$72
-		.IF	__65C02__
+		.IF	__65C02__ | __65816__
 OP_STP		.EQU	$74
 		.ENDIF
 OP_STX		.EQU	$76
 OP_STY		.EQU	$78
-		.IF	__65C02__
+		.IF	__65C02__ | __65816__
 OP_STZ		.EQU	$7A
 		.ENDIF
 OP_TAX		.EQU	$7C
 OP_TAY		.EQU	$7E
-		.IF	__65C02__
+		.IF	__65C02__ | __65816__
 OP_TRB		.EQU	$80
 OP_TSB		.EQU	$82
 		.ENDIF
@@ -118,7 +118,7 @@ OP_TSX		.EQU	$84
 OP_TXA		.EQU	$86
 OP_TXS		.EQU	$88
 OP_TYA		.EQU	$8A
-		.IF	__65C02__
+		.IF	__65C02__ | __65816__
 OP_WAI		.EQU	$8C
 		.ENDIF
 
@@ -139,7 +139,7 @@ MB_YRG		.EQU	%00000100
 
 ; Addressing modes
 
-		.IF	__65C02__
+		.IF	__65C02__ | __65816__
 MO_BIT		.EQU	MB_BIT	     |MB_ZPG
 MO_BRL		.EQU	MB_BIT|MB_REL|MB_ZPG
 		.ENDIF
@@ -150,7 +150,7 @@ MO_REL		.EQU		      MB_REL
 MO_ZPG		.EQU		      MB_ZPG
 MO_ZPX		.EQU	       MB_YRG|MB_ZPG
 MO_ZPY		.EQU	       MB_YRG|MB_ZPG
-		.IF	__65C02__
+		.IF	__65C02__ | __65816__
 MO_IZP		.EQU	MB_IND	     |MB_ZPG
 		.ENDIF
 MO_IZX		.EQU	MB_IND|MB_XRG|MB_ZPG
@@ -159,7 +159,7 @@ MO_ABS		.EQU		      MB_ABS
 MO_ABX		.EQU	       MB_XRG|MB_ABS
 MO_ABY		.EQU	       MB_YRG|MB_ABS
 MO_IAB		.EQU	MB_IND	     |MB_ABS
-		.IF	__65C02__
+		.IF	__65C02__ | __65816__
 MO_IAX		.EQU	MB_IND|MB_XRG|MB_ABS
 		.ENDIF
 
@@ -304,7 +304,7 @@ MODES:
 
 ;-------------------------------------------------------------------------------
 
-		.IF	__65C02__
+		.IF	__65C02__ | __65816__
 OPCODES:
 		.BYTE	OP_BRK,OP_ORA,OP_ERR,OP_ERR,OP_TSB,OP_ORA,OP_ASL,OP_RMB ; 0
 		.BYTE	OP_PHP,OP_ORA,OP_ASL,OP_ERR,OP_TSB,OP_ORA,OP_ASL,OP_BBR
@@ -1262,6 +1262,17 @@ HLP_STR		.EQU	.-STRINGS
 		.BYTE	CR,LF,"T [xxxx]\t\tTrace"
 		.BYTE	CR,LF,"W xxxx yy\t\tWrite Memory"
 		.BYTE 	0
+TTL_STR		.EQU	.-STRINGS
+		.IF	__6502__
+		.BYTE	CR,LF,LF,"Boot 6502 [17.09]"
+		.ENDIF
+		.IF	__65C02__
+		.BYTE	CR,LF,LF,"Boot 65C02 [17.09]"
+		.ENDIF
+		.IF	__65816__
+		.BYTE	CR,LF,LF,"Boot 65C802 [17.09]"
+		.ENDIF
+		.BYTE	0
 		
 FLAG		.BYTE	"CZID11VN"
 BITS		.BYTE	$01,$02,$04,$08,$10,$20,$40,$80
@@ -1298,6 +1309,8 @@ RESET:
                 lda     ACIA_DATA	; Clear receive buffer
 
 		CLI			; Allow interrupts
+		LDX	#TTL_STR
+		JSR	SHOW_STR
 		BRK
 
 ;===============================================================================
@@ -1336,22 +1349,6 @@ UART_TX:
 ;
 
 UART_RX:
-;		BIT	FLAGS		; Terminal stopped from sending?
-;		IF	MI
-;		 JSR	RX_COUNT	; Yes, check RX buffer count
-;		 CMP	#RX_SIZE*1/10	; Restart when only 10% full
-;		 IF	CC
-;		  LDA	#DC1		; Send XON
-;		  JSR	UART_TX
-;		.IF	__65C02__
-;		  STZ	FLAGS		; Mark as no longer stopped
-;		.ELSE
-;		  LDA	#0		; Mark as no longer stopped
-;		  STA	FLAGS
-;		.ENDIF
-;		 ENDIF
-;		ENDIF
-
 		STY	IO_TEMP
 		LDY	RX_HEAD		; Wait until there is some data
 		REPEAT
