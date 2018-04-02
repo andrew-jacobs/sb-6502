@@ -10,6 +10,8 @@ The complete system, including a USB serial adapter and Micro SD card interface 
 
 ![SB-6502 Version 1](images/sb-6502.jpg)
 
+The board in the photo is a version 1 PCB and lacks a pull up on the /SO pin (not that it seems to matter to any of the processors). The PIC is also installed on a development daughter board which allows in circuit programming, normally its plugged straight into the PCB. A new version of the board is being manufactured. It is slightly smaller than 10cm x 10cm, includes an extra resistor and is black.
+
 In order to make a working system the PIC must act as the source of the microprocessor's clock signal and decode it's control signals to either enable the memory or emulate a peripheral chip at the appropriate time.
 
 ## Booting a ROM-less System
@@ -34,7 +36,7 @@ Every 256 bytes a JMP $1000 instruction is generated to reset the program counte
 
 ## Normal Operation
 
-In normal operation the PIC becomes subservient to the microprocessor. It continues to generate the clock pulse but now it examines the control signals and address bus value to determine what data the microprocessor is trying to access. Most of the time the microprocessor will be accessing the SRAM memory chip but if the address is in the $FE00-$FEFF range then address is interpreted as a virtual peripheral access.
+In normal operation the PIC becomes subservient to the microprocessor. It continues to generate the clock pulse but now it examines the control signals and address bus value to determine what data the microprocessor is trying to access. Most of the time the microprocessor will be accessing the SRAM memory chip but if the address is in the $FF00-$FF3F range then address is interpreted as a virtual peripheral access.
 
 The PIC code implements three virtual peripherals, an 6551 ACIA, a DS1318 RTS and a 65SPI (a SPI controller implemented in a CPLD designed by members of the 6502.org web forum). The features of these two chips are mapped to the PICs hardware.
 
@@ -80,3 +82,10 @@ The PIC contains three 8K ROM images, one for each supported processor type.
 ## Notes
 
 You could use this design with other 40 pin PIC 18F chips such as the 18F4680 with a few changes. The advantage of the 18F46K22 is that it executes a little faster on its internal oscillator than the older 18F chips (i.e. 16 MIPS vs 10 MIPS) which in turn means that the microprocessor is clocked a higher rate.
+
+The WDC 65C802 is quite a rare chip and unfortunately I have made it rarer by buying up a number of them in recent years. The 16-bit registers available in native mode make programming it quite a different experience from the regular 65(C)02.
+
+## Bugs/Features
+
+1. The PIC runs too quickly to support the 50 and 75 baud rate settings provided by a real 6551 ACIA.
+2. The virtual DS1318 RTC is not yet completely coded.
