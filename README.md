@@ -38,7 +38,7 @@ Every 256 bytes a JMP $1000 instruction is generated to reset the program counte
 
 In normal operation the PIC becomes subservient to the microprocessor. It continues to generate the clock pulse but now it examines the control signals and address bus value to determine what data the microprocessor is trying to access. Most of the time the microprocessor will be accessing the SRAM memory chip but if the address is in the $FE00-$FE3F range then the address is interpreted as a virtual peripheral access.
 
-The PIC code implements three virtual peripherals, an 6551 ACIA, a DS1318 RTS and a 65SPI (a SPI controller implemented in a CPLD designed by members of the 6502.org web forum). The features of these two chips are mapped to the PICs hardware.
+The PIC code implements three virtual peripherals, an 6551 ACIA, a DS1318 RTS and a 65SPI (a SPI controller implemented in a CPLD designed by members of the 6502.org web forum). The features of these three chips are mapped to the PIC's hardware.
 
 In program code the following addresses should be used to access the peripheral registers.
 
@@ -79,14 +79,24 @@ Accessing some of these registers takes an extended period of time during which 
 
 The PIC contains three 4K ROM images, one for each supported processor type, containing a simple boot monitor that allows you to examine and change the memory, download S19 records and execute code.
 
-The monitor resides in the top 4K of memory from $F000 to $FFFF. The code needed to provided interrupt driven serial I/O is held in the area above the I/O registers (e.g. $FE40-$FFFF) and provides a set of entry points for user programs to call.
+The monitor resides in the top 4K of memory from $F000 to $FFFF. The code needed to provide interrupt driven serial I/O is held in the area above the I/O registers (e.g. $FE40-$FFFF) and provides a set of entry points for user programs to call.
+
+$FE40 UARTTX
+$FE43 UARTRX
+$FE46 UARTCRLF
+
+The memory area from $0200 to $027F is used to hold some interrupt vectors, the UART buffers and thier head/tail indexes. The Monitor uses $0200 to $02FF as a command buffer.
 
 $0200 BRKVE 
 $0200 IRQVE
 $0204 BRKVN
 $0206 IRQVN
 
-All of these vectors are initialised to point at a default handler.
+The vectors are initialised to point at a default handlers. The BRKN and IRQN vectors are only used by the WDC 65C802 version of the monitor.
+
+If you write your own program then you can use the zero page locations $00 to $DF and the main RAM area between $0300 to $EFFF without corrupting the monitor.
+
+As the monitor image is entirely held in RAM it can be completely overwritten (provided you disable interrupts while doing so) but it is probably more practical to preserve the interrupt handler code at $FE40-$FFFF, the associated vectors/buffers area at $0200 to $027F and the zero page temporary area at $FE-$FF (used by the 6502 and 65C02 code). Everything else is up for grabs. 
 
 ## Notes
 
@@ -98,3 +108,4 @@ The WDC 65C802 is quite a rare chip and unfortunately I have made it rarer by bu
 
 1. The PIC runs too quickly to support the 50 and 75 baud rate settings provided by a real 6551 ACIA.
 2. The virtual DS1318 RTC is not yet completely coded.
+3. I'm considering adding virtual access the PICs flash memory so that ROM images can be reprogrammed from the microprocessor. Dangerous but could be fun.
