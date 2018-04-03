@@ -7,7 +7,7 @@
 ;                                          
 ; A Minimal 65(C)02/65C802 Single Board Computer
 ;-------------------------------------------------------------------------------
-; Copyright (C)2014-2017 Andrew John Jacobs
+; Copyright (C)2014-2018 Andrew John Jacobs
 ; All rights reserved.
 ;
 ; This work is made available under the terms of the Creative Commons
@@ -21,24 +21,26 @@
 ;
 ;          65(C)02                 65C802
 ; +------+-----------------------+-----------------------+
-; | 0000 | Page Zero             | RAM                   |
-; +------+-----------------------+                       |
-; | 0100 | Stack                 |                       |
-; +------+-----------------------+                       |
-; | 0200 | RAM                   |                       |
-; |      |                       |                       |
-; |      |                       |                       |
-; |      |                       |                       |
-; | FEFF |                       |                       |
+; | 0000 | Page Zero             | Default Page Zero     |
 ; +------+-----------------------+-----------------------+
-; | F000 | Boot ROM Image        | Boot ROM Image        |
+; | 0100 | Stack                 | Default Stack         |
 ; +------+-----------------------+-----------------------+
-; | FF00 | ACIA                  | ACIA                  |
-; | FF10 | 65SPI                 | 65SPI                 |
-; | FF20 | DS1318                | DS1318                |
-; | FF30 | Empty                 | Empty                 |
+; | 0200 | Vectors & I/O RAM     | Vectors & I/O RAM     |
 ; +------+-----------------------+-----------------------+
-; | FF40 | Boot ROM Image        | Boot ROM Image        |
+; | 0300 | RAM                   | RAM                   |
+; |      |                       |                       |
+; | EFFF |                       |                       |
+; +------+-----------------------+-----------------------+
+; | F000 | Boot 'ROM' Image      | Boot 'ROM' Image      |
+; |      | (Overwritable)        | (Overwritable)        |
+; | FDFF |                       |                       |
+; +------+-----------------------+-----------------------+
+; | FE00 | ACIA                  | ACIA                  |
+; | FE10 | 65SPI                 | 65SPI                 |
+; | FE20 | DS1318                | DS1318                |
+; | FE30 | Empty                 | Empty                 |
+; +------+-----------------------+-----------------------+
+; | FE40 | I/O API & Drivers     | I/O API & Drivers     |
 ; | FFE8 |                       | 65C802 Vectors        |
 ; | FFFA | 65(C)02 Vectors       |                       |
 ; +------+-----------------------+-----------------------+
@@ -55,34 +57,34 @@ STACK		.equ	$0100
 
 ; Emulated 6551 ACIA
 
-ACIA_DATA	.equ	$ff00		; R/W
-ACIA_STAT	.equ	$ff01		; R/W
-ACIA_CMND	.equ	$ff02		; R/W
-ACIA_CTRL	.equ	$ff03		; R/W
+ACIA_DATA	.equ	$fe00		; R/W
+ACIA_STAT	.equ	$fe01		; R/W
+ACIA_CMND	.equ	$fe02		; R/W
+ACIA_CTRL	.equ	$fe03		; R/W
 
 ; Emulated 65SPI
 
-SPI_DATA	.equ	$ff10		; R/W
-SPI_STAT	.equ	$ff11		; R/O
-SPI_CTRL	.equ	$ff11		; W/O
-SPI_DVSR	.equ	$ff12		; R/W
-SPI_SLCT	.equ	$ff13		; R/W
+SPI_DATA	.equ	$fe10		; R/W
+SPI_STAT	.equ	$fe11		; R/O
+SPI_CTRL	.equ	$fe11		; W/O
+SPI_DVSR	.equ	$fe12		; R/W
+SPI_SLCT	.equ	$fe13		; R/W
 
 ; Emulated DS1318 RTCC
 
-RTC_SUB0	.equ	$ff20		; R/W
-RTC_SUB1	.equ	$ff21		; R/W
-RTC_SEC0	.equ	$ff22		; R/W
-RTC_SEC1	.equ	$ff23		; R/W
-RTC_SEC2	.equ	$ff24		; R/W
-RTC_SEC3	.equ	$ff25		; R/W
-RTC_ALM0	.equ	$ff26		; R/W
-RTC_ALM1	.equ	$ff27		; R/W
-RTC_ALM2	.equ	$ff27		; R/W
-RTC_ALM3	.equ	$ff28		; R/W
-RTC_CTLA	.equ	$ff2a		; R/W
-RTC_CTLB	.equ	$ff2b		; R/W
-RTC_STAT	.equ	$ff2c		; R/W
+RTC_SUB0	.equ	$fe20		; R/W
+RTC_SUB1	.equ	$fe21		; R/W
+RTC_SEC0	.equ	$fe22		; R/W
+RTC_SEC1	.equ	$fe23		; R/W
+RTC_SEC2	.equ	$fe24		; R/W
+RTC_SEC3	.equ	$fe25		; R/W
+RTC_ALM0	.equ	$fe26		; R/W
+RTC_ALM1	.equ	$fe27		; R/W
+RTC_ALM2	.equ	$fe27		; R/W
+RTC_ALM3	.equ	$fe28		; R/W
+RTC_CTLA	.equ	$fe2a		; R/W
+RTC_CTLB	.equ	$fe2b		; R/W
+RTC_STAT	.equ	$fe2c		; R/W
 
 ;===============================================================================
 ; Macros
@@ -121,5 +123,15 @@ LONG_AI		.macro
 		.longi	on
 		rep	#$30
 		.endm
+
+
 		
+;===============================================================================
+; I/O API
+;-------------------------------------------------------------------------------
+
+UARTTX		.equ	$fe40
+UARTRX		.equ	$fe43
+UARTCRLF	.equ	$fe46
+
 		.endif

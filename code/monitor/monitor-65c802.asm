@@ -36,6 +36,9 @@
 ;-------------------------------------------------------------------------------
 
 		.65816
+		
+MONITOR		.equ	1
+
 		.include "../sb-6502.inc"
 		
 ;===============================================================================
@@ -49,6 +52,8 @@ BEL		.equ	$07
 BS		.equ	$08
 LF		.equ	$0a
 CR		.equ	$0d
+DC1		.equ	$11		; XON
+DC3		.equ	$13		; XOFF
 NAK		.equ	$15
 CAN		.equ	$18
 ESC		.equ	$1b
@@ -58,98 +63,99 @@ DEL		.equ	$7f
 ; Instruction and Mode Constants
 ;-------------------------------------------------------------------------------
 		
-OP_ADC		.equ	0<<1
-OP_AND		.equ	1<<1
-OP_ASL		.equ	2<<1
-OP_BCC		.equ	3<<1
-OP_BCS		.equ	4<<1
-OP_BEQ		.equ	5<<1
-OP_BIT		.equ	6<<1
-OP_BMI		.equ	7<<1
-OP_BNE		.equ	8<<1
-OP_BPL		.equ	9<<1
-OP_BRA		.equ	10<<1
-OP_BRK		.equ	11<<1
-OP_BRL		.equ	12<<1
-OP_BVC		.equ	13<<1
-OP_BVS		.equ	14<<1
-OP_CLC		.equ	15<<1
-OP_CLD		.equ	16<<1
-OP_CLI		.equ	17<<1
-OP_CLV		.equ	18<<1
-OP_CMP		.equ	19<<1
-OP_COP		.equ	20<<1
-OP_CPX		.equ	21<<1
-OP_CPY		.equ	22<<1
-OP_DEC		.equ	23<<1
-OP_DEX		.equ	24<<1
-OP_DEY		.equ	25<<1
-OP_EOR		.equ	26<<1
-OP_INC		.equ	27<<1
-OP_INX		.equ	28<<1
-OP_INY		.equ	29<<1
-OP_JML		.equ	30<<1
-OP_JMP		.equ	31<<1
-OP_JSL		.equ	32<<1
-OP_JSR		.equ	33<<1
-OP_LDA		.equ	34<<1
-OP_LDX		.equ	35<<1
-OP_LDY		.equ	36<<1
-OP_LSR		.equ	37<<1
-OP_MVN		.equ	38<<1
-OP_MVP		.equ	39<<1
-OP_NOP		.equ	40<<1
-OP_ORA		.equ	41<<1
-OP_PEA		.equ	42<<1
-OP_PEI		.equ	43<<1
-OP_PER		.equ	44<<1
-OP_PHA		.equ	45<<1
-OP_PHB		.equ	46<<1
-OP_PHD		.equ	47<<1
-OP_PHK		.equ	48<<1
-OP_PHP		.equ	49<<1
-OP_PHX		.equ	50<<1
-OP_PHY		.equ	51<<1
-OP_PLA		.equ	52<<1
-OP_PLB		.equ	53<<1
-OP_PLD		.equ	54<<1
-OP_PLP		.equ	55<<1
-OP_PLX		.equ	56<<1
-OP_PLY		.equ	57<<1
-OP_REP		.equ	58<<1
-OP_ROL		.equ	59<<1
-OP_ROR		.equ	60<<1
-OP_RTI		.equ	61<<1
-OP_RTL		.equ	62<<1
-OP_RTS		.equ	63<<1
-OP_SBC		.equ	64<<1
-OP_SEC		.equ	65<<1
-OP_SED		.equ	66<<1
-OP_SEI		.equ	67<<1
-OP_SEP		.equ	68<<1
-OP_STA		.equ	69<<1
-OP_STP		.equ	70<<1
-OP_STX		.equ	71<<1
-OP_STY		.equ	72<<1
-OP_STZ		.equ	73<<1
-OP_TAX		.equ	74<<1
-OP_TAY		.equ	75<<1
-OP_TCD		.equ	76<<1
-OP_TCS		.equ	77<<1
-OP_TDC		.equ	78<<1
-OP_TRB		.equ	79<<1
-OP_TSB		.equ	80<<1
-OP_TSC		.equ	81<<1
-OP_TSX		.equ	82<<1
-OP_TXA		.equ	83<<1
-OP_TXS		.equ	84<<1
-OP_TXY		.equ	85<<1
-OP_TYA		.equ	86<<1
-OP_TYX		.equ	87<<1
-OP_WAI		.equ	88<<1
-OP_WDM		.equ	89<<1
-OP_XBA		.equ	90<<1
-OP_XCE		.equ	91<<1
+OP_ERR		.equ	0<<1
+OP_ADC		.equ	1<<1
+OP_AND		.equ	2<<1
+OP_ASL		.equ	3<<1
+OP_BCC		.equ	4<<1
+OP_BCS		.equ	5<<1
+OP_BEQ		.equ	6<<1
+OP_BIT		.equ	7<<1
+OP_BMI		.equ	8<<1
+OP_BNE		.equ	9<<1
+OP_BPL		.equ	10<<1
+OP_BRA		.equ	11<<1
+OP_BRK		.equ	12<<1
+OP_BRL		.equ	13<<1
+OP_BVC		.equ	14<<1
+OP_BVS		.equ	15<<1
+OP_CLC		.equ	16<<1
+OP_CLD		.equ	17<<1
+OP_CLI		.equ	18<<1
+OP_CLV		.equ	19<<1
+OP_CMP		.equ	20<<1
+OP_COP		.equ	21<<1
+OP_CPX		.equ	22<<1
+OP_CPY		.equ	23<<1
+OP_DEC		.equ	24<<1
+OP_DEX		.equ	25<<1
+OP_DEY		.equ	26<<1
+OP_EOR		.equ	27<<1
+OP_INC		.equ	28<<1
+OP_INX		.equ	29<<1
+OP_INY		.equ	30<<1
+OP_JML		.equ	31<<1
+OP_JMP		.equ	32<<1
+OP_JSL		.equ	33<<1
+OP_JSR		.equ	34<<1
+OP_LDA		.equ	35<<1
+OP_LDX		.equ	36<<1
+OP_LDY		.equ	37<<1
+OP_LSR		.equ	38<<1
+OP_MVN		.equ	39<<1
+OP_MVP		.equ	40<<1
+OP_NOP		.equ	41<<1
+OP_ORA		.equ	42<<1
+OP_PEA		.equ	43<<1
+OP_PEI		.equ	44<<1
+OP_PER		.equ	45<<1
+OP_PHA		.equ	46<<1
+OP_PHB		.equ	47<<1
+OP_PHD		.equ	48<<1
+OP_PHK		.equ	49<<1
+OP_PHP		.equ	50<<1
+OP_PHX		.equ	51<<1
+OP_PHY		.equ	52<<1
+OP_PLA		.equ	53<<1
+OP_PLB		.equ	54<<1
+OP_PLD		.equ	55<<1
+OP_PLP		.equ	56<<1
+OP_PLX		.equ	57<<1
+OP_PLY		.equ	58<<1
+OP_REP		.equ	59<<1
+OP_ROL		.equ	60<<1
+OP_ROR		.equ	61<<1
+OP_rti		.equ	62<<1
+OP_RTL		.equ	63<<1
+OP_RTS		.equ	64<<1
+OP_SBC		.equ	65<<1
+OP_SEC		.equ	66<<1
+OP_SED		.equ	67<<1
+OP_SEI		.equ	68<<1
+OP_SEP		.equ	69<<1
+OP_STA		.equ	70<<1
+OP_STP		.equ	71<<1
+OP_STX		.equ	72<<1
+OP_STY		.equ	73<<1
+OP_STZ		.equ	74<<1
+OP_TAX		.equ	75<<1
+OP_TAY		.equ	76<<1
+OP_TCD		.equ	77<<1
+OP_TCS		.equ	78<<1
+OP_TDC		.equ	79<<1
+OP_TRB		.equ	80<<1
+OP_TSB		.equ	81<<1
+OP_TSC		.equ	82<<1
+OP_TSX		.equ	83<<1
+OP_TXA		.equ	84<<1
+OP_TXS		.equ	85<<1
+OP_TXY		.equ	86<<1
+OP_TYA		.equ	87<<1
+OP_TYX		.equ	88<<1
+OP_WAI		.equ	89<<1
+OP_WDM		.equ	90<<1
+OP_XBA		.equ	91<<1
+OP_XCE		.equ	92<<1
 
 ;-------------------------------------------------------------------------------
 
@@ -183,13 +189,10 @@ MO_IMX		.equ	24<<1			; # (X or Y)
 ; Macros
 ;-------------------------------------------------------------------------------
 
-
-;-------------------------------------------------------------------------------
-
 ; The MNEM macro compresses three characters into a 16-bit value.
 
 MNEM		.macro	CH1,CH2,CH3
-		.word	((((CH3 & $1F) << 5)|(CH2 & $1F)) << 5)|(CH1 & $1F)
+		.word	((((CH3 & $1f) << 5)|(CH2 & $1f)) << 5)|(CH1 & $1f)
 		.endm
 
 ;===============================================================================
@@ -197,18 +200,18 @@ MNEM		.macro	CH1,CH2,CH3
 ;-------------------------------------------------------------------------------
 
 		.page0
-		.org	$00f0
+		.org	$00e0
 		
 E_BIT		.space	1			; E in MSB
-REG_P		.space	1
-REG_C		.space	2
-REG_X		.space	2
-REG_Y		.space	2
-REG_DP		.space	2
-REG_SP		.space	2
-REG_PC		.space	2
-REG_B		.space	1
-REG_K		.space	1
+P_REG		.space	1
+C_REG		.space	2
+X_REG		.space	2
+Y_REG		.space	2
+DP_REG		.space	2
+SP_REG		.space	2
+PC_REG		.space	2
+B_REG		.space	1
+K_REG		.space	1
 
 CMD_LEN		.space	1			; Command buffer length
 ADDR_S		.space	2
@@ -218,39 +221,38 @@ ADDR_E		.space	2
 ;COUNT		.SPACE	1
 
 		
+;===============================================================================
+; UART Buffers
+;-------------------------------------------------------------------------------
 		
 		.bss
 		.org	$0200
+		
+		.space	8		; Vectors
 
 BUF_SIZE	.equ	62
-CMD_SIZE	.equ	128
 
-TX_HEAD		.space	1
-TX_TAIL		.space	1
-RX_HEAD		.space	1
+RX_HEAD		.space	1		; UART recieve buffer offsets
 RX_TAIL		.space	1
+TX_HEAD		.space	1		; UART transmit buffer offsets
+TX_TAIL		.space	1
 
-TX_BUFFER	.space	BUF_SIZE
-RX_BUFFER	.space	BUF_SIZE
+RX_BUFFER	.space	BUF_SIZE	; UART recieve buffer
+TX_BUFFER	.space	BUF_SIZE	; UART transmit buffer
+
+CMD_SIZE	.equ	128
 
 COMMAND		.space	CMD_SIZE
 
-
-;===============================================================================
-; Entry Points
-;-------------------------------------------------------------------------------
-
-		.code
-		.org	$f000
-		
-UARTTX:		.word	_UartTx
-UARTRX:		.word	_UartRx
-		
 ;===============================================================================
 ; Compressed Mnemonics
 ;-------------------------------------------------------------------------------
 		
+		.code
+		.org	$f000
+		
 MNEMONICS:
+		MNEM    '?','?','?'
 		MNEM	'A','D','C'
 		MNEM	'A','N','D'
 		MNEM	'A','S','L'
@@ -371,9 +373,8 @@ RESET:
 		
 		cli			; Allow interrupts
 		
-		ldx	#CRLF		; Show title string
-		jsr	ShowString
-		ldx	#TITLE
+		jsr	NewLine		; Show title string
+		ldx	#TTL_STR
 		jsr	ShowString
 		
 		repeat
@@ -381,20 +382,57 @@ RESET:
 		forever
 
 ;===============================================================================
+; Break Handler
+;-------------------------------------------------------------------------------
+
+		.longa 	off
+		.longi	off
+BRKE:
+BRKN:
+		clc			; Ensure native mode
+		xce
+		ror	E_BIT		; .. but save the original
+		
+		LONG_AI			; Make all registers 16-bit
+		sta	C_REG		; Save A/B
+		stx	X_REG		; .. X
+		sty	Y_REG		; .. Y
+		tdc			; Save DP
+		sta	DP_REG
+		
+		SHORT_A			; Make A register 8-bits
+		bit	E_BIT		; 
+		if pl
+	; Banks
+	
+		endif
+		
+		pla			; Save P
+		sta	P_REG
+		plx			; Save PC
+		dex
+		dex
+		stx	PC_REG
+		tsx			; Save SP
+		stx	SP_REG
+		
+		cli
+		
+;===============================================================================
 ;-------------------------------------------------------------------------------
 
 		.longa	off
 		.longi	on
 ShowRegisters:
 		jsr	NewLine
-		ldx	#STR_PC		; Display the PC
+		ldx	#PC_STR		; Display the PC
 		jsr	ShowString
-		lda	REG_PC+1
+		lda	PC_REG+1
 		xba
-		lda	REG_PC+0
+		lda	PC_REG+0
 		jsr	ShowHex4
 		
-		ldx	#STR_E		; Display the E bit
+		ldx	#E_STR		; Display the E bit
 		jsr	ShowString
 		lda	#'0'
 		bit	E_BIT
@@ -403,39 +441,56 @@ ShowRegisters:
 		endif
 		jsr	UartTx
 		
-		ldx	#STR_C		; Display A/B
+		ldx	#C_STR		; Display A/B
 		jsr	ShowString
-		lda	REG_C+1
+		lda	C_REG+1
 		xba
-		lda	REG_C+0
+		lda	C_REG+0
 		jsr	ShowAcc
 		
-		ldx	#STR_X		; Display X
+		ldx	#X_STR		; Display X
 		jsr	ShowString
-		lda	REG_X+1
+		lda	X_REG+1
 		xba
-		lda	REG_X+0
+		lda	X_REG+0
 		jsr	ShowReg
 		
-		ldx	#STR_Y		; Display Y
+		ldx	#Y_STR		; Display Y
 		jsr	ShowString
-		lda	REG_Y+1
+		lda	Y_REG+1
 		xba
-		lda	REG_Y+0
+		lda	Y_REG+0
 		jsr	ShowReg
 		
-		ldx	#STR_DP		; Display DP
+		ldx	#P_STR		; Display P
 		jsr	ShowString
-		lda	REG_DP+1
+		ldx	#7
+		repeat
+		 ldy	#'.'
+		 lda	BITS,x
+		 bit	P_REG
+		 if	NE
+		  ldy	FLAG,x
+		 endif
+		 tya
+		 jsr	UartTx
+		 dex
+		until mi
+
+; TODO PBR:DBR		
+
+		ldx	#DP_STR		; Display DP
+		jsr	ShowString
+		lda	DP_REG+1
 		xba
-		lda	REG_DP+0
+		lda	DP_REG+0
 		jsr	ShowHex4
 		
-		ldx	#STR_SP		; Display SP
+		ldx	#SP_STR		; Display SP
 		jsr	ShowString
-		lda	REG_SP+1
+		lda	SP_REG+1
 		xba
-		lda	REG_SP+0
+		lda	SP_REG+0
 		jsr	ShowHex4
 		
 ;===============================================================================
@@ -446,19 +501,21 @@ NewCommand:
 		stz	CMD_LEN
 RptCommand:
 		SHORT_AI
-		jsr	NewLine
-		lda	#'.'
+		jsr	NewLine		; Move cursor to next line
+		lda	#'.'		; And output the prompt
 		jsr	UartTx
 		
 		ldx	#0		; Output prepared command
 		repeat
-		 cpx	CMD_LEN
-		 break cs
-		 lda	COMMAND,x
+		 cpx	CMD_LEN		; Any saved characters to display?
+		 break	cs		; No
+		 lda	COMMAND,X	; Yes, print from the buffer
 		 jsr	UartTx
 		 inx
 		forever
 		
+		lda	#DC1		; Send XON
+		jsr	UartTx
 		repeat
 		 jsr	UartRx		; Read a character
 		 sta	COMMAND,x	; .. and save
@@ -466,15 +523,20 @@ RptCommand:
 		 cmp	#CR		; End of input?
 		 break	eq
 		 
-		 cmp	#BS		; Turn a backspace
-		 if eq
-		  lda	#DEL		; .. into a delete
+		 cmp 	#ESC		; Cancel input?
+		 if	EQ
+		  beq	NewCommand	; Yes
 		 endif
-		 cmp	#DEL		; Handle delete
+
+		 cmp	#DEL		; Turn a delete
+		 if eq
+		  lda	#BS		; .. into a backspace
+		 endif
+		 
+		 cmp	#BS		; Handle backspace
 		 if eq
 		  cpx   #0
 		  if ne
-		   lda	#BS
 		   pha
 		   jsr	UartTx
 		   jsr	Space
@@ -496,31 +558,27 @@ RptCommand:
 		 inx			; And bump counter
 		forever
 		
-		ldx	#0		; Prepare to parse command
-		jsr	SkipSpaces
+		stx	CMD_LEN		; Save command length
+		lda	#DC3		; Send XOFF
+		jsr	UartTx
+
+		ldx	#0		; Set character offset to start
+		jsr	SkipSpaces	; And get first character
+		bcs	NewCommand
 		
 		cmp	#CR		; Empty line?
 		beq	NewCommand	; Yes
 
 ;===============================================================================
-; Assemble
+; 'D' - Disassemble Memory
 ;-------------------------------------------------------------------------------
 
-		cmp	#'A'
+		cmp	#'D'
 		if eq
 		endif
-
+	
 ;===============================================================================
-; Display Memory
-;-------------------------------------------------------------------------------
-
-		cmp	#'M'
-		if eq
-		endif
-		
-		
-;===============================================================================
-; Go
+; 'G' - Go
 ;-------------------------------------------------------------------------------
 
 		cmp	#'G'
@@ -528,7 +586,24 @@ RptCommand:
 		endif
 		
 ;===============================================================================
-; S19 Record Loader
+; 'M' - Show Memory
+;-------------------------------------------------------------------------------
+
+		cmp	#'M'
+		if	eq
+		endif
+		
+;===============================================================================
+; 'R' - Show Registers
+;-------------------------------------------------------------------------------
+
+		cmp	#'R'
+		if	eq
+		 jmp	ShowRegisters
+		endif
+		
+;===============================================================================
+; 'S' - S19 Record Loader
 ;-------------------------------------------------------------------------------
 
 		cmp	#'S'
@@ -536,24 +611,58 @@ RptCommand:
 		endif
 		
 ;===============================================================================
-; Display Help
+; Display Help/Bad Command
 ;-------------------------------------------------------------------------------
 
 		cmp 	#'?'
 		if eq
+		 ldx	#HLP_STR
+		else
+Error:		 ldx	#ERR_STR
 		endif
-		
-;===============================================================================
-; Illegal Command
-;-------------------------------------------------------------------------------
-
-		jsr	NewLine
-		ldx	#STR_BADCMD
 		jsr	ShowString
 		jmp	NewCommand
 		
 ;===============================================================================
+;-------------------------------------------------------------------------------		
+		
+	
+	
+	
+	
+		
+;===============================================================================
+; Parsing Utilities
 ;-------------------------------------------------------------------------------
+
+; Get the next characater from the command buffer indicated by the X register
+; and convert it to UPPER case. If the carry is set then the end of the buffer
+; has been reached.
+
+		.longa	off
+		.longi	off
+NextChar:
+		cpx	CMD_LEN		; Reached end of buffer>
+		if	CS
+		 rts			; Yes, return with C=1
+		endif
+		lda	COMMAND,X	; No, fetch a character and C=0
+		inx
+
+
+; Convert the character in A to upper case.
+
+		.longa	off
+ToUpper:
+		cmp	#'a'		; Between 'a'
+		if cs
+		 cmp	#'z'+1		; .. and 'z'?
+		 if cc
+		  and	#$5f		; Yes, convert 	
+		 endif
+		endif
+		clc			; Ensure C=0
+		rts
 
 ; Fetch the next characters from the command buffer ignoring spaces.
 
@@ -561,25 +670,16 @@ RptCommand:
 		.longi	off
 SkipSpaces:
 		repeat
-		 lda	COMMAND,x	; Fetch the next character
-		 inx
-		 cmp 	#' '		; Until not a space
+		 jsr	NextChar	; Fetch a character?
+		 break cs		; Reached the end?
+		 cmp	#' '		; A space to ignore?
+		 clc
 		until ne
-
-;
-
-		.longa	off
-ToUpper:
-		cmp	#'a'		; Is A lower case letter?
-		if cs
-		 cmp	#'z'+1
-		 if cc
-		  and	#$df		; Yes, convert to upper case
-		 endif
-		endif
 		rts			; Done
 
 ;
+
+
 
 		.longa	off
 ShowAcc:
@@ -587,7 +687,7 @@ ShowAcc:
 		bit	E_BIT		; In emulation mode?
 		bmi	ShowShort
 		lda	#$20
-		bit	REG_P		; No, M bit set?
+		bit	P_REG		; No, M bit set?
 		bne	ShowShort	; Yes, short
 		
 ShowLong:
@@ -604,7 +704,7 @@ ShowReg:
 		bit	E_BIT		; In emulation mode?
 		bmi	ShowShort
 		lda	#$10
-		bit	REG_P		; No, X bit set?
+		bit	P_REG		; No, X bit set?
 		beq	ShowLong	; No, long
 
 ShowShort:
@@ -641,34 +741,24 @@ ShowHex1:
 		if cs
 		 adc	#6		; Yes, make it a letter
 		endif
-		bra	UartTx		; Then print it.
+CharOut:	jmp	UartTx		; Then print it.
 
 ;-------------------------------------------------------------------------------		
 
 		.longa	off
 Space:
 		lda	#' '
-		bra	UartTx
+		bne	CharOut
 		
 		.longa	off
 OpenBracket:
 		lda	#'['
-		bra	UartTx
+		bne	CharOut
 		
 		.longa	off
 CloseBracket:
 		lda	#']'
-		bra	UartTx
-
-		.longa	off
-NewLine:
-		lda	#CR
-		jsr	UartTx
-		lda	#LF
-
-UartTx:		jmp	(UARTTX)		
-
-UartRx		jmp	(UARTRX)
+		bne	CharOut
 	
 ;===============================================================================
 ; Strings
@@ -691,126 +781,44 @@ ShowString:
 ;-------------------------------------------------------------------------------
 
 STRINGS		.equ	$
-TITLE		.equ	$-STRINGS
-		.byte	"Boot 65C802 [18.02]"
-CRLF		.equ	$-STRINGS
-		.byte	CR,LF,0
-STR_PC		.equ	$-STRINGS
+TTL_STR		.equ	$-STRINGS
+		.byte	"Boot 65C802 [18.04]"
+		.byte	0
+PC_STR		.equ	$-STRINGS
 		.byte	"PC=",0
-STR_E		.equ	$-STRINGS
+E_STR		.equ	$-STRINGS
 		.byte	" E=",0
-STR_C		.equ	$-STRINGS
+C_STR		.equ	$-STRINGS
 		.byte	" C=",0
-STR_X		.equ	$-STRINGS
+X_STR		.equ	$-STRINGS
 		.byte	" X=",0
-STR_Y		.equ	$-STRINGS
+Y_STR		.equ	$-STRINGS
 		.byte	" Y=",0
-STR_DP		.equ	$-STRINGS
+P_STR		.equ	$-STRINGS
+		.byte	" P=",0
+DP_STR		.equ	$-STRINGS
 		.byte	" DP=",0
-STR_SP		.equ	$-STRINGS
+SP_STR		.equ	$-STRINGS
 		.byte	" SP=",0
-STR_BADCMD	.equ	$-STRINGS
-		.byte	"Bad Command",0
+ERR_STR		.equ	$-STRINGS
+		.byte	CR,LF,"?",0
+HLP_STR		.equ	$-STRINGS
+		.byte 	CR,LF,"D xxxx yyyy\t\tDisassemble"
+		.byte	CR,LF,"G [xxxx]\t\tGoto"
+		.byte	CR,LF,"M xxxx yyyy\t\tDisplay Memory"
+		.byte	CR,LF,"R\t\t\tDisplay Registers"
+		.byte	CR,LF,"S...\t\t\tS19 Load"
+		.byte	CR,LF,"W xxxx yy\t\tWrite Memory"
+		.byte	0
 		
-;===============================================================================
-; Uart I/O
-;-------------------------------------------------------------------------------
-
-		.longa	off		; Assume 8-bit A
-		.longi	off		; Assume 8-bit X/Y
-UartHandler:
-		lda	ACIA_STAT	; Any ACIA interrupts to process?
-		if mi
-		 pha			; Yes
-		 and	#$10		; TX buffer empty?
-		 if ne
-		  ldy	TX_HEAD		; Any data to send?
-		  cpy	TX_TAIL
-		  if ne
-		   lda	TX_BUFFER,y	; Yes, extract and send it
-		   sta	ACIA_DATA
-		   jsr	BumpIdx
-		   sty	TX_HEAD
-		  else
-		   lda	#$01		; No, disable TX interrupt
-		   sta	ACIA_CMND
-		  endif
-		 endif
-		 
-		 pla
-		 and 	#$08		; RX buffer full?
-		 if ne
-		  lda	ACIA_DATA	; Yes, fetch the character
-		  ldy 	RX_TAIL		; .. and save it
-		  sta	RX_BUFFER,y
-		  jsr	BumpIdx
-		  cpy	RX_HEAD		; Is buffer completely full?
-		  if ne
-		   sty	RX_TAIL		; No, update tail offset
-		  endif
-		 endif
-		endif
-		rts			; Done
-
-;-------------------------------------------------------------------------------
-
-; Inserts a character at the end of the TX buffer. If the buffer is completely
-; full then wait for a space before updating the indexes.
-
-_UartTx:
-		pha			; Save callers registers
-		phy
-		php			; .. and register sizes
-		SHORT_AI		; Make registers 8-bits
-		ldy	TX_TAIL		; Save character at tail
-		sta	TX_BUFFER,y
-		jsr	BumpIdx		; Bump the index value
-		repeat
-		 cpy	TX_HEAD		; Wait if buffer is full
-		until ne		
-		sty	TX_TAIL		; Then save the new index
-		lda	#$05		; Ensure TX interrupt enabled
-		sta	ACIA_CMND
-		plp			; Restore register sizes
-		ply			; .. and callers values
-		pla
-		rts			; And continue
-
-; Extracts the next character from the head of the RX buffer. If the buffer is
-; empty then wait for some data to be placed in it by the interrupt handler.
-
-_UartRx:
-		phy			; Save callers registers
-		php			; .. and register sizes
-		SHORT_AI		; Make registers 8-bits
-		ldy	RX_HEAD		; Wait if buffer is empty
-		repeat
-		 cpy	RX_TAIL
-		until ne
-		lda	RX_BUFFER,y	; Fetch a character
-		jsr	BumpIdx		; Bump and same new index
-		sty	RX_HEAD		
-		plp			; Restore register sizes
-		ply			; .. and callers values
-		rts			; And continue
-
-; Increments an index value wrapping it back to zero if it exceeds the buffer
-; size.
-
-		.longi	off		; Assume 8-bit X/Y
-BumpIdx:
-		iny
-		cpy	#BUF_SIZE
-		if cs
-		 ldy	#0
-		endif
-		rts
-
+FLAG		.byte	"CZIDXMVN"
+BITS		.byte	$01,$02,$04,$08,$10,$20,$40,$80
+		
 ;===============================================================================
 ; Instruction Lookup Tables
 ;-------------------------------------------------------------------------------
 
-		.org	$fd00
+		.org	$fc00
 
 OPCODES:
 		.byte	OP_BRK,OP_ORA,OP_COP,OP_ORA	; 00
@@ -829,7 +837,7 @@ OPCODES:
 		.byte	OP_BIT,OP_AND,OP_ROL,OP_AND
 		.byte	OP_SEC,OP_AND,OP_DEC,OP_TSC
 		.byte	OP_BIT,OP_AND,OP_ROL,OP_AND
-		.byte	OP_RTI,OP_EOR,OP_WDM,OP_EOR	; 40
+		.byte	OP_rti,OP_EOR,OP_WDM,OP_EOR	; 40
 		.byte	OP_MVP,OP_EOR,OP_LSR,OP_EOR
 		.byte	OP_PHA,OP_EOR,OP_LSR,OP_PHK
 		.byte	OP_JMP,OP_EOR,OP_LSR,OP_EOR
@@ -945,51 +953,30 @@ MODES:
 		.byte	MO_AIX,MO_ABX,MO_ABX,MO_ALX
 
 ;===============================================================================
-; I/O Page
+; I/O Area
 ;-------------------------------------------------------------------------------
 
-		.org	$ff00
-		.space	64
+		.org	$fe00
+		.space	64		; Skip over virtual hardware
 		
 ;===============================================================================
-; Break Handler
+; API Vectors
 ;-------------------------------------------------------------------------------
 
-BRKE:
-BRKN:
-		clc			; Ensure native mode
-		xce
-		ror	E_BIT		; .. but save the original
+		.longa	off
+		jmp	UartTx
 		
-		LONG_AI			; Make all registers 16-bit
-		sta	REG_C		; Save A/B
-		stx	REG_X		; .. X
-		sty	REG_Y		; .. Y
-		tdc			; Save DP
-		sta	REG_DP
+		.longa	off
+		jmp	UartRx
 		
-		SHORT_A			; Make A register 8-bits
-		bit	E_BIT		; 
-		if pl
-	; Banks
-	
-		endif
-		
-		pla			; Save P
-		sta	REG_P
-		plx			; Save PC
-		dex
-		dex
-		stx	REG_PC
-		tsx			; Save SP
-		stx	REG_SP
-		
-		cli
-
-		jmp	ShowRegisters
+		.longa	off
+NewLine:	lda	#CR
+		jsr	UartTx
+		lda	#LF
+		jmp	UartTx
 		
 ;===============================================================================
-; Interrupt Handlers
+; IRQ Handlers
 ;-------------------------------------------------------------------------------
 
 ; In emulation mode we have to differentiate between BRK and a real interrupt.
@@ -1015,14 +1002,114 @@ IRQE:
 
 IRQN:
 		pha			; Save users registers
+		phx
 		phy
 		php			; Save register sizes
 		SHORT_AI		; Ensure 8-bit
 		jsr	UartHandler	; Service the UART
 		plp			; Restore register sizes
 		ply			; Restore users registers
+		plx
 		pla
 		rti			; Continue
+
+;===============================================================================
+; Uart I/O
+;-------------------------------------------------------------------------------
+
+		.longa	off		; Assume 8-bit A
+		.longi	off		; Assume 8-bit X/Y
+UartHandler:
+		lda	ACIA_STAT	; Any ACIA interrupts to process?
+		if mi
+		 pha			; Yes
+		 and	#$10		; TX buffer empty?
+		 if ne
+		  ldy	TX_HEAD		; Any data to send?
+		  cpy	TX_TAIL
+		  if ne
+		   lda	TX_BUFFER,y	; Yes, extract and send it
+		   sta	ACIA_DATA
+		   jsr	BumpIdx
+		   sty	TX_HEAD
+		  else
+		   lda	#$01		; No, disable TX interrupt
+		   sta	ACIA_CMND
+		  endif
+		 endif
+		 
+		 pla
+		 and 	#$08		; RX buffer full?
+		 if ne
+		  lda	ACIA_DATA	; Yes, fetch the character
+		  ldy 	RX_TAIL		; .. and save it
+		  sta	RX_BUFFER,y
+		  jsr	BumpIdx
+		  cpy	RX_HEAD		; Is buffer completely full?
+		  if ne
+		   sty	RX_TAIL		; No, update tail offset
+		  endif
+		 endif
+		endif
+		rts			; Done
+
+;-------------------------------------------------------------------------------
+
+; Inserts a character at the end of the TX buffer. If the buffer is completely
+; full then wait for a space before updating the indexes.
+
+UartTx:
+		pha			; Save callers registers
+		phx
+		phy
+		php			; .. and register sizes
+		SHORT_AI		; Make registers 8-bits
+		ldy	TX_TAIL		; Save character at tail
+		sta	TX_BUFFER,y
+		jsr	BumpIdx		; Bump the index value
+		repeat
+		 cpy	TX_HEAD		; Wait if buffer is full
+		until ne		
+		sty	TX_TAIL		; Then save the new index
+		lda	#$05		; Ensure TX interrupt enabled
+		sta	ACIA_CMND
+		plp			; Restore register sizes
+		ply			; .. and callers values
+		plx
+		pla
+		rts			; And continue
+
+; Extracts the next character from the head of the RX buffer. If the buffer is
+; empty then wait for some data to be placed in it by the interrupt handler.
+
+UartRx:
+		phx
+		phy			; Save callers registers
+		php			; .. and register sizes
+		SHORT_AI		; Make registers 8-bits
+		ldy	RX_HEAD		; Wait if buffer is empty
+		repeat
+		 cpy	RX_TAIL
+		until ne
+		lda	RX_BUFFER,y	; Fetch a character
+		jsr	BumpIdx		; Bump and same new index
+		sty	RX_HEAD		
+		plp			; Restore register sizes
+		ply			; .. and callers values
+		plx
+		rts			; And continue
+
+; Increments an index value wrapping it back to zero if it exceeds the buffer
+; size.
+
+		.longi	off		; Assume 8-bit X/Y
+BumpIdx:
+		iny			; Bump index
+		cpy	#BUF_SIZE	; Reached end of buffer?
+		if cs
+		 ldy	#0		; Yes, wrap around
+		endif
+		rts			; Done
 
 ;===============================================================================
 ; Vectors

@@ -770,7 +770,7 @@ NormalHi:
                 nop
                 
                 movf    ADRH_PORT,W             ; Read high byte of address
-                xorlw   h'ff' & ADRH_MASK       ; I/O + Vector page?
+                xorlw   h'fe' & ADRH_MASK       ; I/O + Vector page?
                 bz      IOAccess
 RAMAccess:
                 bcf     NRAM_LAT,NRAM_PIN       ; No, RAM access
@@ -791,7 +791,7 @@ IOAccess:
                 
 ;-------------------------------------------------------------------------------
                 
-                bra     AciaRdData              ; ACIA  $FF00 RD
+                bra     AciaRdData              ; ACIA  $FE00 RD
                 bra     AciaRdStat
                 bra     AciaRdCmnd
                 bra     AciaRdCtrl
@@ -808,7 +808,7 @@ IOAccess:
                 bra     AciaRdCmnd
                 bra     AciaRdCtrl
              
-                bra     SpiRdData               ; SPI65 $FF10 RD
+                bra     SpiRdData               ; SPI65 $FE10 RD
                 bra     SpiRdStat
                 bra     SpiRdDvsr
                 bra     SpiRdSlct
@@ -825,7 +825,7 @@ IOAccess:
                 bra     SpiRdDvsr
                 bra     SpiRdSlct
                 
-                bra     RtcRdSub0               ; RTC   $FF20 RD
+                bra     RtcRdSub0               ; RTC   $FE20 RD
                 bra     RtcRdSub1
                 bra     RtcRdSec0
                 bra     RtcRdSec1
@@ -842,7 +842,7 @@ IOAccess:
                 bra     BlankRd
                 bra     BlankRd
                 
-                bra     BlankRd                 ; Empty $FF30 RD
+                bra     BlankRd                 ; Empty $FE30 RD
                 bra     BlankRd
                 bra     BlankRd
                 bra     BlankRd
@@ -861,7 +861,7 @@ IOAccess:
                 
 ;-------------------------------------------------------------------------------
 
-                bra     AciaWrData              ; ACIA  $FF00 WR
+                bra     AciaWrData              ; ACIA  $FE00 WR
                 bra     AciaWrStat
                 bra     AciaWrCmnd
                 bra     AciaWrCtrl
@@ -878,7 +878,7 @@ IOAccess:
                 bra     AciaWrCmnd
                 bra     AciaWrCtrl
                 
-                bra     SpiWrData               ; SPI65 $FF10 WR
+                bra     SpiWrData               ; SPI65 $FE10 WR
                 bra     SpiWrCtrl
                 bra     SpiWrDvsr
                 bra     SpiWrSlct
@@ -895,7 +895,7 @@ IOAccess:
                 bra     SpiWrDvsr
                 bra     SpiWrSlct
                 
-                bra     RtcWrSub0               ; RTC   $FF20 WR
+                bra     RtcWrSub0               ; RTC   $FE20 WR
                 bra     RtcWrSub1
                 bra     RtcWrSec0
                 bra     RtcWrSec1
@@ -912,7 +912,7 @@ IOAccess:
                 bra     BlankRd
                 bra     BlankRd
                 
-                bra     BlankWr                 ; Empty $FF30 WR
+                bra     BlankWr                 ; Empty $FE30 WR
                 bra     BlankWr
                 bra     BlankWr
                 bra     BlankWr

@@ -24,19 +24,19 @@ The PIC generates a series of clock pluses while the microprocessor is released 
 
 The board is designed to take either a MOS 6502 or a WDC 65C02. A different socket is provided for each as some of the control signal pins differ between the two chips. A WDC 65C802 can also be used as it is pin compatible with the original 6502.
 
-The PIC uses the fact that the 6502, 65C02 and 65C802 treat JMP ($00FF) instructions differently. All will read the low byte of the target address from $00FF but as 6502 reads the high byte from $0000 while the 65C02 and 65C802 increment the address correctly and read from $0100 but take a different number of cycles to do so.
+The PIC uses the fact that the 6502, 65C02 and 65C802 treat JMP ($FFFF) instructions differently. All will read the low byte of the target address from $FFFF but as 6502 reads the high byte from $FF00 while the 65C02 and 65C802 increment the address correctly and read from $0000 but take a different number of cycles to do so.
 
-There are other ways you could tell the processors apart but this technique is easy to implement. The PIC feeds the microprocessor the jump indirect instruction when it resets and examines address bus values to see which memory address is accessed in each clock cycle. It then knows which boot ROM image to download.
+There are other ways you could tell the processors apart but this technique is easy to implement. The PIC feeds the microprocessor the jump indirect instruction when it resets and examines address bus values to see which memory address is accessed in each clock cycle.
 
 ### Loading the ROM
 
-Once the PIC knows what type of microprocessor is installed it can generate the instructions needed to create an appropriate ROM image in the memory. The ROM is transferred by generating a pair of byte load and store (e.g. LDA #$xx STA $yyyy) instructions for each byte. The PIC enables the SRAM chip during the cycle when the microprocessor writes the byte value to store it in the memory.
+Once the PIC knows what type of microprocessor is installed it can generate the instructions needed to create an appropriate ROM image in the memory. The ROM is transferred by generating a pair of byte load and store instructions for each byte (e.g. LDA #$bb STA $addr). The PIC enables the SRAM chip during the cycle when the microprocessor writes the byte value to store it in the memory.
 
 Every 256 bytes a JMP $1000 instruction is generated to reset the program counter to a lower value. When all of the image has been transferred a JMP ($FFFC) instruction is generated to restart the microprocessor through the ROM's reset vector and the PIC firmware changes to normal operation mode.
 
 ## Normal Operation
 
-In normal operation the PIC becomes subservient to the microprocessor. It continues to generate the clock pulse but now it examines the control signals and address bus value to determine what data the microprocessor is trying to access. Most of the time the microprocessor will be accessing the SRAM memory chip but if the address is in the $FF00-$FF3F range then address is interpreted as a virtual peripheral access.
+In normal operation the PIC becomes subservient to the microprocessor. It continues to generate the clock pulse but now it examines the control signals and address bus value to determine what data the microprocessor is trying to access. Most of the time the microprocessor will be accessing the SRAM memory chip but if the address is in the $FE00-$FE3F range then the address is interpreted as a virtual peripheral access.
 
 The PIC code implements three virtual peripherals, an 6551 ACIA, a DS1318 RTS and a 65SPI (a SPI controller implemented in a CPLD designed by members of the 6502.org web forum). The features of these two chips are mapped to the PICs hardware.
 
@@ -44,40 +44,49 @@ In program code the following addresses should be used to access the peripheral 
 
     ; Emulated 6551 ACIA
 
-    ACIA_DATA       .equ    $ff00           ; R/W
-    ACIA_STAT       .equ    $ff01           ; R/W
-    ACIA_CMND       .equ    $ff02           ; R/W
-    ACIA_CTRL       .equ    $ff03           ; R/W
+    ACIA_DATA       .equ    $fe00           ; R/W
+    ACIA_STAT       .equ    $fe01           ; R/W
+    ACIA_CMND       .equ    $fe02           ; R/W
+    ACIA_CTRL       .equ    $fe03           ; R/W
 
     ; Emulated 65SPI
 
-    SPI_DATA        .equ    $ff10           ; R/W
-    SPI_STAT        .equ    $ff11           ; R/O
-    SPI_CTRL        .equ    $ff11           ; W/O
-    SPI_DVSR        .equ    $ff12           ; R/W
-    SPI_SLCT        .equ    $ff13           ; R/W
+    SPI_DATA        .equ    $fe10           ; R/W
+    SPI_STAT        .equ    $fe11           ; R/O
+    SPI_CTRL        .equ    $fe11           ; W/O
+    SPI_DVSR        .equ    $fe12           ; R/W
+    SPI_SLCT        .equ    $fe13           ; R/W
 
     ; Emulated DS1318 RTC
 
-    RTC_SUB0        .equ    $ff20           ; R/W
-    RTC_SUB1        .equ    $ff21           ; R/W
-    RTC_SEC0        .equ    $ff22           ; R/W
-    RTC_SEC1        .equ    $ff23           ; R/W
-    RTC_SEC2        .equ    $ff24           ; R/W
-    RTC_SEC3        .equ    $ff25           ; R/W
-    RTC_ALM0        .equ    $ff26           ; R/W
-    RTC_ALM1        .equ    $ff27           ; R/W
-    RTC_ALM2        .equ    $ff27           ; R/W
-    RTC_ALM3        .equ    $ff28           ; R/W
-    RTC_CTLA        .equ    $ff2a           ; R/W
-    RTC_CTLB        .equ    $ff2b           ; R/W
-    RTC_STAT        .equ    $ff2c           ; R/W
+    RTC_SUB0        .equ    $fe20           ; R/W
+    RTC_SUB1        .equ    $fe21           ; R/W
+    RTC_SEC0        .equ    $fe22           ; R/W
+    RTC_SEC1        .equ    $fe23           ; R/W
+    RTC_SEC2        .equ    $fe24           ; R/W
+    RTC_SEC3        .equ    $fe25           ; R/W
+    RTC_ALM0        .equ    $fe26           ; R/W
+    RTC_ALM1        .equ    $fe27           ; R/W
+    RTC_ALM2        .equ    $fe27           ; R/W
+    RTC_ALM3        .equ    $fe28           ; R/W
+    RTC_CTLA        .equ    $fe2a           ; R/W
+    RTC_CTLB        .equ    $fe2b           ; R/W
+    RTC_STAT        .equ    $fe2c           ; R/W
 
 Accessing some of these registers takes an extended period of time during which the microprocessor experiences clock stretching.
 
 ## Firmware
 
-The PIC contains three 8K ROM images, one for each supported processor type. 
+The PIC contains three 4K ROM images, one for each supported processor type, containing a simple boot monitor that allows you to examine and change the memory, download S19 records and execute code.
+
+The monitor resides in the top 4K of memory from $F000 to $FFFF. The code needed to provided interrupt driven serial I/O is held in the area above the I/O registers (e.g. $FE40-$FFFF) and provides a set of entry points for user programs to call.
+
+$0200 BRKVE 
+$0200 IRQVE
+$0204 BRKVN
+$0206 IRQVN
+
+All of these vectors are initialised to point at a default handler.
 
 ## Notes
 

@@ -1,851 +1,716 @@
 
 ;===============================================================================
-; Virtual Peripherals
-;-------------------------------------------------------------------------------
-
-ACIA_DATA	.EQU	$FE00
-ACIA_STAT	.EQU	$FE01
-ACIA_CMND	.EQU	$FE02
-ACIA_CTRL	.EQU	$FE03
-
-SPI_DATA	.EQU	$FE04
-SPI_STAT	.EQU	$FE05
-SPI_CTRL	.EQU	$FE05
-SPI_DVSR	.EQU	$FE06
-SPI_SLCT	.EQU	$FE07
-
-;===============================================================================
 ; ASCII Control Characters
 ;-------------------------------------------------------------------------------
 
-NUL		.EQU	$00
-BEL		.EQU	$07
-BS		.EQU	$08
-HT		.EQU	$09
-CR		.EQU	$0D
-LF		.EQU	$0A
-DC1		.EQU	$11			; XON
-DC3		.EQU	$13			; XOFF
-ESC		.EQU	$1B
-DEL		.EQU	$7F
+SOH		.equ	$01
+EOT		.equ	$04
+ACK		.equ	$06
+BEL		.equ	$07
+BS		.equ	$08
+LF		.equ	$0a
+CR		.equ	$0d
+DC1		.equ	$11		; XON
+DC3		.equ	$13		; XOFF
+NAK		.equ	$15
+CAN		.equ	$18
+ESC		.equ	$1b
+DEL		.equ	$7f
 
 ;===============================================================================
+; Instruction and Mode Constants
 ;-------------------------------------------------------------------------------
 
-OP_ERR		.EQU	$00
-OP_ADC		.EQU	$02
-OP_AND		.EQU	$04
-OP_ASL		.EQU	$06
-		.IF	__65C02__ | __65816__
-OP_BBR		.EQU	$08
-OP_BBS		.EQU	$0A
-		.ENDIF
-OP_BCC		.EQU	$0C
-OP_BCS		.EQU	$0E
-OP_BEQ		.EQU	$10
-OP_BIT		.EQU	$12
-OP_BNE		.EQU	$14
-OP_BMI		.EQU	$16
-OP_BPL		.EQU	$18
-		.IF	__65C02__ | __65816__
-OP_BRA		.EQU	$1A
-		.ENDIF
-OP_BRK		.EQU	$1C
-OP_BVC		.EQU	$1E
-OP_BVS		.EQU	$20
-OP_CLC		.EQU	$22
-OP_CLD		.EQU	$24
-OP_CLI		.EQU	$26
-OP_CLV		.EQU	$28
-OP_CMP		.EQU	$2A
-OP_CPX		.EQU	$2C
-OP_CPY		.EQU	$2E
-OP_DEC		.EQU	$30
-OP_DEX		.EQU	$32
-OP_DEY		.EQU	$34
-OP_EOR		.EQU	$36
-OP_INC		.EQU	$38
-OP_INX		.EQU	$3A
-OP_INY		.EQU	$3C
-OP_JMP		.EQU	$3E
-OP_JSR		.EQU	$40
-OP_LDA		.EQU	$42
-OP_LDX		.EQU	$44
-OP_LDY		.EQU	$46
-OP_LSR		.EQU	$48
-OP_NOP		.EQU	$4A
-OP_ORA		.EQU	$4C
-OP_PHA		.EQU	$4E
-OP_PHP		.EQU	$50
-		.IF	__65C02__ | __65816__
-OP_PHX		.EQU	$52
-OP_PHY		.EQU	$54
-		.ENDIF
-OP_PLA		.EQU	$56
-OP_PLP		.EQU	$58
-		.IF	__65C02__ | __65816__
-OP_PLX		.EQU	$5A
-OP_PLY		.EQU	$5C
-OP_RMB		.EQU	$5E
-		.ENDIF
-OP_ROL		.EQU	$60
-OP_ROR		.EQU	$62
-OP_RTI		.EQU	$64
-OP_RTS		.EQU	$66
-OP_SBC		.EQU	$68
-OP_SEC		.EQU	$6A
-OP_SED		.EQU	$6C
-OP_SEI		.EQU	$6E
-		.IF	__65C02__ | __65816__
-OP_SMB		.EQU	$70
-		.ENDIF
-OP_STA		.EQU	$72
-		.IF	__65C02__ | __65816__
-OP_STP		.EQU	$74
-		.ENDIF
-OP_STX		.EQU	$76
-OP_STY		.EQU	$78
-		.IF	__65C02__ | __65816__
-OP_STZ		.EQU	$7A
-		.ENDIF
-OP_TAX		.EQU	$7C
-OP_TAY		.EQU	$7E
-		.IF	__65C02__ | __65816__
-OP_TRB		.EQU	$80
-OP_TSB		.EQU	$82
-		.ENDIF
-OP_TSX		.EQU	$84
-OP_TXA		.EQU	$86
-OP_TXS		.EQU	$88
-OP_TYA		.EQU	$8A
-		.IF	__65C02__ | __65816__
-OP_WAI		.EQU	$8C
-		.ENDIF
+OP_ERR		.equ	$00
+OP_ADC		.equ	$02
+OP_AND		.equ	$04
+OP_ASL		.equ	$06
+		.if	__65C02__
+OP_BBR		.equ	$08
+OP_BBS		.equ	$0A
+		.endif
+OP_BCC		.equ	$0C
+OP_BCS		.equ	$0E
+OP_BEQ		.equ	$10
+OP_BIT		.equ	$12
+OP_BNE		.equ	$14
+OP_BMI		.equ	$16
+OP_BPL		.equ	$18
+		.if	__65C02__
+OP_BRA		.equ	$1A
+		.endif
+OP_BRK		.equ	$1C
+OP_BVC		.equ	$1E
+OP_BVS		.equ	$20
+OP_CLC		.equ	$22
+OP_CLD		.equ	$24
+OP_CLI		.equ	$26
+OP_CLV		.equ	$28
+OP_CMP		.equ	$2A
+OP_CPX		.equ	$2C
+OP_CPY		.equ	$2E
+OP_DEC		.equ	$30
+OP_DEX		.equ	$32
+OP_DEY		.equ	$34
+OP_EOR		.equ	$36
+OP_INC		.equ	$38
+OP_INX		.equ	$3A
+OP_INY		.equ	$3C
+OP_jmp		.equ	$3E
+OP_JSR		.equ	$40
+OP_LDA		.equ	$42
+OP_LDX		.equ	$44
+OP_LDY		.equ	$46
+OP_LSR		.equ	$48
+OP_NOP		.equ	$4A
+OP_ORA		.equ	$4C
+OP_pha		.equ	$4E
+OP_PHP		.equ	$50
+		.if	__65C02__
+OP_PHX		.equ	$52
+OP_PHY		.equ	$54
+		.endif
+OP_PLA		.equ	$56
+OP_PLP		.equ	$58
+		.if	__65C02__
+OP_PLX		.equ	$5A
+OP_PLY		.equ	$5C
+OP_RMB		.equ	$5E
+		.endif
+OP_ROL		.equ	$60
+OP_ROR		.equ	$62
+OP_RTI		.equ	$64
+OP_RTS		.equ	$66
+OP_SBC		.equ	$68
+OP_SEC		.equ	$6A
+OP_SED		.equ	$6C
+OP_SEI		.equ	$6E
+		.if	__65C02__
+OP_SMB		.equ	$70
+		.endif
+OP_STA		.equ	$72
+		.if	__65C02__
+OP_STP		.equ	$74
+		.endif
+OP_STX		.equ	$76
+OP_STY		.equ	$78
+		.if	__65C02__
+OP_STZ		.equ	$7A
+		.endif
+OP_TAX		.equ	$7C
+OP_TAY		.equ	$7E
+		.if	__65C02__
+OP_TRB		.equ	$80
+OP_TSB		.equ	$82
+		.endif
+OP_TSX		.equ	$84
+OP_TXA		.equ	$86
+OP_TXS		.equ	$88
+OP_TYA		.equ	$8A
+		.if	__65C02__
+OP_WAI		.equ	$8C
+		.endif
 
 ; Bit patterns for addressing modes
 
-MB_IND		.EQU	%10000000
-MB_REL		.EQU	%01000000
-MB_BIT		.EQU	%00100000
+MB_IND		.equ	%10000000
+MB_REL		.equ	%01000000
+MB_bit		.equ	%00100000
 
-MB_IMP		.EQU	%00000000
-MB_ZPG		.EQU	%00000001
-MB_IMM		.EQU	%00000010
-MB_ABS		.EQU	%00000011
+MB_IMP		.equ	%00000000
+MB_ZPG		.equ	%00000001
+MB_IMM		.equ	%00000010
+MB_ABS		.equ	%00000011
 
-MB_ACC		.EQU	%00010000
-MB_XRG		.EQU	%00001000
-MB_YRG		.EQU	%00000100
+MB_ACC		.equ	%00010000
+MB_XRG		.equ	%00001000
+MB_YRG		.equ	%00000100
 
 ; Addressing modes
 
-		.IF	__65C02__ | __65816__
-MO_BIT		.EQU	MB_BIT	     |MB_ZPG
-MO_BRL		.EQU	MB_BIT|MB_REL|MB_ZPG
-		.ENDIF
-MO_ACC		.EQU	       MB_ACC|MB_IMP
-MO_IMP		.EQU		      MB_IMP
-MO_IMM		.EQU		      MB_IMM
-MO_REL		.EQU		      MB_REL
-MO_ZPG		.EQU		      MB_ZPG
-MO_ZPX		.EQU	       MB_YRG|MB_ZPG
-MO_ZPY		.EQU	       MB_YRG|MB_ZPG
-		.IF	__65C02__ | __65816__
-MO_IZP		.EQU	MB_IND	     |MB_ZPG
-		.ENDIF
-MO_IZX		.EQU	MB_IND|MB_XRG|MB_ZPG
-MO_IZY		.EQU	MB_IND|MB_YRG|MB_ZPG
-MO_ABS		.EQU		      MB_ABS
-MO_ABX		.EQU	       MB_XRG|MB_ABS
-MO_ABY		.EQU	       MB_YRG|MB_ABS
-MO_IAB		.EQU	MB_IND	     |MB_ABS
-		.IF	__65C02__ | __65816__
-MO_IAX		.EQU	MB_IND|MB_XRG|MB_ABS
-		.ENDIF
+		.if	__65C02__
+MO_BIT		.equ	MB_bit	     |MB_ZPG
+MO_BRL		.equ	MB_bit|MB_REL|MB_ZPG
+		.endif
+MO_ACC		.equ	       MB_ACC|MB_IMP
+MO_IMP		.equ		      MB_IMP
+MO_IMM		.equ		      MB_IMM
+MO_REL		.equ		      MB_REL
+MO_ZPG		.equ		      MB_ZPG
+MO_ZPX		.equ	       MB_YRG|MB_ZPG
+MO_ZPY		.equ	       MB_YRG|MB_ZPG
+		.if	__65C02__
+MO_IZP		.equ	MB_IND	     |MB_ZPG
+		.endif
+MO_IZX		.equ	MB_IND|MB_XRG|MB_ZPG
+MO_IZY		.equ	MB_IND|MB_YRG|MB_ZPG
+MO_ABS		.equ		      MB_ABS
+MO_ABX		.equ	       MB_XRG|MB_ABS
+MO_ABY		.equ	       MB_YRG|MB_ABS
+MO_IAB		.equ	MB_IND	     |MB_ABS
+		.if	__65C02__
+MO_IAX		.equ	MB_IND|MB_XRG|MB_ABS
+		.endif
+
+;===============================================================================
+; Macros
+;-------------------------------------------------------------------------------
+
+; The MNEM macro compresses three characters into a 16-bit value.
+
+MNEM		.macro	CH1,CH2,CH3
+		.word	((((CH3 & $1f) << 5)|(CH2 & $1f)) << 5)|(CH1 & $1f)
+		.endm
 
 ;===============================================================================
 ; Data Areas
 ;-------------------------------------------------------------------------------
 
-		.PAGE0
-		.ORG	$00F0
+		.page0
+		.org	$00f0
 
-A_REG		.SPACE	1
-X_REG		.SPACE	1
-Y_REG		.SPACE	1
-P_REG		.SPACE	1
-PC_REG		.SPACE	2
+A_REG		.space	1
+X_REG		.space	1
+Y_REG		.space	1
+P_REG		.space	1
+PC_REG		.space	2
 
-CMD_LEN		.SPACE	1			; Command buffer length
-ADDR_S		.SPACE	2
-ADDR_E		.SPACE	2
+CMD_LEN		.space	1			; Command buffer length
+ADDR_S		.space	2
+ADDR_E		.space	2
 
-TEMP		.SPACE	2
-COUNT		.SPACE	1
-
-;-------------------------------------------------------------------------------
-
-		.ORG	$00FE
-
-IO_TEMP		.SPACE	1
-
-FLAGS		.SPACE	1		; I/O Flags for XON/XOFF
-
-FLAG_STOPPED	.EQU	$80
-FLAG_STOP	.EQU	$40
+TEMP		.space	2
+COUNT		.space	1
 
 ;-------------------------------------------------------------------------------
 
-		.ORG	$0100
+		.org	$00fe
 
-STACK		.SPACE	256
+IO_TEMP		.space	1
 
 ;===============================================================================
 ; UART Buffers
 ;-------------------------------------------------------------------------------
 
-RX_SIZE		.EQU	62
-TX_SIZE		.EQU	62
+BUF_SIZE	.equ	62
+		.bss
+		.org	$0200
 
-CMD_SIZE	.EQU	128
-
-		.BSS
-		.ORG	$0200
+		.space	8		; Vectors
 
 ; Communications buffer offsets
 
-RX_HEAD		.SPACE	1		; UART recieve buffer offsets
-RX_TAIL		.SPACE	1
-TX_HEAD		.SPACE	1		; UART transmit buffer offsets
-TX_TAIL		.SPACE	1
+RX_HEAD		.space	1		; UART recieve buffer offsets
+RX_TAIL		.space	1
+TX_HEAD		.space	1		; UART transmit buffer offsets
+TX_TAIL		.space	1
 
-RX_BUFF		.SPACE	RX_SIZE		; UART recieve buffer
-TX_BUFF		.SPACE	TX_SIZE		; UART transmit buffer
+RX_BUFFER	.space	BUF_SIZE	; UART recieve buffer
+TX_BUFFER	.space	BUF_SIZE	; UART transmit buffer
 
-BUFFER		.SPACE	CMD_SIZE
+CMD_SIZE	.equ	128
 
-
-
-		.CODE
-		.ORG	$F000
+COMMAND		.space	CMD_SIZE
 
 ;===============================================================================
+; Compressed Mnemonics
 ;-------------------------------------------------------------------------------
 
-		.IF	__6502__
-OPCODES:
-		.BYTE	OP_BRK,OP_ORA,OP_ERR,OP_ERR,OP_ERR,OP_ORA,OP_ASL,OP_ERR ; 0
-		.BYTE	OP_PHP,OP_ORA,OP_ASL,OP_ERR,OP_ERR,OP_ORA,OP_ASL,OP_ERR
-		.BYTE	OP_BPL,OP_ORA,OP_ERR,OP_ERR,OP_ERR,OP_ORA,OP_ASL,OP_ERR ; 1
-		.BYTE	OP_CLC,OP_ORA,OP_INC,OP_ERR,OP_ERR,OP_ORA,OP_ASL,OP_ERR
-		.BYTE	OP_JSR,OP_AND,OP_ERR,OP_ERR,OP_BIT,OP_AND,OP_ROL,OP_ERR ; 2
-		.BYTE	OP_PLP,OP_AND,OP_ROL,OP_ERR,OP_BIT,OP_AND,OP_ROL,OP_ERR
-		.BYTE	OP_BMI,OP_AND,OP_ERR,OP_ERR,OP_BIT,OP_AND,OP_ROL,OP_ERR ; 3
-		.BYTE	OP_SEC,OP_AND,OP_DEC,OP_ERR,OP_BIT,OP_AND,OP_ROL,OP_ERR
-		.BYTE	OP_RTI,OP_EOR,OP_ERR,OP_ERR,OP_ERR,OP_EOR,OP_LSR,OP_ERR ; 4
-		.BYTE	OP_PHA,OP_EOR,OP_LSR,OP_ERR,OP_JMP,OP_EOR,OP_LSR,OP_ERR
-		.BYTE	OP_BVC,OP_EOR,OP_ERR,OP_ERR,OP_ERR,OP_EOR,OP_LSR,OP_ERR ; 5
-		.BYTE	OP_CLI,OP_EOR,OP_ERR,OP_ERR,OP_ERR,OP_EOR,OP_LSR,OP_ERR
-		.BYTE	OP_RTS,OP_ADC,OP_ERR,OP_ERR,OP_ERR,OP_ADC,OP_ROR,OP_ERR ; 6
-		.BYTE	OP_PLA,OP_ADC,OP_ROR,OP_ERR,OP_JMP,OP_ADC,OP_ROR,OP_ERR
-		.BYTE	OP_BVS,OP_ADC,OP_ERR,OP_ERR,OP_ERR,OP_ADC,OP_ROR,OP_ERR ; 7
-		.BYTE	OP_SEI,OP_ADC,OP_ERR,OP_ERR,OP_ERR,OP_ADC,OP_ROR,OP_ERR
-		.BYTE	OP_ERR,OP_STA,OP_ERR,OP_ERR,OP_STY,OP_STA,OP_STX,OP_ERR ; 8
-		.BYTE	OP_DEY,OP_BIT,OP_TXA,OP_ERR,OP_STY,OP_STA,OP_STX,OP_ERR
-		.BYTE	OP_BCC,OP_STA,OP_ERR,OP_ERR,OP_STY,OP_STA,OP_STX,OP_ERR ; 9
-		.BYTE	OP_TYA,OP_STA,OP_TXS,OP_ERR,OP_ERR,OP_STA,OP_ERR,OP_ERR
-		.BYTE	OP_LDY,OP_LDA,OP_LDX,OP_ERR,OP_LDY,OP_LDA,OP_LDX,OP_ERR ; A
-		.BYTE	OP_TAY,OP_LDA,OP_TAX,OP_ERR,OP_LDY,OP_LDA,OP_LDX,OP_ERR
-		.BYTE	OP_BCS,OP_LDA,OP_ERR,OP_ERR,OP_LDY,OP_LDA,OP_LDX,OP_ERR ; B
-		.BYTE	OP_CLV,OP_LDA,OP_TSX,OP_ERR,OP_LDY,OP_LDA,OP_LDX,OP_ERR
-		.BYTE	OP_CPY,OP_CMP,OP_ERR,OP_ERR,OP_CPY,OP_CMP,OP_DEC,OP_ERR ; C
-		.BYTE	OP_INY,OP_CMP,OP_DEX,OP_ERR,OP_CPY,OP_CMP,OP_DEC,OP_ERR
-		.BYTE	OP_BNE,OP_CMP,OP_ERR,OP_ERR,OP_ERR,OP_CMP,OP_DEC,OP_ERR ; D
-		.BYTE	OP_CLD,OP_CMP,OP_ERR,OP_ERR,OP_ERR,OP_CMP,OP_DEC,OP_ERR
-		.BYTE	OP_CPX,OP_SBC,OP_ERR,OP_ERR,OP_CPX,OP_SBC,OP_INC,OP_ERR ; E
-		.BYTE	OP_INX,OP_SBC,OP_NOP,OP_ERR,OP_CPX,OP_SBC,OP_INC,OP_ERR
-		.BYTE	OP_BEQ,OP_SBC,OP_ERR,OP_ERR,OP_ERR,OP_SBC,OP_INC,OP_ERR ; F
-		.BYTE	OP_SED,OP_SBC,OP_ERR,OP_ERR,OP_ERR,OP_SBC,OP_INC,OP_ERR
-
-MODES:
-		.BYTE	MO_IMM,MO_IZX,MO_IMM,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_IMP ; 0
-		.BYTE	MO_IMP,MO_IMM,MO_ACC,MO_IMP,MO_IMP,MO_ABS,MO_ABS,MO_IMP
-		.BYTE	MO_REL,MO_IZY,MO_IMP,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_IMP ; 1
-		.BYTE	MO_IMP,MO_ABY,MO_ACC,MO_IMP,MO_IMP,MO_ABX,MO_ABX,MO_IMP
-		.BYTE	MO_ABS,MO_IZX,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_IMP ; 2
-		.BYTE	MO_IMP,MO_IMM,MO_ACC,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_IMP
-		.BYTE	MO_REL,MO_IZY,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_ZPX,MO_IMP ; 3
-		.BYTE	MO_IMP,MO_ABY,MO_ACC,MO_IMP,MO_ABX,MO_ABX,MO_ABX,MO_IMP
-		.BYTE	MO_IMP,MO_IZX,MO_IMP,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_IMP ; 4
-		.BYTE	MO_IMP,MO_IMM,MO_ACC,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_IMP
-		.BYTE	MO_REL,MO_IZY,MO_IMP,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_IMP ; 5
-		.BYTE	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_IMP,MO_ABX,MO_ABX,MO_IMP
-		.BYTE	MO_IMP,MO_IZX,MO_IMP,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_IMP ; 6
-		.BYTE	MO_IMP,MO_IMM,MO_ACC,MO_IMP,MO_IAB,MO_ABS,MO_ABS,MO_IMP
-		.BYTE	MO_REL,MO_IZY,MO_IMP,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_IMP ; 7
-		.BYTE	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_IMP,MO_ABX,MO_ABX,MO_IMP
-		.BYTE	MO_IMP,MO_IZX,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_IMP ; 8
-		.BYTE	MO_IMP,MO_IMM,MO_IMP,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_IMP
-		.BYTE	MO_REL,MO_IZY,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_ZPY,MO_IMP ; 9
-		.BYTE	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_IMP,MO_ABX,MO_IMP,MO_IMP
-		.BYTE	MO_IMM,MO_IZX,MO_IMM,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_IMP ; A
-		.BYTE	MO_IMP,MO_IMM,MO_IMP,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_IMP
-		.BYTE	MO_REL,MO_IZY,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_ZPY,MO_IMP ; B
-		.BYTE	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_ABX,MO_ABX,MO_ABY,MO_IMP
-		.BYTE	MO_IMM,MO_IZX,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_IMP ; C
-		.BYTE	MO_IMP,MO_IMM,MO_IMP,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_IMP
-		.BYTE	MO_REL,MO_IZY,MO_IMP,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_IMP ; D
-		.BYTE	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_IMP,MO_ABX,MO_ABX,MO_IMP
-		.BYTE	MO_IMM,MO_IZX,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_IMP ; E
-		.BYTE	MO_IMP,MO_IMM,MO_IMP,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_IMP
-		.BYTE	MO_REL,MO_IZY,MO_IMP,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_IMP ; F
-		.BYTE	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_IMP,MO_ABX,MO_ABX,MO_IMP
-		.ENDIF
-
-;-------------------------------------------------------------------------------
-
-		.IF	__65C02__ | __65816__
-OPCODES:
-		.BYTE	OP_BRK,OP_ORA,OP_ERR,OP_ERR,OP_TSB,OP_ORA,OP_ASL,OP_RMB ; 0
-		.BYTE	OP_PHP,OP_ORA,OP_ASL,OP_ERR,OP_TSB,OP_ORA,OP_ASL,OP_BBR
-		.BYTE	OP_BPL,OP_ORA,OP_ORA,OP_ERR,OP_TRB,OP_ORA,OP_ASL,OP_RMB ; 1
-		.BYTE	OP_CLC,OP_ORA,OP_INC,OP_ERR,OP_TRB,OP_ORA,OP_ASL,OP_BBR
-		.BYTE	OP_JSR,OP_AND,OP_ERR,OP_ERR,OP_BIT,OP_AND,OP_ROL,OP_RMB ; 2
-		.BYTE	OP_PLP,OP_AND,OP_ROL,OP_ERR,OP_BIT,OP_AND,OP_ROL,OP_BBR
-		.BYTE	OP_BMI,OP_AND,OP_AND,OP_ERR,OP_BIT,OP_AND,OP_ROL,OP_RMB ; 3
-		.BYTE	OP_SEC,OP_AND,OP_DEC,OP_ERR,OP_BIT,OP_AND,OP_ROL,OP_BBR
-		.BYTE	OP_RTI,OP_EOR,OP_ERR,OP_ERR,OP_ERR,OP_EOR,OP_LSR,OP_RMB ; 4
-		.BYTE	OP_PHA,OP_EOR,OP_LSR,OP_ERR,OP_JMP,OP_EOR,OP_LSR,OP_BBR
-		.BYTE	OP_BVC,OP_EOR,OP_EOR,OP_ERR,OP_ERR,OP_EOR,OP_LSR,OP_RMB ; 5
-		.BYTE	OP_CLI,OP_EOR,OP_PHY,OP_ERR,OP_ERR,OP_EOR,OP_LSR,OP_BBR
-		.BYTE	OP_RTS,OP_ADC,OP_ERR,OP_ERR,OP_STZ,OP_ADC,OP_ROR,OP_RMB ; 6
-		.BYTE	OP_PLA,OP_ADC,OP_ROR,OP_ERR,OP_JMP,OP_ADC,OP_ROR,OP_BBR
-		.BYTE	OP_BVS,OP_ADC,OP_ADC,OP_ERR,OP_STZ,OP_ADC,OP_ROR,OP_RMB ; 7
-		.BYTE	OP_SEI,OP_ADC,OP_PLY,OP_ERR,OP_JMP,OP_ADC,OP_ROR,OP_BBR
-		.BYTE	OP_BRA,OP_STA,OP_ERR,OP_ERR,OP_STY,OP_STA,OP_STX,OP_SMB ; 8
-		.BYTE	OP_DEY,OP_BIT,OP_TXA,OP_ERR,OP_STY,OP_STA,OP_STX,OP_BBS
-		.BYTE	OP_BCC,OP_STA,OP_STA,OP_ERR,OP_STY,OP_STA,OP_STX,OP_SMB ; 9
-		.BYTE	OP_TYA,OP_STA,OP_TXS,OP_ERR,OP_STZ,OP_STA,OP_STZ,OP_BBS
-		.BYTE	OP_LDY,OP_LDA,OP_LDX,OP_ERR,OP_LDY,OP_LDA,OP_LDX,OP_SMB ; A
-		.BYTE	OP_TAY,OP_LDA,OP_TAX,OP_ERR,OP_LDY,OP_LDA,OP_LDX,OP_BBS
-		.BYTE	OP_BCS,OP_LDA,OP_LDA,OP_ERR,OP_LDY,OP_LDA,OP_LDX,OP_SMB ; B
-		.BYTE	OP_CLV,OP_LDA,OP_TSX,OP_ERR,OP_LDY,OP_LDA,OP_LDX,OP_BBS
-		.BYTE	OP_CPY,OP_CMP,OP_ERR,OP_ERR,OP_CPY,OP_CMP,OP_DEC,OP_SMB ; C
-		.BYTE	OP_INY,OP_CMP,OP_DEX,OP_WAI,OP_CPY,OP_CMP,OP_DEC,OP_BBS
-		.BYTE	OP_BNE,OP_CMP,OP_CMP,OP_ERR,OP_ERR,OP_CMP,OP_DEC,OP_SMB ; D
-		.BYTE	OP_CLD,OP_CMP,OP_PHX,OP_STP,OP_ERR,OP_CMP,OP_DEC,OP_BBS
-		.BYTE	OP_CPX,OP_SBC,OP_ERR,OP_ERR,OP_CPX,OP_SBC,OP_INC,OP_SMB ; E
-		.BYTE	OP_INX,OP_SBC,OP_NOP,OP_ERR,OP_CPX,OP_SBC,OP_INC,OP_BBS
-		.BYTE	OP_BEQ,OP_SBC,OP_SBC,OP_ERR,OP_ERR,OP_SBC,OP_INC,OP_SMB ; F
-		.BYTE	OP_SED,OP_SBC,OP_PLX,OP_ERR,OP_ERR,OP_SBC,OP_INC,OP_BBS
-
-MODES:
-		.BYTE	MO_IMM,MO_IZX,MO_IMM,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_ZPG ; 0
-		.BYTE	MO_IMP,MO_IMM,MO_ACC,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_BRL
-		.BYTE	MO_REL,MO_IZY,MO_IZP,MO_IMP,MO_ZPG,MO_ZPX,MO_ZPX,MO_ZPG ; 1
-		.BYTE	MO_IMP,MO_ABY,MO_ACC,MO_IMP,MO_ABS,MO_ABX,MO_ABX,MO_BRL
-		.BYTE	MO_ABS,MO_IZX,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_ZPG ; 2
-		.BYTE	MO_IMP,MO_IMM,MO_ACC,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_BRL
-		.BYTE	MO_REL,MO_IZY,MO_IZP,MO_IMP,MO_ZPX,MO_ZPX,MO_ZPX,MO_ZPG ; 3
-		.BYTE	MO_IMP,MO_ABY,MO_ACC,MO_IMP,MO_ABX,MO_ABX,MO_ABX,MO_BRL
-		.BYTE	MO_IMP,MO_IZX,MO_IMP,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG ; 4
-		.BYTE	MO_IMP,MO_IMM,MO_ACC,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_BRL
-		.BYTE	MO_REL,MO_IZY,MO_IZP,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_ZPG ; 5
-		.BYTE	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_IMP,MO_ABX,MO_ABX,MO_BRL
-		.BYTE	MO_IMP,MO_IZX,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_ZPG ; 6
-		.BYTE	MO_IMP,MO_IMM,MO_ACC,MO_IMP,MO_IAB,MO_ABS,MO_ABS,MO_BRL
-		.BYTE	MO_REL,MO_IZY,MO_IZP,MO_IMP,MO_ZPX,MO_ZPX,MO_ZPX,MO_ZPG ; 7
-		.BYTE	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_IAX,MO_ABX,MO_ABX,MO_BRL
-		.BYTE	MO_REL,MO_IZX,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_ZPG ; 8
-		.BYTE	MO_IMP,MO_IMM,MO_IMP,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_BRL
-		.BYTE	MO_REL,MO_IZY,MO_IZP,MO_IMP,MO_ZPX,MO_ZPX,MO_ZPY,MO_ZPG ; 9
-		.BYTE	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_ABS,MO_ABX,MO_ABX,MO_BRL
-		.BYTE	MO_IMM,MO_IZX,MO_IMM,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_ZPG ; A
-		.BYTE	MO_IMP,MO_IMM,MO_IMP,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_BRL
-		.BYTE	MO_REL,MO_IZY,MO_IZP,MO_IMP,MO_ZPX,MO_ZPX,MO_ZPY,MO_ZPG ; B
-		.BYTE	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_ABX,MO_ABX,MO_ABY,MO_BRL
-		.BYTE	MO_IMM,MO_IZX,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_ZPG ; C
-		.BYTE	MO_IMP,MO_IMM,MO_IMP,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_BRL
-		.BYTE	MO_REL,MO_IZY,MO_IZP,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_ZPG ; D
-		.BYTE	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_IMP,MO_ABX,MO_ABX,MO_BRL
-		.BYTE	MO_IMM,MO_IZX,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_ZPG ; E
-		.BYTE	MO_IMP,MO_IMM,MO_IMP,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_BRL
-		.BYTE	MO_REL,MO_IZY,MO_IZP,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_ZPG ; F
-		.BYTE	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_IMP,MO_ABX,MO_ABX,MO_BRL
-		.ENDIF
-
-;-------------------------------------------------------------------------------
-
-SQUEEZE		.MACRO	CH1,CH2,CH3
-		.WORD	((((CH3 & $1F) << 5)|(CH2 & $1F)) << 5)|(CH1 & $1F)
-		.ENDM
+		.code
+		.org	$f000
 
 MNEMONICS:
-		SQUEEZE '?','?','?'
-		SQUEEZE 'A','D','C'
-		SQUEEZE 'A','N','D'
-		SQUEEZE 'A','S','L'
-		SQUEEZE 'B','B','R'
-		SQUEEZE 'B','B','S'
-		SQUEEZE 'B','C','C'
-		SQUEEZE 'B','C','S'
-		SQUEEZE 'B','E','Q'
-		SQUEEZE 'B','I','T'
-		SQUEEZE 'B','N','E'
-		SQUEEZE 'B','M','I'
-		SQUEEZE 'B','P','L'
-		SQUEEZE 'B','R','A'
-		SQUEEZE 'B','R','K'
-		SQUEEZE 'B','V','C'
-		SQUEEZE 'B','V','S'
-		SQUEEZE 'C','L','C'
-		SQUEEZE 'C','L','D'
-		SQUEEZE 'C','L','I'
-		SQUEEZE 'C','L','V'
-		SQUEEZE 'C','M','P'
-		SQUEEZE 'C','P','X'
-		SQUEEZE 'C','P','Y'
-		SQUEEZE 'D','E','C'
-		SQUEEZE 'D','E','X'
-		SQUEEZE 'D','E','Y'
-		SQUEEZE 'E','O','R'
-		SQUEEZE 'I','N','C'
-		SQUEEZE 'I','N','X'
-		SQUEEZE 'I','N','Y'
-		SQUEEZE 'J','M','P'
-		SQUEEZE 'J','S','R'
-		SQUEEZE 'L','D','A'
-		SQUEEZE 'L','D','X'
-		SQUEEZE 'L','D','Y'
-		SQUEEZE 'L','S','R'
-		SQUEEZE 'N','O','P'
-		SQUEEZE 'O','R','A'
-		SQUEEZE 'P','H','A'
-		SQUEEZE 'P','H','P'
-		SQUEEZE 'P','H','X'
-		SQUEEZE 'P','H','Y'
-		SQUEEZE 'P','L','A'
-		SQUEEZE 'P','L','P'
-		SQUEEZE 'P','L','X'
-		SQUEEZE 'P','L','Y'
-		SQUEEZE 'R','M','B'
-		SQUEEZE 'R','O','L'
-		SQUEEZE 'R','O','R'
-		SQUEEZE 'R','T','I'
-		SQUEEZE 'R','T','S'
-		SQUEEZE 'S','B','C'
-		SQUEEZE 'S','E','C'
-		SQUEEZE 'S','E','D'
-		SQUEEZE 'S','E','I'
-		SQUEEZE 'S','M','B'
-		SQUEEZE 'S','T','A'
-		SQUEEZE 'S','T','P'
-		SQUEEZE 'S','T','X'
-		SQUEEZE 'S','T','Y'
-		SQUEEZE 'S','T','Z'
-		SQUEEZE 'T','A','X'
-		SQUEEZE 'T','A','Y'
-		SQUEEZE 'T','R','B'
-		SQUEEZE 'T','S','B'
-		SQUEEZE 'T','S','X'
-		SQUEEZE 'T','X','A'
-		SQUEEZE 'T','X','S'
-		SQUEEZE 'T','Y','A'
-		SQUEEZE 'W','A','I'
+		MNEM    '?','?','?'
+		MNEM    'A','D','C'
+		MNEM    'A','N','D'
+		MNEM    'A','S','L'
+		MNEM    'B','B','R'
+		MNEM    'B','B','S'
+		MNEM    'B','C','C'
+		MNEM    'B','C','S'
+		MNEM    'B','E','Q'
+		MNEM    'B','I','T'
+		MNEM    'B','N','E'
+		MNEM    'B','M','I'
+		MNEM    'B','P','L'
+		MNEM    'B','R','A'
+		MNEM    'B','R','K'
+		MNEM    'B','V','C'
+		MNEM    'B','V','S'
+		MNEM    'C','L','C'
+		MNEM    'C','L','D'
+		MNEM    'C','L','I'
+		MNEM    'C','L','V'
+		MNEM    'C','M','P'
+		MNEM    'C','P','X'
+		MNEM    'C','P','Y'
+		MNEM    'D','E','C'
+		MNEM    'D','E','X'
+		MNEM    'D','E','Y'
+		MNEM    'E','O','R'
+		MNEM    'I','N','C'
+		MNEM    'I','N','X'
+		MNEM    'I','N','Y'
+		MNEM    'J','M','P'
+		MNEM    'J','S','R'
+		MNEM    'L','D','A'
+		MNEM    'L','D','X'
+		MNEM    'L','D','Y'
+		MNEM    'L','S','R'
+		MNEM    'N','O','P'
+		MNEM    'O','R','A'
+		MNEM    'P','H','A'
+		MNEM    'P','H','P'
+		MNEM    'P','H','X'
+		MNEM    'P','H','Y'
+		MNEM    'P','L','A'
+		MNEM    'P','L','P'
+		MNEM    'P','L','X'
+		MNEM    'P','L','Y'
+		MNEM    'R','M','B'
+		MNEM    'R','O','L'
+		MNEM    'R','O','R'
+		MNEM    'R','T','I'
+		MNEM    'R','T','S'
+		MNEM    'S','B','C'
+		MNEM    'S','E','C'
+		MNEM    'S','E','D'
+		MNEM    'S','E','I'
+		MNEM    'S','M','B'
+		MNEM    'S','T','A'
+		MNEM    'S','T','P'
+		MNEM    'S','T','X'
+		MNEM    'S','T','Y'
+		MNEM    'S','T','Z'
+		MNEM    'T','A','X'
+		MNEM    'T','A','Y'
+		MNEM    'T','R','B'
+		MNEM    'T','S','B'
+		MNEM    'T','S','X'
+		MNEM    'T','X','A'
+		MNEM    'T','X','S'
+		MNEM    'T','Y','A'
+		MNEM    'W','A','I'
+		
+;===============================================================================
+; Power On Reset
+;-------------------------------------------------------------------------------
 
+RESET:
+		sei
+		cld			; Ensure binary mode
+		
+		ldx	#$FF		; Reset the stack
+		txs
+
+		inx			; Clear buffer offsets
+		stx	RX_HEAD
+		stx	RX_TAIL
+		stx	TX_HEAD
+		stx	TX_TAIL
+
+                lda     #%00011111	; 8 bits, 1 stop bit, 19200 baud
+                sta     ACIA_CTRL
+                lda     #%11001001	; No parity, no interrupt
+                sta     ACIA_CMND
+                lda     ACIA_DATA	; Clear receive buffer
+
+		cli			; Allow interrupts
+		
+		jsr	NewLine
+		ldx	#TTL_STR
+		jsr	ShowString
+		
+		repeat
+		 brk	#0		; And enter monitor
+		forever
+		
 ;===============================================================================
 ;
 ;-------------------------------------------------------------------------------
 
-BREAK:
-		CLI			; Allow interrupts
-		PLA
-		STA	Y_REG
-		PLA
-		STA	X_REG
-		PLA
-		STA	A_REG
-		PLA
-		STA	P_REG
-		SEC
-		PLA
-		SBC	#2
-		STA	PC_REG+0
-		PLA
-		SBC	#0
-		STA	PC_REG+1
-
-REGISTERS:
-		JSR	CRLF
-		LDX	#PC_STR
-		JSR	SHOW_STR
-		LDA	PC_REG+1
-		JSR	HEX2
-		LDA	PC_REG+0
-		JSR	HEX2
-
-		LDX	#A_STR
-		JSR	SHOW_STR
-		LDA	A_REG
-		JSR	HEX2
-
-		LDX	#X_STR
-		JSR	SHOW_STR
-		LDA	X_REG
-		JSR	HEX2
-
-		LDX	#Y_STR
-		JSR	SHOW_STR
-		LDA	Y_REG
-		JSR	HEX2
+BRK:
+		pla			; Pull off saved registers
+		sta	Y_REG
+		pla
+		sta	X_REG
+		pla
+		sta	A_REG
+		pla
+		sta	P_REG
+		sec			; Move PC back to BRK
+		pla
+		sbc	#2
+		sta	PC_REG+0
+		pla
+		sbc	#0
+		sta	PC_REG+1
 		
-		LDX	#P_STR
-		JSR	SHOW_STR
-		LDX	#7
-		REPEAT
-		 LDY	#'.'
-		 LDA	BITS,X
-		 BIT	P_REG
-		 IF	NE
-		  LDY	FLAG,X
-		 ENDIF
-		 TYA
-		 JSR	UART_TX
-		 DEX
-		UNTIL MI		  
-		
-		LDX	#SP_STR
-		JSR	SHOW_STR
-		TSX
-		TXA
-		JSR	HEX2
-
-COMMAND:
-		.IF	__65C02__
-		STZ	CMD_LEN		; Mark the buffer as empty
-		.ELSE
-		LDA	#0		; Mark the buffer as empty
-		STA	CMD_LEN
-		.ENDIF
-
-PROMPT:
-		JSR	CRLF		; Move cursor to next line
-		LDA	#'.'		; And output the prompt
-		JSR	UART_TX
-
-		LDX	#0
-		REPEAT
-		 CPX	CMD_LEN		; Any saved characters to display?
-		 BREAK	EQ		; No
-		 LDA	BUFFER,X	; Yes, print from the buffer
-		 JSR	UART_TX
-		 INX
-		FOREVER
-		
-		JSR	XON
-		REPEAT
-		 JSR	UART_RX		; Wait for some user input
-		 
-		 CMP 	#ESC		; Cancel input?
-		 IF	EQ
-		  BEQ	COMMAND		; Yes
-		 ENDIF
-
-		 CMP	#BS		; Backspace?
-		 IF	EQ
-BACKSPACE:	  CPX	#0		; Anything in the buffer?
-		  IF	NE
-		   PHA			; Erase the last character
-		   JSR	UART_TX
-		   JSR	SPACE
-		   PLA
-		   JSR	UART_TX
-		   DEX
-		  ENDIF
-		  CONTINUE
-		 ENDIF
-
-		 CMP	#CR		; End of command entry?
-		 BREAK	EQ		; Yes
-
-		 CMP	#DEL		; Convert DEL into BS
-		 IF	EQ
-		  LDA	#BS
-		  BNE	BACKSPACE
-		 ENDIF
-		 IF	CS		; In the range $7F-$FF?
-SQUAWK:		  LDA	#BEL		; Yes, squawk!
-		  JSR	UART_TX
-		  CONTINUE
-		 ENDIF
-
-		 CMP	#' '		; In the range $00-$1F?
-		 BCC	SQUAWK		; Yes, squawk!
-
-		 CPX	#CMD_SIZE-1	; Command buffer full?
-		 BCS	SQUAWK		; Yes, squawk!
-
-		 STA	BUFFER,X	; Save the character
-		 INX			; Bump the count
-		 JSR	UART_TX		; And echo to terminal
-		FOREVER
-		JSR	XOFF
-
-		STX	CMD_LEN		; Save the command length
-		LDX	#0		; Set character offset to start
-		JSR	SKIP_CHAR	; And get first character
-		BCS	COMMAND
+		cli			; Allow interrupts
 
 ;===============================================================================
-; 'A' - Assemble
+; Show Registers
 ;-------------------------------------------------------------------------------
 
-		CMP	#'A'
-		IF	EQ
-		ENDIF
+ShowRegisters:
+		jsr	NewLine
+		ldx	#PC_STR		; Display the PC
+		jsr	ShowString
+		lda	PC_REG+1
+		jsr	ShowHex2
+		lda	PC_REG+0
+		jsr	ShowHex2
+
+		ldx	#A_STR		; Display A
+		jsr	ShowString
+		lda	A_REG
+		jsr	ShowHex2
+
+		ldx	#X_STR		; Display X
+		jsr	ShowString
+		lda	X_REG
+		jsr	ShowHex2
+
+		ldx	#Y_STR		; Display Y
+		jsr	ShowString
+		lda	Y_REG
+		jsr	ShowHex2
+		
+		ldx	#P_STR		; Display P
+		jsr	ShowString
+		ldx	#7
+		repeat
+		 ldy	#'.'
+		 lda	BITS,x
+		 bit	P_REG
+		 if	NE
+		  ldy	FLAG,x
+		 endif
+		 tya
+		 jsr	UartTx
+		 dex
+		until mi		  
+		
+		ldx	#SP_STR		; Display SP
+		jsr	ShowString
+		tsx
+		txa
+		jsr	ShowHex2
+		
+;===============================================================================
+;-------------------------------------------------------------------------------
+
+NewCommand:
+		.if	__65C02__
+		stz	CMD_LEN		; Mark the buffer as empty
+		.else
+		lda	#0		; Mark the buffer as empty
+		sta	CMD_LEN
+		.endif
+
+RptCommand:
+		jsr	NewLine		; Move cursor to next line
+		lda	#'.'		; And output the prompt
+		jsr	UartTx
+
+		ldx	#0		; Output prepared command
+		repeat
+		 cpx	CMD_LEN		; Any saved characters to display?
+		 break	cs		; No
+		 lda	COMMAND,x	; Yes, print from the buffer
+		 jsr	UartTx
+		 inx
+		forever
+		
+		lda	#DC1		; Send XON
+		jsr	UartTx
+		repeat
+		 jsr	UartRx		; Wait for some user input
+		 sta	COMMAND,x
+		 
+		 cmp	#CR		; End of input?
+		 break eq
+		 
+		 cmp 	#ESC		; Cancel input?
+		 if eq
+		  beq	NewCommand	; Yes
+		 endif
+
+		 cmp	#DEL		; Turn a delete
+		 if eq
+		  lda	#BS		; .. into a backspace
+		 endif
+		 
+		 cmp	#BS		; Handle backspace
+		 if eq
+		  cpx   #0
+		  if ne
+		   pha
+		   jsr	UartTx
+		   jsr	Space
+		   pla
+		   jsr	UartTx
+		   dex
+		  endif
+		  continue
+		 endif
+
+		 cmp	#' '		; Beep if non-printable
+		 if cs
+		  lda	#BEL
+		  jsr	UartTx
+		  continue
+		 endif
+
+		 jsr	UartTx		; Otherwise echo to screen
+		 inx			; And bump counter
+		forever
+		
+		stx	CMD_LEN		; Save the command length
+		lda	#DC3		; Send XOFF
+		jsr	UartTx
+
+		ldx	#0		; Set character offset to start
+		jsr	SkipSpaces	; And get first character
+		bcs	NewCommand
+		
+		cmp	#CR		; Empty line?
+		beq	NewCommand	; Yes
 
 ;===============================================================================
 ; 'D' - Disassemble Memory
 ;-------------------------------------------------------------------------------
 
-		CMP	#'D'
-		IF	EQ
-		 JSR	GET_WORD
-		 IF	CC
-		  JSR	SET_ADDR_S
-		  JSR	SET_ADDR_E
-		  JSR	GET_WORD
-		  IF	CC
-		   JSR	SET_ADDR_E
-		  ELSE
-		   INC	ADDR_E+1
-		  ENDIF
+		cmp	#'D'
+		if	EQ
+		 jsr	GET_WORD
+		 if	CC
+		  jsr	SET_ADDR_S
+		  jsr	SET_ADDR_E
+		  jsr	GET_WORD
+		  if	CC
+		   jsr	SET_ADDR_E
+		  else
+		   inc	ADDR_E+1
+		  endif
 		  
-		  REPEAT
-		   JSR	CRLF		; Print the memory address
-		   LDA	ADDR_S+1
-		   JSR	HEX2
-		   LDA	ADDR_S+0
-		   JSR	HEX2
+		  repeat
+		   jsr	NewLine		; Print the memory address
+		   lda	ADDR_S+1
+		   jsr	ShowHex2
+		   lda	ADDR_S+0
+		   jsr	ShowHex2
 		   
-		   JSR	DISASSEMBLE
-		   JSR	BUMP_ADDR		   
-		   JSR	CHECK_END
-		  UNTIL	PL
-		  JMP	COMMAND
-		 ENDIF
-		 JMP	ERROR		
-		ENDIF
+		   jsr	DISASSEMBLE
+		   jsr	BUMP_ADDR		   
+		   jsr	CHECK_END
+		  until	PL
+		  jmp	NewCommand
+		 endif
+		 jmp	Error		
+		endif
 		
 ;===============================================================================
 ; 'G' - Go
 ;-------------------------------------------------------------------------------
 
-		CMP	#'G'
-		IF	EQ
+		cmp	#'G'
+		if	EQ
 
-		 LDA	PC_REG+1	; Push the target address
-		 PHA
-		 LDA	PC_REG+0
-		 PHA
-		 LDA	P_REG		; And status flags
-		 PHA
-		 LDA	A_REG		; Reload A, X and Y
-		 LDX	X_REG
-		 LDY	Y_REG
-		 RTI			; Then go to code
-		ENDIF
+		 lda	PC_REG+1	; Push the target address
+		 pha
+		 lda	PC_REG+0
+		 pha
+		 lda	P_REG		; And status flags
+		 pha
+		 lda	A_REG		; Reload A, X and Y
+		 ldx	X_REG
+		 ldy	Y_REG
+		 rti			; Then go to code
+		endif
 
 ;===============================================================================
 ; 'M' - Show Memory
 ;-------------------------------------------------------------------------------		
 
-		CMP	#'M'
-		IF	EQ
-		 JSR	GET_WORD
-		 IF	CC
-		  JSR	SET_ADDR_S
-		  JSR	SET_ADDR_E
-		  JSR	GET_WORD
-		  IF	CC
-		   JSR	SET_ADDR_E
-		  ELSE
-		   INC	ADDR_E+1
-		  ENDIF
+		cmp	#'M'
+		if	EQ
+		 jsr	GET_WORD
+		 if	CC
+		  jsr	SET_ADDR_S
+		  jsr	SET_ADDR_E
+		  jsr	GET_WORD
+		  if	CC
+		   jsr	SET_ADDR_E
+		  else
+		   inc	ADDR_E+1
+		  endif
 		  
-		  REPEAT
-		   JSR	CRLF		; Print the memory address
-		   LDA	ADDR_S+1
-		   JSR	HEX2
-		   LDA	ADDR_S+0
-		   JSR	HEX2
+		  repeat
+		   jsr	NewLine		; Print the memory address
+		   lda	ADDR_S+1
+		   jsr	ShowHex2
+		   lda	ADDR_S+0
+		   jsr	ShowHex2
 		   
-		   LDY	#0		; Dump 16 bytes of data
-		   REPEAT
-		    JSR	SPACE
-		    LDA	(ADDR_S),Y
-		    INY
-		    JSR	HEX2
-		    CPY #16
-		   UNTIL EQ
+		   ldy	#0		; Dump 16 bytes of data
+		   repeat
+		    jsr	Space
+		    lda	(ADDR_S),Y
+		    iny
+		    jsr	ShowHex2
+		    cpy #16
+		   until EQ
 		   
-		   JSR	SPACE		; Then show as characters
-		   JSR	BAR
-		   LDY	#0
-		   REPEAT
-		    LDA	(ADDR_S),Y
-		    INY
-		    JSR	IS_PRINTABLE
-		    IF CC
-		     LDA #'.'
-		    ENDIF
-		    JSR	UART_TX
-		    CPY	#16
-		   UNTIL EQ
-		   JSR	BAR
+		   jsr	Space		; Then show as characters
+		   jsr	Bar
+		   ldy	#0
+		   repeat
+		    lda	(ADDR_S),Y
+		    iny
+		    jsr	IS_PRINTABLE
+		    if CC
+		     lda #'.'
+		    endif
+		    jsr	UartTx
+		    cpy	#16
+		   until EQ
+		   jsr	Bar
 		   
-		   TYA
-		   JSR	BUMP_ADDR
-		   JSR	CHECK_END
-		  UNTIL	PL
-		  JMP	COMMAND
-		 ENDIF
-		 JMP	ERROR
-		ENDIF
+		   tya
+		   jsr	BUMP_ADDR
+		   jsr	CHECK_END
+		  until	PL
+		  jmp	NewCommand
+		 endif
+		 jmp	Error
+		endif
 
 ;===============================================================================
 ; 'R' - Show Registers
 ;-------------------------------------------------------------------------------
 
-		CMP	#'R'
-		IF	EQ
-		 JMP	REGISTERS
-		ENDIF
+		cmp	#'R'
+		if	eq
+		 jmp	ShowRegisters
+		endif
 		
 ;===============================================================================
-; 'S' - Load SREC
+; 'S' - S19 Record Loader
 ;-------------------------------------------------------------------------------
 
-		CMP	#'S'
-		IF	EQ
-		ENDIF
-		
-;===============================================================================
-; 'T' - Trace
-;-------------------------------------------------------------------------------
-
-		CMP	#'T'
-		IF	EQ
-		ENDIF
+		cmp	#'S'
+		if	eq
+		endif
 		
 ;===============================================================================
 ; 'W' - Write Memory
 ;-------------------------------------------------------------------------------
 
-		CMP	#'W'
-		IF	EQ
-		 JSR	GET_WORD	; Get the target address
-		 IF	CC
-		  JSR	SET_ADDR_S	; Copy to start address
-		  JSR	GET_BYTE	; Get the value
-		  IF	CC
-		   LDY	#0		; Write to  memory
-		   LDA	TEMP+0
-		   STA	(ADDR_S),Y
-		   LDA	#1		; Increment address
-		   JSR	BUMP_ADDR
-		   LDA	#'W'		; Create prompt for next byte
-		   JMP	SET_PROMPT
-		  ENDIF
-		 ENDIF
-		 JMP	ERROR		; Handle syntax errors
-		ENDIF
+		cmp	#'W'
+		if	EQ
+		 jsr	GET_WORD	; Get the target address
+		 if	CC
+		  jsr	SET_ADDR_S	; Copy to start address
+		  jsr	GET_BYTE	; Get the value
+		  if	CC
+		   ldy	#0		; Write to  memory
+		   lda	TEMP+0
+		   sta	(ADDR_S),Y
+		   lda	#1		; Increment address
+		   jsr	BUMP_ADDR
+		   lda	#'W'		; Create prompt for next byte
+		   jmp	SET_PROMPT
+		  endif
+		 endif
+		 jmp	Error		; Handle syntax errors
+		endif
 		
 ;===============================================================================
 ; '?' - Display Help
 ;-------------------------------------------------------------------------------
 
-		CMP	#'?'
-		IF	EQ
-		 LDX	#HLP_STR
-		ELSE
-ERROR:		 LDX	#ERR_STR
-		ENDIF
-		JSR	SHOW_STR
-		JMP	COMMAND
+		cmp	#'?'
+		if	EQ
+		 ldx	#HLP_STR
+		else
+Error:		 ldx	#ERR_STR
+		endif
+		jsr	ShowString
+		jmp	NewCommand
 
 ;===============================================================================
 ;-------------------------------------------------------------------------------
 
 SET_ADDR_S:
-		LDA	TEMP+0
-		STA	ADDR_S+0
-		LDA	TEMP+1
-		STA	ADDR_S+1
-		RTS
+		lda	TEMP+0
+		sta	ADDR_S+0
+		lda	TEMP+1
+		sta	ADDR_S+1
+		rts
 
 SET_ADDR_E:
-		LDA	TEMP+0
-		STA	ADDR_E+0
-		LDA	TEMP+1
-		STA	ADDR_E+1
-		RTS
+		lda	TEMP+0
+		sta	ADDR_E+0
+		lda	TEMP+1
+		sta	ADDR_E+1
+		rts
 
 BUMP_ADDR:
-		CLC
-		ADC	ADDR_S+0
-		STA	ADDR_S+0
-		IF	CS
-		 INC	ADDR_S+1
-		ENDIF
-		RTS
+		clc
+		adc	ADDR_S+0
+		sta	ADDR_S+0
+		if	CS
+		 inc	ADDR_S+1
+		endif
+		rts
 		
 CHECK_END:
-		SEC
-		LDA	ADDR_S+0
-		SBC	ADDR_E+0
-		LDA	ADDR_S+1
-		SBC	ADDR_E+1
-		RTS
+		sec
+		lda	ADDR_S+0
+		sbc	ADDR_E+0
+		lda	ADDR_S+1
+		sbc	ADDR_E+1
+		rts
 
 ; Create a prompt string in the command buffer for the command in A using the
 ; current value of the starting address.
 
 SET_PROMPT:
-		LDX	#0		; Clear buffer and add command letter
-		JSR	APPEND_CHAR
-		LDA	#' '		; Then a space
-		JSR	APPEND_CHAR
+		ldx	#0		; Clear buffer and add command letter
+		jsr	APPEND_CHAR
+		lda	#' '		; Then a space
+		jsr	APPEND_CHAR
 		
-		LDA	ADDR_S+1	; Followed by the address
-		JSR	APPEND_HEX2
-		LDA	ADDR_S+0
-		JSR	APPEND_HEX2
-		LDA	#' '		; And another space
-		JSR	APPEND_CHAR
-		JMP	PROMPT		; Then output it
+		lda	ADDR_S+1	; Followed by the address
+		jsr	APPEND_HEX2
+		lda	ADDR_S+0
+		jsr	APPEND_HEX2
+		lda	#' '		; And another space
+		jsr	APPEND_CHAR
+		jmp	RptCommand	; Then output it
 
 ; Convert the byte in A into hexadecimal digits and append to the command buffer.		
 		
 APPEND_HEX2:
-		PHA
-		LSR	A
-		LSR	A
-		LSR	A
-		LSR	A
-		JSR	APPEND_HEX
-		PLA
+		pha
+		lsr	A
+		lsr	A
+		lsr	A
+		lsr	A
+		jsr	APPEND_HEX
+		pla
 APPEND_HEX:
-		JSR	TO_HEX
+		jsr	TO_HEX
 
 ; Append the character in A to the command buffer to create the next prompt
 ; string.
 
 APPEND_CHAR:
-		STA	BUFFER,X
-		INX
-		STX	CMD_LEN
-		RTS
+		sta	COMMAND,X
+		inx
+		stx	CMD_LEN
+		rts
 				
 ;===============================================================================
 ; Parsing Utilities
@@ -855,317 +720,317 @@ APPEND_CHAR:
 ; and convert it to UPPER case. If the carry is set then the end of the buffer
 ; has been reached.
 
-NEXT_CHAR:
-		CPX	CMD_LEN		; Reached end of buffer
-		IF	CS
-		 RTS
-		ENDIF
-		LDA	BUFFER,X
-		INX
+NextChar:
+		cpx	CMD_LEN		; Reached end of buffer>
+		if cs
+		 rts			; Yes, return with C=1
+		endif
+		lda	COMMAND,X	; No, fetch a character
+		inx
 
 ; Convert the character in A to upper case.
 
-TO_UPPER:
-		CMP	#'a'
-		IF	CS
-		 CMP	#'z'+1
-		 IF	CC
-		  AND	#$5F
-		 ENDIF
-		ENDIF
-		CLC
-		RTS
+ToUpper:
+		cmp	#'a'		; Between 'a'
+		if cs
+		 cmp	#'z'+1		; .. and 'z'?
+		 if cc
+		  and	#$5f		; Yes, convert 	
+		 endif
+		endif
+		clc			; Ensure C=0
+		rts
 		
-SKIP_CHAR:
-		REPEAT
-		 JSR	NEXT_CHAR
-		 IF 	CS
-		  RTS
-		 ENDIF
-		 CMP	#' '
-		UNTIL	NE
-		CLC
-		RTS
+; Fetch the next characters from the command buffer ignoring spaces.
+
+SkipSpaces:
+		repeat
+		 jsr	NextChar	; Fetch a character?
+		 break cs		; Reached the end?
+		 cmp	#' '		; A space to ignore?
+		 clc
+		until ne
+		rts			; Done
 
 ; Parse a word from the command buffer and store it at 0,Y. Return if the
 ; carry set if there is a syntax error.
 
 GET_WORD:
-		LDY	#4		; Set maximim number of nybbles
-		BNE	GET_BYTE+2
+		ldy	#4		; Set maximim number of nybbles
+		bne	GET_BYTE+2
 
 
 ; Parse a word from the command buffer and store it at 0,Y. Return if the
 ; carry set if there is a syntax error.
 
 GET_BYTE:
-		LDY	#2		; Set maximum number of nybble
-		STY	COUNT
+		ldy	#2		; Set maximum number of nybble
+		sty	COUNT
 		
-		.IF	__65C02__
-		STZ	TEMP+0		; Clear conversion area
-		STZ	TEMP+1
-		.ELSE
-		LDY	#0
-		STY	TEMP+0		; Clear conversion area
-		STY	TEMP+1
-		.ENDIF
+		.if	__65C02__
+		stz	TEMP+0		; Clear conversion area
+		stz	TEMP+1
+		.else
+		ldy	#0
+		sty	TEMP+0		; Clear conversion area
+		sty	TEMP+1
+		.endif
 
-		JSR	SKIP_CHAR	; Fetch first character
-		JSR	GET_NYBBLE	; And try to convert
-		IF	CS
-		 RTS			; Syntax error
-		ENDIF
-		REPEAT
-		 ASL	TEMP+0		; Fold into the result
-		 ROL	TEMP+1
-		 ASL	TEMP+0
-		 ROL	TEMP+1
-		 ASL	TEMP+0
-		 ROL	TEMP+1
-		 ASL	TEMP+0
-		 ROL	TEMP+1
-		 ORA	TEMP+0
-		 STA	TEMP+0
+		jsr	SkipSpaces	; Fetch first character
+		jsr	GET_NYBBLE	; And try to convert
+		if	CS
+		 rts			; Syntax error
+		endif
+		repeat
+		 asl	TEMP+0		; Fold into the result
+		 rol	TEMP+1
+		 asl	TEMP+0
+		 rol	TEMP+1
+		 asl	TEMP+0
+		 rol	TEMP+1
+		 asl	TEMP+0
+		 rol	TEMP+1
+		 ora	TEMP+0
+		 sta	TEMP+0
 		 
-		 DEC	COUNT		; Reach maximum length?
-		 BREAK	EQ
+		 dec	COUNT		; Reach maximum length?
+		 break	EQ
 		 
-		 JSR	NEXT_CHAR	; Try for another nybble
-		 JSR	GET_NYBBLE
-		UNTIL CS		
-		CLC			; Conversion sucessfull
-		RTS
+		 jsr	NextChar	; Try for another nybble
+		 jsr	GET_NYBBLE
+		until CS		
+		clc			; Conversion sucessfull
+		rts
 
 ;
 ;
 
 GET_NYBBLE:
-		JSR	IS_HEX		; Got a hex digit?
-		IF	CS
-		 CMP	#'A'		; Handle letters
-		 IF	CS
-		  SBC	#7
-		 ENDIF
-		 AND	#$0F		; Skip out nybble
-		 CLC			; Done
-		 RTS
-		ENDIF
-		SEC			; Set carry -- not hex
-		RTS
+		jsr	IS_HEX		; Got a hex digit?
+		if	CS
+		 cmp	#'A'		; Handle letters
+		 if	CS
+		  sbc	#7
+		 endif
+		 and	#$0F		; Skip out nybble
+		 clc			; Done
+		 rts
+		endif
+		sec			; Set carry -- not hex
+		rts
 
 ; Return with the carry set of the character in A is a digit or 'A' thru 'F'.
 
 IS_HEX:
-		CMP	#'9'+1
-		IF 	CC
-		 CMP	#'0'
-		 RTS
-		ENDIF
-		CMP	#'F'+1
-		IF	CC
-		 CMP	#'A'
-		 RTS
-		ENDIF
-		CLC
-		RTS
+		cmp	#'9'+1
+		if 	CC
+		 cmp	#'0'
+		 rts
+		endif
+		cmp	#'F'+1
+		if	CC
+		 cmp	#'A'
+		 rts
+		endif
+		clc
+		rts
 		
 IS_PRINTABLE:
-		CMP	#' '
-		IF	CS
-		 CMP	#DEL
-		 IF	CC
-		  SEC
-		  RTS
-		 ENDIF
-		ENDIF
-		CLC
-		RTS
+		cmp	#' '
+		if	CS
+		 cmp	#DEL
+		 if	CC
+		  sec
+		  rts
+		 endif
+		endif
+		clc
+		rts
 		
 ;===============================================================================
 ;-------------------------------------------------------------------------------
 
 DISASSEMBLE:
-		JSR	SPACE
-		LDY	#0		; Fetch the opcode
-		LDA	(ADDR_S),Y
-		TAX
-		JSR	HEX2		; And display it
+		jsr	Space
+		ldy	#0		; Fetch the opcode
+		lda	(ADDR_S),Y
+		tax
+		jsr	ShowHex2		; And display it
 		
-		JSR	SPACE
-		LDA	MODES,X
-		PHA
-		PHA
-		AND	#MB_REL|MB_ABS
-		IF	NE
-		 LDY	#1
-		 LDA	(ADDR_S),Y
-		 JSR	HEX2
-		ELSE
-		 JSR	SPACE2
-		ENDIF
+		jsr	Space
+		lda	MODES,X
+		pha
+		pha
+		and	#MB_REL|MB_ABS
+		if	NE
+		 ldy	#1
+		 lda	(ADDR_S),Y
+		 jsr	ShowHex2
+		else
+		 jsr	Space2
+		endif
 		
-		JSR	SPACE
-		PLA
-		TAY
-		AND	#MB_REL|MB_ZPG
-		CMP	#MB_REL|MB_ZPG
-		IF	NE
-		 TYA
-		 AND	#MB_ABS
-		 CMP	#MB_ABS
-		ENDIF
-		IF	EQ
-		 LDY	#2
-		 LDA	(ADDR_S),Y
-		 JSR	HEX2
-		ELSE
-		 JSR	SPACE2
-		ENDIF
+		jsr	Space
+		pla
+		tay
+		and	#MB_REL|MB_ZPG
+		cmp	#MB_REL|MB_ZPG
+		if	NE
+		 tya
+		 and	#MB_ABS
+		 cmp	#MB_ABS
+		endif
+		if	EQ
+		 ldy	#2
+		 lda	(ADDR_S),Y
+		 jsr	ShowHex2
+		else
+		 jsr	Space2
+		endif
 		
-		INY			; Save the byte count
-		TYA
-		PHA
+		iny			; Save the byte count
+		tya
+		pha
 
-		JSR	SPACE
-		LDY	#0		; Fetch the opcode
-		LDA	(ADDR_S),Y
-		TAX
-		LDA	OPCODES,X
-		TAX
-		LDA	MNEMONICS+1,X
-		STA	TEMP
-		LDA	MNEMONICS+0,X
-		JSR	EXTRACT_LETTER
-		JSR	EXTRACT_LETTER
-		JSR	EXTRACT_LETTER
-		JSR	SPACE
+		jsr	Space
+		ldy	#0		; Fetch the opcode
+		lda	(ADDR_S),Y
+		tax
+		lda	OPCODES,X
+		tax
+		lda	MNEMONICS+1,X
+		sta	TEMP
+		lda	MNEMONICS+0,X
+		jsr	EXTRACT_LETTER
+		jsr	EXTRACT_LETTER
+		jsr	EXTRACT_LETTER
+		jsr	Space
 		
-		PLA
-		PHA
-		AND	#MB_BIT
-		IF	NE
-		 LDY	#0
-		 LDA	(ADDR_S),Y
-		 AND	#7
-		 ORA	#'0'
-		 JSR	UART_TX
-		 LDA	#','
-		 JSR	UART_TX
-		ENDIF
+		pla
+		pha
+		and	#MB_bit
+		if	NE
+		 ldy	#0
+		 lda	(ADDR_S),Y
+		 and	#7
+		 ora	#'0'
+		 jsr	UartTx
+		 lda	#','
+		 jsr	UartTx
+		endif
 		
-		PLA
-		PHA
-		IF	MI
-		 LDA	#'('
-		 JSR	UART_TX
-		ENDIF
+		pla
+		pha
+		if	MI
+		 lda	#'('
+		 jsr	UartTx
+		endif
 		
-		PLA
-		PHA
-		AND	#MB_ABS
-		IF	NE
-		 PHA
-		 CMP	#MB_IMM
-		 IF	EQ
-		  LDA	#'#'
-		  JSR	UART_TX
-		 ENDIF
-		 LDA	#'$'
-		 JSR	UART_TX
-		 PLA
-		 CMP	#MB_ABS
-		 IF	EQ
-		  LDY	#2
-		  LDA	(ADDR_S),Y
-		  JSR	HEX2
-		 ENDIF
-		 LDY	#1
-		 LDA	(ADDR_S),Y
-		 JSR	HEX2
-		ENDIF
+		pla
+		pha
+		and	#MB_ABS
+		if	NE
+		 pha
+		 cmp	#MB_IMM
+		 if	EQ
+		  lda	#'#'
+		  jsr	UartTx
+		 endif
+		 lda	#'$'
+		 jsr	UartTx
+		 pla
+		 cmp	#MB_ABS
+		 if	EQ
+		  ldy	#2
+		  lda	(ADDR_S),Y
+		  jsr	ShowHex2
+		 endif
+		 ldy	#1
+		 lda	(ADDR_S),Y
+		 jsr	ShowHex2
+		endif
 		
-		PLA
-		PHA
-		AND	#MB_BIT|MB_REL
-		CMP	#MB_BIT|MB_REL
-		IF	EQ
-		 LDA	#','
-		 JSR	UART_TX
-		ENDIF
+		pla
+		pha
+		and	#MB_bit|MB_REL
+		cmp	#MB_bit|MB_REL
+		if	EQ
+		 lda	#','
+		 jsr	UartTx
+		endif
 		
-		PLA
-		PHA
-		TAY
-		AND	#MB_REL
-		IF	NE
-		 LDA	#'$'
-		 JSR	UART_TX
-		 TYA
-		 LDY	#1
-		 AND	#MB_BIT
-		 IF	NE
-		  INY
-		 ENDIF
+		pla
+		pha
+		tay
+		and	#MB_REL
+		if	NE
+		 lda	#'$'
+		 jsr	UartTx
+		 tya
+		 ldy	#1
+		 and	#MB_bit
+		 if	NE
+		  iny
+		 endif
 		 
-		 LDA	#'r'
-		 JSR	UART_RX
-		ENDIF
+		 lda	#'r'
+		 jsr	UartTx
+		endif
 		
-		PLA
-		PHA
-		AND	#MB_ACC
-		IF 	NE
-		 LDA	#'A'
-		 JSR	UART_TX
-		ENDIF
+		pla
+		pha
+		and	#MB_ACC
+		if 	NE
+		 lda	#'A'
+		 jsr	UartTx
+		endif
 		
-		PLA
-		PHA
-		AND	#MB_XRG
-		IF 	NE
-		 LDA	#','
-		 JSR	UART_TX
-		 LDA	#'X'
-		 JSR	UART_TX
-		ENDIF
+		pla
+		pha
+		and	#MB_XRG
+		if 	NE
+		 lda	#','
+		 jsr	UartTx
+		 lda	#'X'
+		 jsr	UartTx
+		endif
 		
-		PLA
-		PHA
-		IF	MI
-		 LDA	#')'
-		 JSR	UART_TX
-		ENDIF
+		pla
+		pha
+		if	MI
+		 lda	#')'
+		 jsr	UartTx
+		endif
 		
-		PLA
-		AND	#MB_YRG
-		IF 	NE
-		 LDA	#','
-		 JSR	UART_TX
-		 LDA	#'Y'
-		 JSR	UART_TX
-		ENDIF
+		pla
+		and	#MB_YRG
+		if 	NE
+		 lda	#','
+		 jsr	UartTx
+		 lda	#'Y'
+		 jsr	UartTx
+		endif
 		
-		PLA			; Return the number of bytes
-		RTS
+		pla			; Return the number of bytes
+		rts
 		
 EXTRACT_LETTER:
-		PHA
-		AND	#$1F
-		ORA	#'@'
-		JSR	UART_TX
-		PLA
-		LSR	TEMP
-		ROR	A
-		LSR	TEMP
-		ROR	A
-		LSR	TEMP
-		ROR	A
-		LSR	TEMP
-		ROR	A
-		LSR	TEMP
-		ROR	A
-		RTS
+		pha
+		and	#$1F
+		ora	#'@'
+		jsr	UartTx
+		pla
+		lsr	TEMP
+		ror	A
+		lsr	TEMP
+		ror	A
+		lsr	TEMP
+		ror	A
+		lsr	TEMP
+		ror	A
+		lsr	TEMP
+		ror	A
+		rts
 		
 		
 ;===============================================================================
@@ -1175,212 +1040,262 @@ EXTRACT_LETTER:
 ; Display the byte in A as two hexadecimal digits. The values in A & Y are
 ; destroyed.
 
-HEX2:
-		PHA			; Save a copy of the value
-		LSR	A		; Shift down the hi nybble
-		LSR	A
-		LSR	A
-		LSR	A
-		JSR	HEX		; Convert and display
-		PLA			; Pull back value and ...
+ShowHex2:
+		pha			; Save a copy of the value
+		lsr	A		; Shift down the hi nybble
+		lsr	A
+		lsr	A
+		lsr	A
+		jsr	HEX		; Convert and display
+		pla			; Pull back value and ...
 
 ; Display the lo nybble of A as a hexadecimal digit. The values in A & Y are
 ; destroyed.
 
-HEX		JSR	TO_HEX		; Convert to printable character
-		JMP	UART_TX		; And display.
+HEX		jsr	TO_HEX		; Convert to printable character
+		jmp	UartTx		; And display.
 		
 ;
 		
-TO_HEX		AND	#$0F		; Isolate the lo nybble
-		SED			; Converted to ASCII
-		CLC
-		ADC	#$90
-		ADC	#$40
-		CLD
-		RTS
+TO_HEX		and	#$0F		; Isolate the lo nybble
+		sed			; Converted to ASCII
+		clc
+		adc	#$90
+		adc	#$40
+		cld
+		rts
 
 ; Output two spaces.
 
-SPACE2:
-		JSR	SPACE
+Space2:
+		jsr	Space
 		
 ; Output a single space. The values in A & Y are destroyed.
 
-SPACE:
-		LDA	#' '
-		JMP	UART_TX
+Space:
+		lda	#' '
+		jmp	UartTx
 		
-BAR:
-		LDA	#'|'
-		JMP	UART_TX
-
-; Output a CR/LF control sequence to move the display cursor to the start of
-; the next line. A & Y are destroyed.
-
-CRLF:
-		LDA	#CR		; Output a carriage return
-		JSR	UART_TX
-		LDA	#LF		; .. followed by a new line
-		JMP	UART_TX
+Bar:
+		lda	#'|'
+		jmp	UartTx
 
 ;-------------------------------------------------------------------------------
 
 
-SHOW_STR:
-		REPEAT
-		 LDA	STRINGS,X
-		 IF	EQ
-		  RTS
-		 ENDIF
-		 JSR	UART_TX
-		 INX
-		FOREVER
+ShowString:
+		repeat
+		 lda	STRINGS,X
+		 if	EQ
+		  rts
+		 endif
+		 jsr	UartTx
+		 inx
+		forever
 
 STRINGS:
-PC_STR		.EQU	.-STRINGS
-		.BYTE	"PC=",0
-SP_STR		.EQU	.-STRINGS
-		.BYTE	" SP=",0
-P_STR		.EQU	.-STRINGS
-		.BYTE	" P=",0
-A_STR		.EQU	.-STRINGS
-		.BYTE	" A=",0
-X_STR		.EQU	.-STRINGS
-		.BYTE	" X=",0
-Y_STR		.EQU	.-STRINGS
-		.BYTE	" Y=",0
-ERR_STR		.EQU	.-STRINGS
-		.BYTE	CR,LF,"?",0
-HLP_STR		.EQU	.-STRINGS
-		.BYTE	CR,LF,"A xxxx opcode [args]\tAssemble"
-		.BYTE 	CR,LF,"D xxxx yyyy\t\tDisassemble"
-		.BYTE	CR,LF,"G [xxxx]\t\tGoto"
-		.BYTE	CR,LF,"M xxxx yyyy\t\tDisplay Memory"
-		.BYTE	CR,LF,"R\t\t\tDisplay Registers"
-		.BYTE	CR,LF,"S...\t\t\tS19 Load"
-		.BYTE	CR,LF,"T [xxxx]\t\tTrace"
-		.BYTE	CR,LF,"W xxxx yy\t\tWrite Memory"
-		.BYTE 	0
-TTL_STR		.EQU	.-STRINGS
-		.IF	__6502__
-		.BYTE	CR,LF,LF,"Boot 6502 [17.09]"
-		.ENDIF
-		.IF	__65C02__
-		.BYTE	CR,LF,LF,"Boot 65C02 [17.09]"
-		.ENDIF
-		.IF	__65816__
-		.BYTE	CR,LF,LF,"Boot 65C802 [17.09]"
-		.ENDIF
-		.BYTE	0
+TTL_STR		.equ	.-STRINGS
+		.if	__6502__
+		.byte	"Boot 6502 [18.04]"
+		.endif
+		.if	__65C02__
+		.byte	"Boot 65C02 [18.04]"
+		.endif
+		.byte	0
+PC_STR		.equ	.-STRINGS
+		.byte	"PC=",0
+SP_STR		.equ	.-STRINGS
+		.byte	" SP=",0
+P_STR		.equ	.-STRINGS
+		.byte	" P=",0
+A_STR		.equ	.-STRINGS
+		.byte	" A=",0
+X_STR		.equ	.-STRINGS
+		.byte	" X=",0
+Y_STR		.equ	.-STRINGS
+		.byte	" Y=",0
+ERR_STR		.equ	.-STRINGS
+		.byte	CR,LF,"?",0
+HLP_STR		.equ	.-STRINGS
+		.byte 	CR,LF,"D xxxx yyyy\t\tDisassemble"
+		.byte	CR,LF,"G [xxxx]\t\tGoto"
+		.byte	CR,LF,"M xxxx yyyy\t\tDisplay Memory"
+		.byte	CR,LF,"R\t\t\tDisplay Registers"
+		.byte	CR,LF,"S...\t\t\tS19 Load"
+		.byte	CR,LF,"W xxxx yy\t\tWrite Memory"
+		.byte 	0
 		
-FLAG		.BYTE	"CZID11VN"
-BITS		.BYTE	$01,$02,$04,$08,$10,$20,$40,$80
+FLAG		.byte	"CZID11VN"
+BITS		.byte	$01,$02,$04,$08,$10,$20,$40,$80
+
+;===============================================================================
+; Instruction Lookup Tables
+;-------------------------------------------------------------------------------
+
+		.org	$fc00
+		
+		.if	__6502__
+OPCODES:
+		.byte	OP_BRK,OP_ORA,OP_ERR,OP_ERR,OP_ERR,OP_ORA,OP_ASL,OP_ERR ; 0
+		.byte	OP_PHP,OP_ORA,OP_ASL,OP_ERR,OP_ERR,OP_ORA,OP_ASL,OP_ERR
+		.byte	OP_BPL,OP_ORA,OP_ERR,OP_ERR,OP_ERR,OP_ORA,OP_ASL,OP_ERR ; 1
+		.byte	OP_CLC,OP_ORA,OP_INC,OP_ERR,OP_ERR,OP_ORA,OP_ASL,OP_ERR
+		.byte	OP_JSR,OP_AND,OP_ERR,OP_ERR,OP_BIT,OP_AND,OP_ROL,OP_ERR ; 2
+		.byte	OP_PLP,OP_AND,OP_ROL,OP_ERR,OP_BIT,OP_AND,OP_ROL,OP_ERR
+		.byte	OP_BMI,OP_AND,OP_ERR,OP_ERR,OP_BIT,OP_AND,OP_ROL,OP_ERR ; 3
+		.byte	OP_SEC,OP_AND,OP_DEC,OP_ERR,OP_BIT,OP_AND,OP_ROL,OP_ERR
+		.byte	OP_RTI,OP_EOR,OP_ERR,OP_ERR,OP_ERR,OP_EOR,OP_LSR,OP_ERR ; 4
+		.byte	OP_pha,OP_EOR,OP_LSR,OP_ERR,OP_jmp,OP_EOR,OP_LSR,OP_ERR
+		.byte	OP_BVC,OP_EOR,OP_ERR,OP_ERR,OP_ERR,OP_EOR,OP_LSR,OP_ERR ; 5
+		.byte	OP_CLI,OP_EOR,OP_ERR,OP_ERR,OP_ERR,OP_EOR,OP_LSR,OP_ERR
+		.byte	OP_RTS,OP_ADC,OP_ERR,OP_ERR,OP_ERR,OP_ADC,OP_ROR,OP_ERR ; 6
+		.byte	OP_PLA,OP_ADC,OP_ROR,OP_ERR,OP_jmp,OP_ADC,OP_ROR,OP_ERR
+		.byte	OP_BVS,OP_ADC,OP_ERR,OP_ERR,OP_ERR,OP_ADC,OP_ROR,OP_ERR ; 7
+		.byte	OP_SEI,OP_ADC,OP_ERR,OP_ERR,OP_ERR,OP_ADC,OP_ROR,OP_ERR
+		.byte	OP_ERR,OP_STA,OP_ERR,OP_ERR,OP_STY,OP_STA,OP_STX,OP_ERR ; 8
+		.byte	OP_DEY,OP_BIT,OP_TXA,OP_ERR,OP_STY,OP_STA,OP_STX,OP_ERR
+		.byte	OP_BCC,OP_STA,OP_ERR,OP_ERR,OP_STY,OP_STA,OP_STX,OP_ERR ; 9
+		.byte	OP_TYA,OP_STA,OP_TXS,OP_ERR,OP_ERR,OP_STA,OP_ERR,OP_ERR
+		.byte	OP_LDY,OP_LDA,OP_LDX,OP_ERR,OP_LDY,OP_LDA,OP_LDX,OP_ERR ; A
+		.byte	OP_TAY,OP_LDA,OP_TAX,OP_ERR,OP_LDY,OP_LDA,OP_LDX,OP_ERR
+		.byte	OP_BCS,OP_LDA,OP_ERR,OP_ERR,OP_LDY,OP_LDA,OP_LDX,OP_ERR ; B
+		.byte	OP_CLV,OP_LDA,OP_TSX,OP_ERR,OP_LDY,OP_LDA,OP_LDX,OP_ERR
+		.byte	OP_CPY,OP_CMP,OP_ERR,OP_ERR,OP_CPY,OP_CMP,OP_DEC,OP_ERR ; C
+		.byte	OP_INY,OP_CMP,OP_DEX,OP_ERR,OP_CPY,OP_CMP,OP_DEC,OP_ERR
+		.byte	OP_BNE,OP_CMP,OP_ERR,OP_ERR,OP_ERR,OP_CMP,OP_DEC,OP_ERR ; D
+		.byte	OP_CLD,OP_CMP,OP_ERR,OP_ERR,OP_ERR,OP_CMP,OP_DEC,OP_ERR
+		.byte	OP_CPX,OP_SBC,OP_ERR,OP_ERR,OP_CPX,OP_SBC,OP_INC,OP_ERR ; E
+		.byte	OP_INX,OP_SBC,OP_NOP,OP_ERR,OP_CPX,OP_SBC,OP_INC,OP_ERR
+		.byte	OP_BEQ,OP_SBC,OP_ERR,OP_ERR,OP_ERR,OP_SBC,OP_INC,OP_ERR ; F
+		.byte	OP_SED,OP_SBC,OP_ERR,OP_ERR,OP_ERR,OP_SBC,OP_INC,OP_ERR
+
+MODES:
+		.byte	MO_IMM,MO_IZX,MO_IMM,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_IMP ; 0
+		.byte	MO_IMP,MO_IMM,MO_ACC,MO_IMP,MO_IMP,MO_ABS,MO_ABS,MO_IMP
+		.byte	MO_REL,MO_IZY,MO_IMP,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_IMP ; 1
+		.byte	MO_IMP,MO_ABY,MO_ACC,MO_IMP,MO_IMP,MO_ABX,MO_ABX,MO_IMP
+		.byte	MO_ABS,MO_IZX,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_IMP ; 2
+		.byte	MO_IMP,MO_IMM,MO_ACC,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_IMP
+		.byte	MO_REL,MO_IZY,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_ZPX,MO_IMP ; 3
+		.byte	MO_IMP,MO_ABY,MO_ACC,MO_IMP,MO_ABX,MO_ABX,MO_ABX,MO_IMP
+		.byte	MO_IMP,MO_IZX,MO_IMP,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_IMP ; 4
+		.byte	MO_IMP,MO_IMM,MO_ACC,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_IMP
+		.byte	MO_REL,MO_IZY,MO_IMP,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_IMP ; 5
+		.byte	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_IMP,MO_ABX,MO_ABX,MO_IMP
+		.byte	MO_IMP,MO_IZX,MO_IMP,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_IMP ; 6
+		.byte	MO_IMP,MO_IMM,MO_ACC,MO_IMP,MO_IAB,MO_ABS,MO_ABS,MO_IMP
+		.byte	MO_REL,MO_IZY,MO_IMP,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_IMP ; 7
+		.byte	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_IMP,MO_ABX,MO_ABX,MO_IMP
+		.byte	MO_IMP,MO_IZX,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_IMP ; 8
+		.byte	MO_IMP,MO_IMM,MO_IMP,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_IMP
+		.byte	MO_REL,MO_IZY,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_ZPY,MO_IMP ; 9
+		.byte	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_IMP,MO_ABX,MO_IMP,MO_IMP
+		.byte	MO_IMM,MO_IZX,MO_IMM,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_IMP ; A
+		.byte	MO_IMP,MO_IMM,MO_IMP,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_IMP
+		.byte	MO_REL,MO_IZY,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_ZPY,MO_IMP ; B
+		.byte	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_ABX,MO_ABX,MO_ABY,MO_IMP
+		.byte	MO_IMM,MO_IZX,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_IMP ; C
+		.byte	MO_IMP,MO_IMM,MO_IMP,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_IMP
+		.byte	MO_REL,MO_IZY,MO_IMP,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_IMP ; D
+		.byte	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_IMP,MO_ABX,MO_ABX,MO_IMP
+		.byte	MO_IMM,MO_IZX,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_IMP ; E
+		.byte	MO_IMP,MO_IMM,MO_IMP,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_IMP
+		.byte	MO_REL,MO_IZY,MO_IMP,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_IMP ; F
+		.byte	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_IMP,MO_ABX,MO_ABX,MO_IMP
+		.endif
+
+;-------------------------------------------------------------------------------
+
+		.if	__65C02__
+OPCODES:
+		.byte	OP_BRK,OP_ORA,OP_ERR,OP_ERR,OP_TSB,OP_ORA,OP_ASL,OP_RMB ; 0
+		.byte	OP_PHP,OP_ORA,OP_ASL,OP_ERR,OP_TSB,OP_ORA,OP_ASL,OP_BBR
+		.byte	OP_BPL,OP_ORA,OP_ORA,OP_ERR,OP_TRB,OP_ORA,OP_ASL,OP_RMB ; 1
+		.byte	OP_CLC,OP_ORA,OP_INC,OP_ERR,OP_TRB,OP_ORA,OP_ASL,OP_BBR
+		.byte	OP_JSR,OP_AND,OP_ERR,OP_ERR,OP_BIT,OP_AND,OP_ROL,OP_RMB ; 2
+		.byte	OP_PLP,OP_AND,OP_ROL,OP_ERR,OP_BIT,OP_AND,OP_ROL,OP_BBR
+		.byte	OP_BMI,OP_AND,OP_AND,OP_ERR,OP_BIT,OP_AND,OP_ROL,OP_RMB ; 3
+		.byte	OP_SEC,OP_AND,OP_DEC,OP_ERR,OP_BIT,OP_AND,OP_ROL,OP_BBR
+		.byte	OP_RTI,OP_EOR,OP_ERR,OP_ERR,OP_ERR,OP_EOR,OP_LSR,OP_RMB ; 4
+		.byte	OP_pha,OP_EOR,OP_LSR,OP_ERR,OP_jmp,OP_EOR,OP_LSR,OP_BBR
+		.byte	OP_BVC,OP_EOR,OP_EOR,OP_ERR,OP_ERR,OP_EOR,OP_LSR,OP_RMB ; 5
+		.byte	OP_CLI,OP_EOR,OP_PHY,OP_ERR,OP_ERR,OP_EOR,OP_LSR,OP_BBR
+		.byte	OP_RTS,OP_ADC,OP_ERR,OP_ERR,OP_STZ,OP_ADC,OP_ROR,OP_RMB ; 6
+		.byte	OP_PLA,OP_ADC,OP_ROR,OP_ERR,OP_jmp,OP_ADC,OP_ROR,OP_BBR
+		.byte	OP_BVS,OP_ADC,OP_ADC,OP_ERR,OP_STZ,OP_ADC,OP_ROR,OP_RMB ; 7
+		.byte	OP_SEI,OP_ADC,OP_PLY,OP_ERR,OP_jmp,OP_ADC,OP_ROR,OP_BBR
+		.byte	OP_BRA,OP_STA,OP_ERR,OP_ERR,OP_STY,OP_STA,OP_STX,OP_SMB ; 8
+		.byte	OP_DEY,OP_BIT,OP_TXA,OP_ERR,OP_STY,OP_STA,OP_STX,OP_BBS
+		.byte	OP_BCC,OP_STA,OP_STA,OP_ERR,OP_STY,OP_STA,OP_STX,OP_SMB ; 9
+		.byte	OP_TYA,OP_STA,OP_TXS,OP_ERR,OP_STZ,OP_STA,OP_STZ,OP_BBS
+		.byte	OP_LDY,OP_LDA,OP_LDX,OP_ERR,OP_LDY,OP_LDA,OP_LDX,OP_SMB ; A
+		.byte	OP_TAY,OP_LDA,OP_TAX,OP_ERR,OP_LDY,OP_LDA,OP_LDX,OP_BBS
+		.byte	OP_BCS,OP_LDA,OP_LDA,OP_ERR,OP_LDY,OP_LDA,OP_LDX,OP_SMB ; B
+		.byte	OP_CLV,OP_LDA,OP_TSX,OP_ERR,OP_LDY,OP_LDA,OP_LDX,OP_BBS
+		.byte	OP_CPY,OP_CMP,OP_ERR,OP_ERR,OP_CPY,OP_CMP,OP_DEC,OP_SMB ; C
+		.byte	OP_INY,OP_CMP,OP_DEX,OP_WAI,OP_CPY,OP_CMP,OP_DEC,OP_BBS
+		.byte	OP_BNE,OP_CMP,OP_CMP,OP_ERR,OP_ERR,OP_CMP,OP_DEC,OP_SMB ; D
+		.byte	OP_CLD,OP_CMP,OP_PHX,OP_STP,OP_ERR,OP_CMP,OP_DEC,OP_BBS
+		.byte	OP_CPX,OP_SBC,OP_ERR,OP_ERR,OP_CPX,OP_SBC,OP_INC,OP_SMB ; E
+		.byte	OP_INX,OP_SBC,OP_NOP,OP_ERR,OP_CPX,OP_SBC,OP_INC,OP_BBS
+		.byte	OP_BEQ,OP_SBC,OP_SBC,OP_ERR,OP_ERR,OP_SBC,OP_INC,OP_SMB ; F
+		.byte	OP_SED,OP_SBC,OP_PLX,OP_ERR,OP_ERR,OP_SBC,OP_INC,OP_BBS
+
+MODES:
+		.byte	MO_IMM,MO_IZX,MO_IMM,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_ZPG ; 0
+		.byte	MO_IMP,MO_IMM,MO_ACC,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_BRL
+		.byte	MO_REL,MO_IZY,MO_IZP,MO_IMP,MO_ZPG,MO_ZPX,MO_ZPX,MO_ZPG ; 1
+		.byte	MO_IMP,MO_ABY,MO_ACC,MO_IMP,MO_ABS,MO_ABX,MO_ABX,MO_BRL
+		.byte	MO_ABS,MO_IZX,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_ZPG ; 2
+		.byte	MO_IMP,MO_IMM,MO_ACC,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_BRL
+		.byte	MO_REL,MO_IZY,MO_IZP,MO_IMP,MO_ZPX,MO_ZPX,MO_ZPX,MO_ZPG ; 3
+		.byte	MO_IMP,MO_ABY,MO_ACC,MO_IMP,MO_ABX,MO_ABX,MO_ABX,MO_BRL
+		.byte	MO_IMP,MO_IZX,MO_IMP,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG ; 4
+		.byte	MO_IMP,MO_IMM,MO_ACC,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_BRL
+		.byte	MO_REL,MO_IZY,MO_IZP,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_ZPG ; 5
+		.byte	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_IMP,MO_ABX,MO_ABX,MO_BRL
+		.byte	MO_IMP,MO_IZX,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_ZPG ; 6
+		.byte	MO_IMP,MO_IMM,MO_ACC,MO_IMP,MO_IAB,MO_ABS,MO_ABS,MO_BRL
+		.byte	MO_REL,MO_IZY,MO_IZP,MO_IMP,MO_ZPX,MO_ZPX,MO_ZPX,MO_ZPG ; 7
+		.byte	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_IAX,MO_ABX,MO_ABX,MO_BRL
+		.byte	MO_REL,MO_IZX,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_ZPG ; 8
+		.byte	MO_IMP,MO_IMM,MO_IMP,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_BRL
+		.byte	MO_REL,MO_IZY,MO_IZP,MO_IMP,MO_ZPX,MO_ZPX,MO_ZPY,MO_ZPG ; 9
+		.byte	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_ABS,MO_ABX,MO_ABX,MO_BRL
+		.byte	MO_IMM,MO_IZX,MO_IMM,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_ZPG ; A
+		.byte	MO_IMP,MO_IMM,MO_IMP,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_BRL
+		.byte	MO_REL,MO_IZY,MO_IZP,MO_IMP,MO_ZPX,MO_ZPX,MO_ZPY,MO_ZPG ; B
+		.byte	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_ABX,MO_ABX,MO_ABY,MO_BRL
+		.byte	MO_IMM,MO_IZX,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_ZPG ; C
+		.byte	MO_IMP,MO_IMM,MO_IMP,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_BRL
+		.byte	MO_REL,MO_IZY,MO_IZP,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_ZPG ; D
+		.byte	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_IMP,MO_ABX,MO_ABX,MO_BRL
+		.byte	MO_IMM,MO_IZX,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_ZPG ; E
+		.byte	MO_IMP,MO_IMM,MO_IMP,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_BRL
+		.byte	MO_REL,MO_IZY,MO_IZP,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_ZPG ; F
+		.byte	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_IMP,MO_ABX,MO_ABX,MO_BRL
+		.endif
 		
 ;==============================================================================
-; I/O Page
+; I/O Area
 ;-------------------------------------------------------------------------------
 
-		.ORG	$FE00
-		.SPACE	256
-
-;===============================================================================
-; Reset Handler
-;-------------------------------------------------------------------------------
-
-		.ORG	$FF00
-
-RESET:
-		CLD			; Ensure binary mode
-		LDX	#$FF		; Reset the stack
-		TXS
-
-		INX			; Clear buffer offsets
-		STX	RX_HEAD
-		STX	RX_TAIL
-		STX	TX_HEAD
-		STX	TX_TAIL
-;		STX	FLAGS		; And flow control flags
-
-                lda     #%00011111	; 8 bits, 1 stop bit, 19200 baud
-                sta     ACIA_CTRL
-                lda     #%11001001	; No parity, no interrupt
-                sta     ACIA_CMND
-                lda     ACIA_DATA	; Clear receive buffer
-
-		CLI			; Allow interrupts
-		LDX	#TTL_STR
-		JSR	SHOW_STR
-		BRK
-
-;===============================================================================
-; UART Interface
-;-------------------------------------------------------------------------------
-
-XON:
-		LDA	#DC1
-		BNE	UART_TX
-
-XOFF:
-		LDA	#DC3
-
-; Inserts the byte in A into the transmit buffer. If the buffer is full then
-; wait until some space is available. Registers are preserved.
-
-UART_TX:
-		PHA
-		STY	IO_TEMP
-		
-		LDY	TX_TAIL		; Save the data byte at the tail
-		STA	TX_BUFF,Y
-		JSR	BUMP_TX		; Work out the next offset
-		REPEAT			; And wait until save to store
-		 CPY	TX_HEAD
-		UNTIL	NE
-		STY	TX_TAIL
-		LDA	#$05		; Ensure TX interrupt enabled
-		STA	ACIA_CMND
-		
-		LDY	IO_TEMP
-		PLA
-		RTS			; Done
-
-;
-;
-
-UART_RX:
-		STY	IO_TEMP
-		LDY	RX_HEAD		; Wait until there is some data
-		REPEAT
-		 CPY	RX_TAIL
-		UNTIL	NE
-		LDA	RX_BUFF,Y	; Then extract the head byte
-		JSR	BUMP_RX		; Update the offset
-		STY	RX_HEAD
-		LDY	IO_TEMP
-		RTS			; Done
-
-;
-;
-
-		.IF	0
-RX_COUNT:
-		SEC
-		LDA	RX_TAIL		; Subtract the two offsets
-		SBC	RX_HEAD
-		IF	CC
-		 ADC	#RX_SIZE	; And correct if negative
-		ENDIF
-		RTS			; Done
-		.ENDIF
+		.org	$fe00
+		.space	64		; Skip over virtual hardware
 		
 ;===============================================================================
-; NMI Handler
+; API Vectors
 ;-------------------------------------------------------------------------------
 
-NMI:
-		JMP	BREAK
-
+		jmp	UartTx
+		
+		jmp	UartRx
+		
+NewLine:	lda	#CR
+		jsr	UartTx
+		lda	#LF
+		jmp	UartTx
+		
 ;===============================================================================
 ; IRQ Handler
 ;-------------------------------------------------------------------------------
@@ -1389,124 +1304,132 @@ NMI:
 ; buffer full.
 
 IRQ:
-		PHA			; Save users registers
-		.IF	__65C02__
-		PHX
-		PHY
-		.ELSE
-		TXA
-		PHA
-		TYA
-		PHA
-		CLD
-		.ENDIF
+		pha			; Save users registers
+		.if	__65C02__
+		phx
+		phy
+		.else
+		txa
+		pha
+		tya
+		pha
+		cld
+		.endif
 
-		TSX			; Check for BRK
-		LDA	STACK+4,X
-		AND	#$10
-		BNE	NMI		; Enter via NMI handler
+		tsx			; Check for BRK
+		lda	STACK+4,X
+		and	#$10
+		if ne
+		 jmp	BRK		; Enter monitor with registers on stack
+		endif
+		
+;-------------------------------------------------------------------------------
+
+		lda	ACIA_STAT	; ACIA is the source?
+		if mi
+		 pha
+		 and	#$10		; TX Buffer empty?
+		 if ne
+		  ldy	TX_HEAD		; Any data to send?
+		  cpy	TX_TAIL
+		  if ne
+		   lda	TX_BUFFER,Y	; Yes, extract and send it
+		   sta	ACIA_DATA
+		   jsr	BumpIdx
+		   sty	TX_HEAD
+		  else
+		   lda	#$01		; No, disable TX interrupt
+		   sta	ACIA_CMND
+		  endif
+		 endif
+
+		 pla
+		 and	#$08		; RX Buffer full?
+		 if ne
+		  lda	ACIA_DATA	; Yes, fetch the character
+		  ldy	RX_TAIL		; .. and save it
+		  sta	RX_BUFFER,Y
+		  jsr	BumpIdx
+		  cpy	RX_HEAD		; Is buffer completely full?
+		  if	ne
+		   sty	RX_TAIL		; No, update tail offset
+		  endif
+		 endif
+		endif
 
 ;-------------------------------------------------------------------------------
 
-		LDA	ACIA_STAT	; ACIA is the source?
-		BPL	NOT_ACIA	; No.
+		.if	__65C02__
+		ply			; Restore user registers
+		plx
+		.else
+		pla			; Restore user registers
+		tay
+		pla
+		tax
+		.endif
+		pla
+NMI:		rti			; Done
 
-		PHA
-		AND	#$10		; TX Buffer empty?
-		IF	NE
-;		 BIT	FLAGS		; Do we need to send XOFF?
-;		 IF	VS
-;		  LDA	#DC3		; Yes, send XOFF to terminal
-;		  STA	ACIA_DATA
-;		  ASL	FLAGS		; And mark as sent
-;		  BNE	NOT_ACIA
-;		 ENDIF
-
-		 LDY	TX_HEAD		; Any data to send?
-		 CPY	TX_TAIL
-		 IF	NE
-		  LDA	TX_BUFF,Y	; Yes, extract and send it
-		  STA	ACIA_DATA
-		  JSR	BUMP_TX
-		  STY	TX_HEAD
-		 ELSE
-		  LDA	#$01		; No, disable TX interrupt
-		  STA	ACIA_CMND
-		 ENDIF
-		ENDIF
-
-		PLA
-		AND	#$08		; RX Buffer full?
-		IF	NE
-		 LDA	ACIA_DATA	; Yes, fetch the character
-		 LDY	RX_TAIL		; .. and save it
-		 STA	RX_BUFF,Y
-		 JSR	BUMP_RX
-		 CPY	RX_HEAD		; Is buffer completely full?
-		 IF	NE
-		  STY	RX_TAIL		; No, update tail offset
-		 ENDIF
-
-;		 BIT	FLAGS		; Already stopped or stopping?
-;		 IF	PL
-;		  IF	VC
-;		   JSR	RX_COUNT	; Fetch FX buffer count
-;		   CMP	#RX_SIZE*9/10	; More than 90%
-;		   IF	CS
-;		    LDA #FLAG_STOP	; Yes, set flags to send XOFF
-;		    STA FLAGS
-;		    LDA #$05		; Ensure transmit interrupt enabled
-;		    STA ACIA_CMND
-;		   ENDIF
-;		  ENDIF
-;		 ENDIF
-		ENDIF
-NOT_ACIA:
-
+;===============================================================================
+; UART I/O
 ;-------------------------------------------------------------------------------
 
-		.IF	__65C02__
-		PLY			; Restore user registers
-		PLX
-		.ELSE
-		PLA			; Restore user registers
-		TAY
-		PLA
-		TAX
-		.ENDIF
-		PLA
-		RTI			; Done
+; Inserts the byte in A into the transmit buffer. If the buffer is full then
+; wait until some space is available. Registers are preserved.
 
-; Bump and wrap a recieve buffer index value.
+UartTx:
+		pha
+		sty	IO_TEMP
+		
+		ldy	TX_TAIL		; Save the data byte at the tail
+		sta	TX_BUFFER,Y
+		jsr	BumpIdx		; Work out the next offset
+		repeat			; And wait until save to store
+		 cpy	TX_HEAD
+		until	NE
+		sty	TX_TAIL
+		lda	#$05		; Ensure TX interrupt enabled
+		sta	ACIA_CMND
+		
+		ldy	IO_TEMP
+		pla
+		rts			; Done
 
-BUMP_RX:
-		.IF	RX_SIZE != TX_SIZE
-		INY
-		CPY	#RX_SIZE
-		IF	EQ
-		 LDY	#0
-		ENDIF
-		RTS
-		.ENDIF
+; Extracts the next character from the head of the RX buffer. If the buffer is
+; empty then wait for some data to be placed in it by the interrupt handler.
 
-; Bump and wrap a transmit buffer index value.
+UartRx:
+		sty	IO_TEMP
+		ldy	RX_HEAD		; Wait until there is some data
+		repeat
+		 cpy	RX_TAIL
+		until	NE
+		lda	RX_BUFFER,y	; Then extract the head byte
+		jsr	BumpIdx		; Update the offset
+		sty	RX_HEAD
+		ldy	IO_TEMP
+		rts			; Done
+		
+; Increments an index value wrapping it back to zero if it exceeds the buffer
+; size.
 
-BUMP_TX:
-		INY
-		CPY	#TX_SIZE
-		IF	EQ
-		 LDY	#0
-		ENDIF
-		RTS
-
+BumpIdx:
+		iny			; Bump index
+		cpy	#BUF_SIZE	; Reached end of buffer?
+		if cs
+		 ldy	#0		; Yes, wrap around
+		endif
+		rts			; Done
+		
 ;===============================================================================
 ; Vector Locations
 ;-------------------------------------------------------------------------------
 
-		.ORG	$FFFA
+		.org	$FFFA
 
-		.WORD	NMI		; NMI
-		.WORD	RESET		; RESET
-		.WORD	IRQ		; IRQ/BRK
+		.word	NMI		; NMI
+		.word	RESET		; RESET
+		.word	IRQ		; IRQ/BRK
 
 		.END
