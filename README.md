@@ -1,9 +1,9 @@
-# SB-6502/65C02
+# SB-6502/65C02/65C802
 
 This repository contains the firmware for a simple single board computer that
 uses only three chips, namely:
 
-- A MOS 6502 or WDC 65C02 microprocessor
+- A MOS 6502, WDC 65C02 or WDC 65C802 microprocessor
 - A 128K SRAM memory chip (of which 64K is used)
 - A 16F45K22 PIC micro-controller
 
@@ -24,16 +24,17 @@ a random PC value on the stack followed by the status flags. Then it reads
 the reset vector from $FFFC/D. The PIC provides data values back to the 
 microprocessor as if it was a ROM
 
-### Telling the 6502 and 65C02 Apart
+### Telling the 6502, 65C02 and 65C802 Apart
 
-The board is designed to take either a MOS 6502 or a WDC 65C02. A different
-socket is provided for each as some of the control signal pins differ between
-the two chips.
+The board is designed to take a MOS 6502, WDC 65C02 or WDC 65C802. The
+MOS 6502 and WDC 65C802 have the same pin out and can be installed in the lefthand
+side of the overlapped sockets. The WDC 65C02 has different control signal pins so
+most be installed on the righthand side.
 
-The PIC uses the fact that the 6502 and 65C02 treat JMP ($00FF) instructions
+The PIC uses the fact that the 6502, 65C02 and 65C802 treat JMP ($00FF) instructions
 differently. Both will read the low byte of the target address from $00FF but
-as 6502 reads the high byte from $0000 while the 6502 increments the address
-correctly and reads from $0100.
+as 6502 reads the high byte from $0000 while the 65C02 and 65C802 increment the address
+correctly and reads from $0100 although the 65C02 needs an extra cycle to do this.
 
 There are other ways you could tell the difference but this technique is easy
 to implement. The PIC feeds the microprocessor the jump indirect instruction
@@ -74,42 +75,48 @@ registers.
 ```
 ; Emulated 6551 ACIA
 
-ACIA_DATA       .equ    $fe00           ; R/W
-ACIA_STAT       .equ    $fe01           ; R/W
-ACIA_CMND       .equ    $fe02           ; R/W
-ACIA_CTRL       .equ    $fe03           ; R/W
+ACIA_DATA       .equ    $ff00           ; R/W
+ACIA_STAT       .equ    $ff01           ; R/W
+ACIA_CMND       .equ    $ff02           ; R/W
+ACIA_CTRL       .equ    $ff03           ; R/W
 
 ; Emulated 65SPI
 
-SPI_DATA        .equ    $fe10           ; R/W
-SPI_STAT        .equ    $fe11           ; R/O
-SPI_CTRL        .equ    $fe11           ; W/O
-SPI_DVSR        .equ    $fe12           ; R/W
-SPI_SLCT        .equ    $fe13           ; R/W
+SPI_DATA        .equ    $ff10           ; R/W
+SPI_STAT        .equ    $ff11           ; R/O
+SPI_CTRL        .equ    $ff11           ; W/O
+SPI_DVSR        .equ    $ff12           ; R/W
+SPI_SLCT        .equ    $ff13           ; R/W
 
 ; Emulated DS1318 RTC
 
-RTC_SUB0        .equ    $fe20           ; R/W
-RTC_SUB1        .equ    $fe21           ; R/W
-RTC_SEC0        .equ    $fe22           ; R/W
-RTC_SEC1        .equ    $fe23           ; R/W
-RTC_SEC2        .equ    $fe24           ; R/W
-RTC_SEC3        .equ    $fe25           ; R/W
-RTC_ALM0        .equ    $fe26           ; R/W
-RTC_ALM1        .equ    $fe27           ; R/W
-RTC_ALM2        .equ    $fe27           ; R/W
-RTC_ALM3        .equ    $fe28           ; R/W
-RTC_CTLA        .equ    $fe2a           ; R/W
-RTC_CTLB        .equ    $fe2b           ; R/W
-RTC_STAT        .equ    $fe2c           ; R/W
+RTC_SUB0        .equ    $ff20           ; R/W
+RTC_SUB1        .equ    $ff21           ; R/W
+RTC_SEC0        .equ    $ff22           ; R/W
+RTC_SEC1        .equ    $ff23           ; R/W
+RTC_SEC2        .equ    $ff24           ; R/W
+RTC_SEC3        .equ    $ff25           ; R/W
+RTC_ALM0        .equ    $ff26           ; R/W
+RTC_ALM1        .equ    $ff27           ; R/W
+RTC_ALM2        .equ    $ff27           ; R/W
+RTC_ALM3        .equ    $ff28           ; R/W
+RTC_CTLA        .equ    $ff2a           ; R/W
+RTC_CTLB        .equ    $ff2b           ; R/W
+RTC_STAT        .equ    $ff2c           ; R/W
 ```
 
 Accessing some of these registers takes an extended period of time during
-which the 65(C)02 experiences clock stretching.
+which the microprocessor experiences clock stretching.
 
-# Notes
+## Boot ROM
+
+## Notes
 
 You could use this design with other 40 pin PIC 18F chips such as the 18F4680 with
 a few changes. The advantage of the 18F46K22 is that it executes a little faster on
 its internal oscillator than the older 18F chips (i.e. 16 MIPS vs 10 MIPS) which
 in turn means that the microprocessor is clocked a higher rate.
+
+The WDC 65C802 is a variant of the 8/16-bitW DC 65C816 processor which has the
+same pinout as a 6502 and is limited to a 16-bit address bus (instead of the
+65C816's full 24-bit address bus). They are rather rare these days. 

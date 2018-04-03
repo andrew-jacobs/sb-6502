@@ -78,10 +78,10 @@ clean:
 #-------------------------------------------------------------------------------
 
 monitor-6502.obj: \
-	monitor-6502.asm monitor.asm
+	monitor-6502.asm monitor.asm ..\sb-6502.inc
 
 monitor-65c02.obj: \
-	monitor-65c02.asm monitor.asm
+	monitor-65c02.asm monitor.asm ..\sb-6502.inc
 
 monitor-65c802.obj: \
-	monitor-65c802.asm monitor.asm
+	monitor-65c802.asm ..\sb-6502.inc

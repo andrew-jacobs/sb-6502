@@ -5,9 +5,9 @@
 ;  ___) | |_) |_____| (_) |__) | |_| / __/ 
 ; |____/|____/       \___/____/ \___/_____|
 ;                                         
-; A Firmware for a Three Chip 6502/65C02 Single Board Computer
+; A Firmware for a Three Chip 6502/65C02/65C802 Single Board Computer
 ;-------------------------------------------------------------------------------
-; Copyright (C)2014-2017 Andrew John Jacobs
+; Copyright (C)2014-2018 Andrew John Jacobs
 ; All rights reserved.
 ;
 ; This work is made available under the terms of the Creative Commons
@@ -26,9 +26,9 @@
 ;
 ; At start up the firmware determines which microprocessor is installed by
 ; executing a JMP ($00FF) instruction and checking which memory locations the
-; indirect address is read from (e.g. $00FF/$0000 = 6502, $00FF/$0100 = 65C02).
-; a different boot ROM image is loaded accordingly.
-;
+; indirect address is read from (e.g. $00FF/$0000 = 6502, $00FF/$0100 = 65C02
+; & 65C802) and the number of cycles taken to do it. A different boot ROM image
+; is loaded for each type of device.
 ;
 ; FOSC is too fast for the UART to be set to 50 or 75 baud. The other speeds
 ; should work.
@@ -770,15 +770,19 @@ NormalHi:
                 nop
                 
                 movf    ADRH_PORT,W             ; Read high byte of address
-                xorlw   h'fe' & ADRH_MASK       ; I/O page?
+                xorlw   h'ff' & ADRH_MASK       ; I/O + Vector page?
                 bz      IOAccess
+RAMAccess:
                 bcf     NRAM_LAT,NRAM_PIN       ; No, RAM access
                 TRACE_DATA
                 bra     NormalLo
                 
 IOAccess:
                 movf    ADRL_PORT,W             ; Read low part of address
-                andlw   h'3f'
+		btfsc	WREG,.7			; Map 80-ff to RAM
+		bra	RAMAccess
+		btfsc	WREG,.6			; Map 40-7F to RAM
+		bra	RAMAccess
                 btfss   RW_PORT,RW_PIN          ; Read access?
                 iorlw   h'40'                   ; Yes, add 64
                 
@@ -787,7 +791,7 @@ IOAccess:
                 
 ;-------------------------------------------------------------------------------
                 
-                bra     AciaRdData              ; ACIA  $FE00 RD
+                bra     AciaRdData              ; ACIA  $FF00 RD
                 bra     AciaRdStat
                 bra     AciaRdCmnd
                 bra     AciaRdCtrl
@@ -804,7 +808,7 @@ IOAccess:
                 bra     AciaRdCmnd
                 bra     AciaRdCtrl
              
-                bra     SpiRdData               ; SPI65 $FE10 RD
+                bra     SpiRdData               ; SPI65 $FF10 RD
                 bra     SpiRdStat
                 bra     SpiRdDvsr
                 bra     SpiRdSlct
@@ -821,7 +825,7 @@ IOAccess:
                 bra     SpiRdDvsr
                 bra     SpiRdSlct
                 
-                bra     RtcRdSub0               ; RTC   $FE20 RD
+                bra     RtcRdSub0               ; RTC   $FF20 RD
                 bra     RtcRdSub1
                 bra     RtcRdSec0
                 bra     RtcRdSec1
@@ -838,7 +842,7 @@ IOAccess:
                 bra     BlankRd
                 bra     BlankRd
                 
-                bra     BlankRd                 ; Empty $FE30 RD
+                bra     BlankRd                 ; Empty $FF30 RD
                 bra     BlankRd
                 bra     BlankRd
                 bra     BlankRd
@@ -857,7 +861,7 @@ IOAccess:
                 
 ;-------------------------------------------------------------------------------
 
-                bra     AciaWrData              ; ACIA  $FE00 WR
+                bra     AciaWrData              ; ACIA  $FF00 WR
                 bra     AciaWrStat
                 bra     AciaWrCmnd
                 bra     AciaWrCtrl
@@ -874,7 +878,7 @@ IOAccess:
                 bra     AciaWrCmnd
                 bra     AciaWrCtrl
                 
-                bra     SpiWrData               ; SPI65 $FE10 WR
+                bra     SpiWrData               ; SPI65 $FF10 WR
                 bra     SpiWrCtrl
                 bra     SpiWrDvsr
                 bra     SpiWrSlct
@@ -891,7 +895,7 @@ IOAccess:
                 bra     SpiWrDvsr
                 bra     SpiWrSlct
                 
-                bra     RtcWrSub0               ; RTC   $FE20 WR
+                bra     RtcWrSub0               ; RTC   $FF20 WR
                 bra     RtcWrSub1
                 bra     RtcWrSec0
                 bra     RtcWrSec1
@@ -908,7 +912,7 @@ IOAccess:
                 bra     BlankRd
                 bra     BlankRd
                 
-                bra     BlankWr                 ; Empty $FE30 WR
+                bra     BlankWr                 ; Empty $FF30 WR
                 bra     BlankWr
                 bra     BlankWr
                 bra     BlankWr
