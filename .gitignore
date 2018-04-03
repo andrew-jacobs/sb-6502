@@ -9,3 +9,12 @@
 /code/forth/forth.hex
 /code/forth/forth.bin
 /code/forth/forth.obj
+/code/monitor/*.map
+/code/monitor/*.bin
+/code/monitor/*.hex
+/code/monitor/*.lst
+/schematics/designspark/~SB-6502.sch
+/schematics/designspark/~SB-6502.pcb
+/schematics/designspark/*.txt
+/schematics/designspark/SB-6502 V2.zip
+/schematics/designspark/SB-6502 V1.zip
