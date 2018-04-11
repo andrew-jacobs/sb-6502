@@ -456,7 +456,7 @@ RptCommand:
 		 endif
 
 		 cmp	#' '		; Beep if non-printable
-		 if cs
+		 if cc
 		  lda	#BEL
 		  jsr	UartTx
 		  continue
