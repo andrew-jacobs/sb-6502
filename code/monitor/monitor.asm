@@ -115,7 +115,7 @@ OP_WAI		.equ	$8C
 
 MB_IND		.equ	%10000000
 MB_REL		.equ	%01000000
-MB_bit		.equ	%00100000
+MB_BIT		.equ	%00100000
 
 MB_IMP		.equ	%00000000
 MB_ZPG		.equ	%00000001
@@ -129,8 +129,8 @@ MB_YRG		.equ	%00000100
 ; Addressing modes
 
 		.if	__65C02__
-MO_BIT		.equ	MB_bit	     |MB_ZPG
-MO_BRL		.equ	MB_bit|MB_REL|MB_ZPG
+MO_BIT		.equ	MB_BIT	     |MB_ZPG
+MO_BRL		.equ	MB_BIT|MB_REL|MB_ZPG
 		.endif
 MO_ACC		.equ	       MB_ACC|MB_IMP
 MO_IMP		.equ		      MB_IMP
@@ -169,7 +169,7 @@ MNEM		.macro	CH1,CH2,CH3
 		.page0
 		.org	$00f0
 
-A_REG		.space	1
+A_REG		.space	1			; Saved registers
 X_REG		.space	1
 Y_REG		.space	1
 P_REG		.space	1
@@ -192,7 +192,8 @@ IO_TEMP		.space	1
 ; UART Buffers
 ;-------------------------------------------------------------------------------
 
-BUF_SIZE	.equ	62
+BUF_SIZE	.equ	62		; UART buffer sizes
+
 		.bss
 		.org	$0200
 
@@ -326,7 +327,7 @@ RESET:
 		forever
 		
 ;===============================================================================
-;
+; Entry Point
 ;-------------------------------------------------------------------------------
 
 BRK:
@@ -383,7 +384,7 @@ ShowRegisters:
 		 ldy	#'.'
 		 lda	BITS,x
 		 bit	P_REG
-		 if	NE
+		 if	ne
 		  ldy	FLAG,x
 		 endif
 		 tya
@@ -432,19 +433,19 @@ RptCommand:
 		 break eq
 		 
 		 cmp 	#ESC		; Cancel input?
-		 if eq
+		 if 	eq
 		  beq	NewCommand	; Yes
 		 endif
 
 		 cmp	#DEL		; Turn a delete
-		 if eq
+		 if 	eq
 		  lda	#BS		; .. into a backspace
 		 endif
 		 
 		 cmp	#BS		; Handle backspace
-		 if eq
+		 if 	eq
 		  cpx   #0
-		  if ne
+		  if 	ne
 		   pha
 		   jsr	UartTx
 		   jsr	Space
@@ -456,7 +457,7 @@ RptCommand:
 		 endif
 
 		 cmp	#' '		; Beep if non-printable
-		 if cc
+		 if 	cc
 		  lda	#BEL
 		  jsr	UartTx
 		  continue
@@ -482,14 +483,14 @@ RptCommand:
 ;-------------------------------------------------------------------------------
 
 		cmp	#'D'
-		if	EQ
-		 jsr	GET_WORD
-		 if	CC
-		  jsr	SET_ADDR_S
-		  jsr	SET_ADDR_E
-		  jsr	GET_WORD
-		  if	CC
-		   jsr	SET_ADDR_E
+		if	eq
+		 jsr	GetWord
+		 if	cc
+		  jsr	SetStartAddr
+		  jsr	SetEndAddr
+		  jsr	GetWord
+		  if	cc
+		   jsr	SetEndAddr
 		  else
 		   inc	ADDR_E+1
 		  endif
@@ -501,10 +502,10 @@ RptCommand:
 		   lda	ADDR_S+0
 		   jsr	ShowHex2
 		   
-		   jsr	DISASSEMBLE
-		   jsr	BUMP_ADDR		   
-		   jsr	CHECK_END
-		  until	PL
+		   jsr	Disassemble
+		   jsr	BumpAddr		   
+		   jsr	CheckEnd
+		  until	pl
 		  jmp	NewCommand
 		 endif
 		 jmp	Error		
@@ -515,7 +516,7 @@ RptCommand:
 ;-------------------------------------------------------------------------------
 
 		cmp	#'G'
-		if	EQ
+		if	eq
 
 		 lda	PC_REG+1	; Push the target address
 		 pha
@@ -534,14 +535,14 @@ RptCommand:
 ;-------------------------------------------------------------------------------		
 
 		cmp	#'M'
-		if	EQ
-		 jsr	GET_WORD
-		 if	CC
-		  jsr	SET_ADDR_S
-		  jsr	SET_ADDR_E
-		  jsr	GET_WORD
-		  if	CC
-		   jsr	SET_ADDR_E
+		if	eq
+		 jsr	GetWord
+		 if	cc
+		  jsr	SetStartAddr
+		  jsr	SetEndAddr
+		  jsr	GetWord
+		  if	cc
+		   jsr	SetEndAddr
 		  else
 		   inc	ADDR_E+1
 		  endif
@@ -560,7 +561,7 @@ RptCommand:
 		    iny
 		    jsr	ShowHex2
 		    cpy #16
-		   until EQ
+		   until eq
 		   
 		   jsr	Space		; Then show as characters
 		   jsr	Bar
@@ -568,19 +569,19 @@ RptCommand:
 		   repeat
 		    lda	(ADDR_S),Y
 		    iny
-		    jsr	IS_PRINTABLE
-		    if CC
+		    jsr	IsPrintable
+		    if 	cc
 		     lda #'.'
 		    endif
 		    jsr	UartTx
 		    cpy	#16
-		   until EQ
+		   until eq
 		   jsr	Bar
 		   
 		   tya
-		   jsr	BUMP_ADDR
-		   jsr	CHECK_END
-		  until	PL
+		   jsr	BumpAddr
+		   jsr	CheckEnd
+		  until	pl
 		  jmp	NewCommand
 		 endif
 		 jmp	Error
@@ -608,19 +609,19 @@ RptCommand:
 ;-------------------------------------------------------------------------------
 
 		cmp	#'W'
-		if	EQ
-		 jsr	GET_WORD	; Get the target address
-		 if	CC
-		  jsr	SET_ADDR_S	; Copy to start address
-		  jsr	GET_BYTE	; Get the value
-		  if	CC
+		if	eq
+		 jsr	GetWord	; Get the target address
+		 if	cc
+		  jsr	SetStartAddr	; Copy to start address
+		  jsr	GetByte	; Get the value
+		  if	cc
 		   ldy	#0		; Write to  memory
 		   lda	TEMP+0
 		   sta	(ADDR_S),Y
 		   lda	#1		; Increment address
-		   jsr	BUMP_ADDR
+		   jsr	BumpAddr
 		   lda	#'W'		; Create prompt for next byte
-		   jmp	SET_PROMPT
+		   jmp	SetPrompt
 		  endif
 		 endif
 		 jmp	Error		; Handle syntax errors
@@ -631,7 +632,7 @@ RptCommand:
 ;-------------------------------------------------------------------------------
 
 		cmp	#'?'
-		if	EQ
+		if	eq
 		 ldx	#HLP_STR
 		else
 Error:		 ldx	#ERR_STR
@@ -642,30 +643,30 @@ Error:		 ldx	#ERR_STR
 ;===============================================================================
 ;-------------------------------------------------------------------------------
 
-SET_ADDR_S:
+SetStartAddr:
 		lda	TEMP+0
 		sta	ADDR_S+0
 		lda	TEMP+1
 		sta	ADDR_S+1
 		rts
 
-SET_ADDR_E:
+SetEndAddr:
 		lda	TEMP+0
 		sta	ADDR_E+0
 		lda	TEMP+1
 		sta	ADDR_E+1
 		rts
 
-BUMP_ADDR:
+BumpAddr:
 		clc
 		adc	ADDR_S+0
 		sta	ADDR_S+0
-		if	CS
+		if	cs
 		 inc	ADDR_S+1
 		endif
 		rts
 		
-CHECK_END:
+CheckEnd:
 		sec
 		lda	ADDR_S+0
 		sbc	ADDR_E+0
@@ -676,38 +677,38 @@ CHECK_END:
 ; Create a prompt string in the command buffer for the command in A using the
 ; current value of the starting address.
 
-SET_PROMPT:
+SetPrompt:
 		ldx	#0		; Clear buffer and add command letter
-		jsr	APPEND_CHAR
+		jsr	AppendChar
 		lda	#' '		; Then a space
-		jsr	APPEND_CHAR
+		jsr	AppendChar
 		
 		lda	ADDR_S+1	; Followed by the address
-		jsr	APPEND_HEX2
+		jsr	AppendHex2
 		lda	ADDR_S+0
-		jsr	APPEND_HEX2
+		jsr	AppendHex2
 		lda	#' '		; And another space
-		jsr	APPEND_CHAR
+		jsr	AppendChar
 		jmp	RptCommand	; Then output it
 
 ; Convert the byte in A into hexadecimal digits and append to the command buffer.		
 		
-APPEND_HEX2:
+AppendHex2:
 		pha
-		lsr	A
-		lsr	A
-		lsr	A
-		lsr	A
-		jsr	APPEND_HEX
+		lsr	a
+		lsr	a
+		lsr	a
+		lsr	a
+		jsr	AppendHex
 		pla
-APPEND_HEX:
-		jsr	TO_HEX
+AppendHex:
+		jsr	ToHex
 
 ; Append the character in A to the command buffer to create the next prompt
 ; string.
 
-APPEND_CHAR:
-		sta	COMMAND,X
+AppendChar:
+		sta	COMMAND,x
 		inx
 		stx	CMD_LEN
 		rts
@@ -722,7 +723,7 @@ APPEND_CHAR:
 
 NextChar:
 		cpx	CMD_LEN		; Reached end of buffer>
-		if cs
+		if 	cs
 		 rts			; Yes, return with C=1
 		endif
 		lda	COMMAND,X	; No, fetch a character
@@ -732,9 +733,9 @@ NextChar:
 
 ToUpper:
 		cmp	#'a'		; Between 'a'
-		if cs
+		if 	cs
 		 cmp	#'z'+1		; .. and 'z'?
-		 if cc
+		 if 	cc
 		  and	#$5f		; Yes, convert 	
 		 endif
 		endif
@@ -746,24 +747,24 @@ ToUpper:
 SkipSpaces:
 		repeat
 		 jsr	NextChar	; Fetch a character?
-		 break cs		; Reached the end?
+		 break 	cs		; Reached the end?
 		 cmp	#' '		; A space to ignore?
 		 clc
-		until ne
+		until 	ne
 		rts			; Done
 
 ; Parse a word from the command buffer and store it at 0,Y. Return if the
 ; carry set if there is a syntax error.
 
-GET_WORD:
+GetWord:
 		ldy	#4		; Set maximim number of nybbles
-		bne	GET_BYTE+2
+		bne	GetByte+2
 
 
 ; Parse a word from the command buffer and store it at 0,Y. Return if the
 ; carry set if there is a syntax error.
 
-GET_BYTE:
+GetByte:
 		ldy	#2		; Set maximum number of nybble
 		sty	COUNT
 		
@@ -777,8 +778,8 @@ GET_BYTE:
 		.endif
 
 		jsr	SkipSpaces	; Fetch first character
-		jsr	GET_NYBBLE	; And try to convert
-		if	CS
+		jsr	GetNybble	; And try to convert
+		if	cs
 		 rts			; Syntax error
 		endif
 		repeat
@@ -794,25 +795,25 @@ GET_BYTE:
 		 sta	TEMP+0
 		 
 		 dec	COUNT		; Reach maximum length?
-		 break	EQ
+		 break	eq
 		 
 		 jsr	NextChar	; Try for another nybble
-		 jsr	GET_NYBBLE
-		until CS		
+		 jsr	GetNybble
+		until 	cs		
 		clc			; Conversion sucessfull
 		rts
 
 ;
 ;
 
-GET_NYBBLE:
-		jsr	IS_HEX		; Got a hex digit?
-		if	CS
+GetNybble:
+		jsr	IsHex		; Got a hex digit?
+		if	cs
 		 cmp	#'A'		; Handle letters
-		 if	CS
+		 if	cs
 		  sbc	#7
 		 endif
-		 and	#$0F		; Skip out nybble
+		 and	#$0f		; Skip out nybble
 		 clc			; Done
 		 rts
 		endif
@@ -821,23 +822,23 @@ GET_NYBBLE:
 
 ; Return with the carry set of the character in A is a digit or 'A' thru 'F'.
 
-IS_HEX:
+IsHex:
 		cmp	#'9'+1
-		if 	CC
+		if 	cc
 		 cmp	#'0'
 		 rts
 		endif
 		cmp	#'F'+1
-		if	CC
+		if	cc
 		 cmp	#'A'
 		 rts
 		endif
 		clc
 		rts
 		
-IS_PRINTABLE:
+IsPrintable:
 		cmp	#' '
-		if	CS
+		if	cs
 		 cmp	#DEL
 		 if	CC
 		  sec
@@ -850,20 +851,20 @@ IS_PRINTABLE:
 ;===============================================================================
 ;-------------------------------------------------------------------------------
 
-DISASSEMBLE:
+Disassemble:
 		jsr	Space
 		ldy	#0		; Fetch the opcode
 		lda	(ADDR_S),Y
 		tax
-		jsr	ShowHex2		; And display it
+		jsr	ShowHex2	; And display it
 		
 		jsr	Space
-		lda	MODES,X
+		lda	MODES,X		; Fetch the mode
+		pha			; And save some copies
 		pha
-		pha
-		and	#MB_REL|MB_ABS
-		if	NE
-		 ldy	#1
+		and	#MB_REL|MB_ABS	; Show second byte if relative,
+		if	ne		; .. zero page, immediate or absolute
+		 iny		
 		 lda	(ADDR_S),Y
 		 jsr	ShowHex2
 		else
@@ -871,17 +872,15 @@ DISASSEMBLE:
 		endif
 		
 		jsr	Space
-		pla
-		tay
-		and	#MB_REL|MB_ZPG
-		cmp	#MB_REL|MB_ZPG
-		if	NE
-		 tya
-		 and	#MB_ABS
-		 cmp	#MB_ABS
-		endif
-		if	EQ
-		 ldy	#2
+		pla			; Show third byte 
+		.if	__65C02__
+		cmp	#MO_BRL		; .. if bit relative
+		beq	.Skip
+		.endif
+		and	#MB_ABS		; .. or absolute
+		cmp	#MB_ABS
+		if	eq
+.Skip:		 iny
 		 lda	(ADDR_S),Y
 		 jsr	ShowHex2
 		else
@@ -889,8 +888,7 @@ DISASSEMBLE:
 		endif
 		
 		iny			; Save the byte count
-		tya
-		pha
+		sty	COUNT
 
 		jsr	Space
 		ldy	#0		; Fetch the opcode
@@ -901,15 +899,16 @@ DISASSEMBLE:
 		lda	MNEMONICS+1,X
 		sta	TEMP
 		lda	MNEMONICS+0,X
-		jsr	EXTRACT_LETTER
-		jsr	EXTRACT_LETTER
-		jsr	EXTRACT_LETTER
+		jsr	ExtractLetter
+		jsr	ExtractLetter
+		jsr	ExtractLetter
 		jsr	Space
 		
+		.if	__65C02__
 		pla
 		pha
-		and	#MB_bit
-		if	NE
+		and	#MB_BIT
+		if	ne
 		 ldy	#0
 		 lda	(ADDR_S),Y
 		 and	#7
@@ -918,69 +917,91 @@ DISASSEMBLE:
 		 lda	#','
 		 jsr	UartTx
 		endif
+		.endif
 		
-		pla
+		pla			; Indirect mode?
 		pha
-		if	MI
+		if	mi
 		 lda	#'('
 		 jsr	UartTx
 		endif
 		
-		pla
+		pla			; Has an address?
 		pha
 		and	#MB_ABS
-		if	NE
+		if	ne
 		 pha
-		 cmp	#MB_IMM
-		 if	EQ
+		 cmp	#MB_IMM		; Immediate?
+		 if	eq
 		  lda	#'#'
 		  jsr	UartTx
 		 endif
 		 lda	#'$'
 		 jsr	UartTx
 		 pla
-		 cmp	#MB_ABS
-		 if	EQ
+		 cmp	#MB_ABS		; Absolute?
+		 if	eq
 		  ldy	#2
-		  lda	(ADDR_S),Y
+		  lda	(ADDR_S),Y	; Show hi byte
 		  jsr	ShowHex2
 		 endif
 		 ldy	#1
-		 lda	(ADDR_S),Y
+		 lda	(ADDR_S),Y	; Then lo byte	
 		 jsr	ShowHex2
 		endif
 		
+		.if	__65C02__
 		pla
 		pha
-		and	#MB_bit|MB_REL
-		cmp	#MB_bit|MB_REL
-		if	EQ
+		and	#MB_BIT|MB_REL
+		cmp	#MB_BIT|MB_REL
+		if	eq
 		 lda	#','
 		 jsr	UartTx
 		endif
+		.endif
 		
 		pla
 		pha
 		tay
 		and	#MB_REL
-		if	NE
+		if	ne
 		 lda	#'$'
 		 jsr	UartTx
 		 tya
 		 ldy	#1
-		 and	#MB_bit
-		 if	NE
+		 and	#MB_BIT
+		 if	ne
 		  iny
 		 endif
 		 
-		 lda	#'r'
-		 jsr	UartTx
+		 sec			; Word out address of next
+		 tya			; .. instruction
+		 adc	ADDR_S+0
+		 sta	TEMP+0
+		 lda	#0
+		 adc	ADDR_S+1
+		 sta	TEMP+1
+		 
+		 clc			; Fetch offset
+		 lda	(ADDR_S),y	; Work out lo byte
+		 adc	TEMP+0
+		 pha			; And save
+		 lda	(ADDR_S),y	
+		 and	#$80
+		 if	mi
+		  lda	#$ff
+		 endif
+		 adc	TEMP+1		; Work out hi byte
+		 jsr	ShowHex2	; And show result
+		 pla
+		 jsr	ShowHex2
 		endif
 		
 		pla
 		pha
 		and	#MB_ACC
-		if 	NE
+		if 	ne
 		 lda	#'A'
 		 jsr	UartTx
 		endif
@@ -988,7 +1009,7 @@ DISASSEMBLE:
 		pla
 		pha
 		and	#MB_XRG
-		if 	NE
+		if 	ne
 		 lda	#','
 		 jsr	UartTx
 		 lda	#'X'
@@ -997,39 +1018,39 @@ DISASSEMBLE:
 		
 		pla
 		pha
-		if	MI
+		if	mi
 		 lda	#')'
 		 jsr	UartTx
 		endif
 		
 		pla
 		and	#MB_YRG
-		if 	NE
+		if 	ne
 		 lda	#','
 		 jsr	UartTx
 		 lda	#'Y'
 		 jsr	UartTx
 		endif
 		
-		pla			; Return the number of bytes
+		lda	COUNT		; Return the number of bytes
 		rts
 		
-EXTRACT_LETTER:
+ExtractLetter:
 		pha
-		and	#$1F
+		and	#$1f
 		ora	#'@'
 		jsr	UartTx
 		pla
 		lsr	TEMP
-		ror	A
+		ror	a
 		lsr	TEMP
-		ror	A
+		ror	a
 		lsr	TEMP
-		ror	A
+		ror	a
 		lsr	TEMP
-		ror	A
+		ror	a
 		lsr	TEMP
-		ror	A
+		ror	a
 		rts
 		
 		
@@ -1042,28 +1063,29 @@ EXTRACT_LETTER:
 
 ShowHex2:
 		pha			; Save a copy of the value
-		lsr	A		; Shift down the hi nybble
-		lsr	A
-		lsr	A
-		lsr	A
-		jsr	HEX		; Convert and display
+		lsr	a		; Shift down the hi nybble
+		lsr	a
+		lsr	a
+		lsr	a
+		jsr	ShowHex		; Convert and display
 		pla			; Pull back value and ...
 
 ; Display the lo nybble of A as a hexadecimal digit. The values in A & Y are
 ; destroyed.
 
-HEX		jsr	TO_HEX		; Convert to printable character
+ShowHex:
+		jsr	ToHex		; Convert to printable character
 		jmp	UartTx		; And display.
 		
-;
+; Convert the lo nybble of A to a hexadecimal digit.
 		
-TO_HEX		and	#$0F		; Isolate the lo nybble
-		sed			; Converted to ASCII
+ToHex		and	#$0f		; Isolate the lo nybble
+		sed			; Convert to ASCII using BCD
 		clc
 		adc	#$90
 		adc	#$40
 		cld
-		rts
+		rts			; Done
 
 ; Output two spaces.
 
@@ -1075,7 +1097,9 @@ Space2:
 Space:
 		lda	#' '
 		jmp	UartTx
-		
+
+; Output a vertical bar character.
+
 Bar:
 		lda	#'|'
 		jmp	UartTx
@@ -1085,8 +1109,8 @@ Bar:
 
 ShowString:
 		repeat
-		 lda	STRINGS,X
-		 if	EQ
+		 lda	STRINGS,x
+		 if	eq
 		  rts
 		 endif
 		 jsr	UartTx
@@ -1096,10 +1120,10 @@ ShowString:
 STRINGS:
 TTL_STR		.equ	.-STRINGS
 		.if	__6502__
-		.byte	"Boot 6502 [18.04]"
+		.byte	CR,LF,"Boot 6502 [18.04]"
 		.endif
 		.if	__65C02__
-		.byte	"Boot 65C02 [18.04]"
+		.byte	CR,LF,"Boot 65C02 [18.04]"
 		.endif
 		.byte	0
 PC_STR		.equ	.-STRINGS
@@ -1319,7 +1343,7 @@ IRQ:
 		tsx			; Check for BRK
 		lda	STACK+4,X
 		and	#$10
-		if ne
+		if 	ne
 		 jmp	BRK		; Enter monitor with registers on stack
 		endif
 		
@@ -1329,10 +1353,10 @@ IRQ:
 		if mi
 		 pha
 		 and	#$10		; TX Buffer empty?
-		 if ne
+		 if 	ne
 		  ldy	TX_HEAD		; Any data to send?
 		  cpy	TX_TAIL
-		  if ne
+		  if 	ne
 		   lda	TX_BUFFER,Y	; Yes, extract and send it
 		   sta	ACIA_DATA
 		   jsr	BumpIdx
@@ -1345,7 +1369,7 @@ IRQ:
 
 		 pla
 		 and	#$08		; RX Buffer full?
-		 if ne
+		 if 	ne
 		  lda	ACIA_DATA	; Yes, fetch the character
 		  ldy	RX_TAIL		; .. and save it
 		  sta	RX_BUFFER,Y
@@ -1387,7 +1411,7 @@ UartTx:
 		jsr	BumpIdx		; Work out the next offset
 		repeat			; And wait until save to store
 		 cpy	TX_HEAD
-		until	NE
+		until	ne
 		sty	TX_TAIL
 		lda	#$05		; Ensure TX interrupt enabled
 		sta	ACIA_CMND
@@ -1404,7 +1428,7 @@ UartRx:
 		ldy	RX_HEAD		; Wait until there is some data
 		repeat
 		 cpy	RX_TAIL
-		until	NE
+		until	ne
 		lda	RX_BUFFER,y	; Then extract the head byte
 		jsr	BumpIdx		; Update the offset
 		sty	RX_HEAD
@@ -1417,7 +1441,7 @@ UartRx:
 BumpIdx:
 		iny			; Bump index
 		cpy	#BUF_SIZE	; Reached end of buffer?
-		if cs
+		if 	cs
 		 ldy	#0		; Yes, wrap around
 		endif
 		rts			; Done
