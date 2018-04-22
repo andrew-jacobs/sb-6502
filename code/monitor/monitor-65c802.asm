@@ -230,7 +230,7 @@ ADDR_E		.space	2
 		
 		.space	8		; Vectors
 
-BUF_SIZE	.equ	62
+BUF_SIZE	.equ	58
 
 RX_HEAD		.space	1		; UART recieve buffer offsets
 RX_TAIL		.space	1
@@ -360,10 +360,19 @@ RESET:
 		
 		ldx	#$ff		; Initialise the stack
 		txs
-		stz	TX_HEAD		; Clear buffer indexes
-		stz	TX_TAIL
-		stz	RX_HEAD
-		stz	RX_TAIL
+		
+		inx
+		stx	TX_HEAD		; Clear buffer indexes
+		stx	TX_TAIL
+		stx	RX_HEAD
+		stx	RX_TAIL
+		
+		repeat
+		 lda	VECTORS,x	; Setup the vectors
+		 sta	IRQV,x
+		 inx
+		 cmp	#8
+		until eq
 		
                 lda     #%00011111	; 8 bits, 1 stop bit, 19200 baud
                 sta     ACIA_CTRL
@@ -381,6 +390,13 @@ RESET:
 		 brk	#0		; And enter monitor via BRK
 		forever
 
+;-------------------------------------------------------------------------------
+
+VECTORS:	.space	IRQE
+		.space	NMIE
+		.space	IRQN
+		.space	NMIN
+		
 ;===============================================================================
 ; Break Handler
 ;-------------------------------------------------------------------------------
@@ -953,14 +969,14 @@ MODES:
 		.byte	MO_AIX,MO_ABX,MO_ABX,MO_ALX
 
 ;===============================================================================
-; I/O Area
+; Virtual Hardware Area
 ;-------------------------------------------------------------------------------
 
 		.org	$fe00
 		.space	64		; Skip over virtual hardware
 		
 ;===============================================================================
-; API Vectors
+; I/O API
 ;-------------------------------------------------------------------------------
 
 		.longa	off
@@ -1115,6 +1131,11 @@ BumpIdx:
 ; Vectors
 ;-------------------------------------------------------------------------------
 
+DO_IRQ:		jmp	(IRQV)
+DO_NMI:		jmp	(NMIV)
+DO_IRQN:	jmp	(IRQNV)
+DO_NMIN:	jmp	(NMINV)
+
 ; Native Mode Vectors
 		
 		.org	$ffe4
@@ -1122,9 +1143,9 @@ BumpIdx:
 		.word	COPN
 		.word	BRKN
 		.word	ABORTN
-		.word	NMIN
+		.word	DO_NMIN
 		.word	0
-		.word	IRQN
+		.word	DO_IRQN
 
 NMIN:		
 COPN:
@@ -1143,8 +1164,8 @@ ABORTE:
 		.word	COPE
 		.word	0
 		.word	ABORTE
-		.word	NMIE
+		.word	DO_NMI
 		.word	RESET
-		.word	IRQE
+		.word	DO_IRQ
 
 		.end

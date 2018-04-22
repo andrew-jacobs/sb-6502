@@ -192,7 +192,7 @@ IO_TEMP		.space	1
 ; UART Buffers
 ;-------------------------------------------------------------------------------
 
-BUF_SIZE	.equ	62		; UART buffer sizes
+BUF_SIZE	.equ	58		; UART buffer sizes
 
 		.bss
 		.org	$0200
@@ -309,6 +309,13 @@ RESET:
 		stx	RX_TAIL
 		stx	TX_HEAD
 		stx	TX_TAIL
+		
+		repeat			; Setup vectors
+		 lda	VECTORS,x
+		 sta	IRQV,x
+		 inx
+		 cpx	#8
+		until eq
 
                 lda     #%00011111	; 8 bits, 1 stop bit, 19200 baud
                 sta     ACIA_CTRL
@@ -325,6 +332,13 @@ RESET:
 		repeat
 		 brk	#0		; And enter monitor
 		forever
+		
+;-------------------------------------------------------------------------------
+		
+VECTORS:	.word	IRQ		; Default vectors
+		.word	NMI
+		.word	IRQ
+		.word	NMI
 		
 ;===============================================================================
 ; Entry Point
@@ -512,6 +526,37 @@ RptCommand:
 		endif
 		
 ;===============================================================================
+; 'F' - Fill
+;-------------------------------------------------------------------------------
+
+		cmp	#'F'
+		if	eq
+		 jsr	GetWord		; Extract start address
+		 if cc
+		  jsr	SetStartAddr
+		  jsr	GetWord		; Extract end address
+		  bcs	.FillFail
+		  jsr	SetEndAddr
+		  jsr	GetByte		; Extract fill byte
+		  bcs	.FillFail
+
+		  repeat
+		   ldy	#0		; Perform the fill
+		   lda	TEMP+0
+		   sta 	(ADDR_S),y
+		   
+		   iny
+		   tya
+		   jsr	BumpAddr	; Until the end
+		   jsr	CheckEnd
+		  until pl
+		 else
+.FillFail:	  jmp	Error
+		 endif
+		 jmp	NewCommand
+		endif
+		
+;===============================================================================
 ; 'G' - Go
 ;-------------------------------------------------------------------------------
 
@@ -536,15 +581,15 @@ RptCommand:
 
 		cmp	#'M'
 		if	eq
-		 jsr	GetWord
+		 jsr	GetWord		; Extract start address
 		 if	cc
 		  jsr	SetStartAddr
 		  jsr	SetEndAddr
-		  jsr	GetWord
+		  jsr	GetWord		; Extract end address
 		  if	cc
 		   jsr	SetEndAddr
 		  else
-		   inc	ADDR_E+1
+		   inc	ADDR_E+1	; Or default to start + 256
 		  endif
 		  
 		  repeat
@@ -602,6 +647,46 @@ RptCommand:
 
 		cmp	#'S'
 		if	eq
+		 jsr	NextChar
+		 cmp	#'1'		; Data record?
+		 if 	eq
+		  jsr	GetByte		; Extract length
+		  bcs	.S19Fail
+		  sta	ADDR_E+0
+		  jsr	GetWord		; Extract address
+		  bcs	.S19Fail		  
+		  jsr	SetStartAddr
+		  dec	ADDR_E+0	; Reduce count
+		  dec	ADDR_E+0
+		  dec	ADDR_E+0
+		  
+		  ldy	#0
+		  sty	ADDR_E+1
+		  repeat
+		   jsr	GetByte		; Extract data byte
+		   bcs	.S19Fail
+		   ldy	ADDR_E+1	; And save
+		   lda	TEMP+0
+		   sta	(ADDR_S),y
+		   inc	ADDR_E+1
+		   dec	ADDR_E+0	; Until line processed
+		  until eq
+		 else
+		  cmp	#'9'
+		  if 	eq
+		   jsr	GetByte		; Extract length
+		   bcs	.S19Fail
+		   jsr	GetWord		; Extract start address
+		   bcs	.S19Fail
+		   lda	TEMP+0		; Copy to PC
+		   sta	PC_REG+0
+		   lda	TEMP+1
+		   sta 	PC_REG+1	   
+		  else
+.S19Fail:	   jmp	Error
+		  endif
+		 endif
+		 jmp	NewCommand
 		endif
 		
 ;===============================================================================
@@ -615,7 +700,7 @@ RptCommand:
 		  jsr	SetStartAddr	; Copy to start address
 		  jsr	GetByte	; Get the value
 		  if	cc
-		   ldy	#0		; Write to  memory
+		   ldy	#0		; Write to memory
 		   lda	TEMP+0
 		   sta	(ADDR_S),Y
 		   lda	#1		; Increment address
@@ -1039,6 +1124,10 @@ ExtractLetter:
 		pha
 		and	#$1f
 		ora	#'@'
+		cmp	#$5f
+		if	eq
+		 lda	#'?'
+		endif
 		jsr	UartTx
 		pla
 		lsr	TEMP
@@ -1142,6 +1231,7 @@ ERR_STR		.equ	.-STRINGS
 		.byte	CR,LF,"?",0
 HLP_STR		.equ	.-STRINGS
 		.byte 	CR,LF,"D xxxx yyyy\t\tDisassemble"
+		.byte	CR,LF,"F xxxx yyyy bb\t\tFill Memory"
 		.byte	CR,LF,"G [xxxx]\t\tGoto"
 		.byte	CR,LF,"M xxxx yyyy\t\tDisplay Memory"
 		.byte	CR,LF,"R\t\t\tDisplay Registers"
@@ -1301,14 +1391,14 @@ MODES:
 		.endif
 		
 ;==============================================================================
-; I/O Area
+; Virtual Hardware Area
 ;-------------------------------------------------------------------------------
 
 		.org	$fe00
 		.space	64		; Skip over virtual hardware
 		
 ;===============================================================================
-; API Vectors
+; I/O API
 ;-------------------------------------------------------------------------------
 
 		jmp	UartTx
@@ -1450,10 +1540,13 @@ BumpIdx:
 ; Vector Locations
 ;-------------------------------------------------------------------------------
 
+DO_IRQ		jmp	(IRQV)
+DO_NMI		jmp	(NMIV)
+
 		.org	$FFFA
 
-		.word	NMI		; NMI
+		.word	DO_NMI		; NMI
 		.word	RESET		; RESET
-		.word	IRQ		; IRQ/BRK
+		.word	DO_IRQ		; IRQ/BRK
 
 		.END
