@@ -230,6 +230,9 @@ RTC_ALM3        res     .1
 RTC_CTLA        res     .1
 RTC_CTLB        res     .1
 RTC_STAT        res     .1
+	
+RTC_PERIOD	res	.5			; Periodic interrupt period
+RTC_COUNT	res	.5			; Periodic interrupt count
 
 ;===============================================================================
 ; Reset Vector
@@ -246,7 +249,38 @@ RTC_STAT        res     .1
 .Interrupt      code    h'0008'
       
                 bcf     PIR1,TMR2IF     ; Clear the interrupt flag
+		
+		movf	RTC_CTLB,W	; Is period interrupt configured?
+		andlw	h'f0'
+		bz	BumpTime
+		
+		incf	RTC_COUNT+.0,F	; Yes, update counter
+		bnz	BumpTime
+		incf	RTC_COUNT+.1,F
+		bnz	BumpTime
+		incf	RTC_COUNT+.2,F
+		bnz	BumpTime
+		incf	RTC_COUNT+.3,F
+		bnz	BumpTime
+		incf	RTC_COUNT+.4,F
+		bnz	BumpTime
+		
+		bsf	RTC_STAT,.1	; Flag period interrupt
+		btfsc	RTC_CTLA,.1
+		bsf	INT_FLAG,INT_SW_TMR
 
+		movf	RTC_PERIOD+.0,W	; Reset the period
+		movwf	RTC_COUNT+.0
+		movf	RTC_PERIOD+.1,W
+		movwf	RTC_COUNT+.1
+		movf	RTC_PERIOD+.2,W
+		movwf	RTC_COUNT+.2
+		movf	RTC_PERIOD+.3,W
+		movwf	RTC_COUNT+.3
+		movf	RTC_PERIOD+.4,W
+		movwf	RTC_COUNT+.4
+		
+BumpTime:
                 movlw   h'10'           ; Bump the time value
                 addwf   RTC_SUB0R,W
                 movwf   RTC_SUB0R
@@ -254,37 +288,60 @@ RTC_STAT        res     .1
                 movwf   RTC_SUB0
                 
                 movlw   .0
-                addwfc  RTC_SUB1R,F
+                addwfc  RTC_SUB1R,W
                 movwf   RTC_SUB1R
                 btfsc   RTC_CTLA,.7
                 movwf   RTC_SUB1
                 
                 movlw   .0
-                addwfc  RTC_SEC0,F
+                addwfc  RTC_SEC0R,W
                 movwf   RTC_SEC0R
                 btfsc   RTC_CTLA,.7
                 movwf   RTC_SEC0
                 
                 movlw   .0
-                addwfc  RTC_SEC1,F
+                addwfc  RTC_SEC1R,W
                 movwf   RTC_SEC1R
                 btfsc   RTC_CTLA,.7
                 movwf   RTC_SEC1
                 
                 movlw   .0
-                addwfc  RTC_SEC2,F
+                addwfc  RTC_SEC2R,W
                 movwf   RTC_SEC2R
                 btfsc   RTC_CTLA,.7
                 movwf   RTC_SEC2
                 
                 movlw   .0
-                addwfc  RTC_SEC3,F
+                addwfc  RTC_SEC3R,W
                 movwf   RTC_SEC3R
                 btfsc   RTC_CTLA,.7
                 movwf   RTC_SEC3
-      
-                retfie  FAST
-         
+		
+		movf	RTC_SEC0,W	; Matched the alarm?
+		xorwf	RTC_ALM0,W
+		btfss	STATUS,Z
+		retfie	FAST		; No
+		
+		movf	RTC_SEC1,W
+		xorwf	RTC_ALM1,W
+		btfss	STATUS,Z
+		retfie	FAST		; No
+		
+		movf	RTC_SEC2,W
+		xorwf	RTC_ALM2,W
+		btfss	STATUS,Z
+		retfie	FAST		; No
+
+		movf	RTC_SEC2,W
+		xorwf	RTC_ALM2,W
+		btfss	STATUS,Z
+		retfie	FAST		; Done
+		
+		bsf	RTC_STAT,.0	; Flag alarm match
+		btfsc	RTC_CTLA,.0
+		bsf	INT_FLAG,INT_SW_TMR
+		retfie	FAST
+
 ;===============================================================================
 ; Power On Reset
 ;-------------------------------------------------------------------------------
@@ -361,11 +418,12 @@ WaitTillStable:
 
                 movlw   TMR2_PR                 ; Configure Timer2
                 movwf   PR2
-                movlw   M(TMR2ON)|h'03'|((TMR2_POST-.1) << .3)
+                movlw   M(TMR2ON)|((TMR2_POST-.1) << .3)|h'01'
                 clrf    TMR2
                 movwf   T2CON
                 
                 bcf     PIR1,TMR2IF
+		bsf	INTCON,PEIE
                 
 ;-------------------------------------------------------------------------------
 
@@ -1207,6 +1265,27 @@ SpiWrSlct:
 ; RTC Emulation
 ;-------------------------------------------------------------------------------
 
+PRS		macro	X0,X1,X2,X3,X4
+		movlw	X0		    ; Load the period and counr
+		movwf	RTC_PERIOD+.0
+		movwf	RTC_COUNT+.0
+		movlw	X1
+		movwf	RTC_PERIOD+.1
+		movwf	RTC_COUNT+.1
+		movlw	X2
+		movwf	RTC_PERIOD+.2
+		movwf	RTC_COUNT+.2
+		movlw	X3
+		movwf	RTC_PERIOD+.3
+		movwf	RTC_COUNT+.3
+		movlw	X4
+		movwf	RTC_PERIOD+.4
+		movwf	RTC_COUNT+.4
+		bsf	INTCON,GIE		; Allow interrupts
+                bra     NormalLo		; And continue	
+		endm
+		
+		
 RtcRdSub0:       
                 movf    RTC_SUB0,W              ; Copy from register
                 clrf    DATA_TRIS               ; .. to the data bus
@@ -1377,8 +1456,13 @@ RtcWrCtlA:
                 movf    DATA_PORT,W             ; Copy from data bus
                 andlw   h'cf'
                 movwf   RTC_CTLA                ; .. to register
-                nop
-                nop
+		bcf	PIE1,TMR2IE
+		btfsc	RTC_CTLA,.6		; Enabled?
+		bsf	PIE1,TMR2IE
+		andlw	h'03'			; Interrupts enabled?
+		bcf	INT_MASK,INT_SW_TMR	; Assume no.
+		btfss	STATUS,Z
+		bsf	INT_MASK,INT_SW_TMR	; Yes
                 bra     NormalLo
                 
 RtcRdCtlB:
@@ -1392,10 +1476,30 @@ RtcRdCtlB:
 RtcWrCtlB:
                 movf    DATA_PORT,W             ; Copy from data bus
                 movwf   RTC_CTLB                ; .. to register
-                nop
-                nop
-                bra     NormalLo
-                
+		swapf	WREG,W			; Extract periodic
+		andlw	h'0f'
+		
+		bcf	INTCON,GIE
+                mullw   .17 * .2                ; Work out jump offset
+                rcall   ComputedJump            ; And go there
+
+		PRS	h'00',h'00',h'00',h'00',h'00'	; PRS = 0
+		PRS	h'ff',h'ff',h'ff',h'ff',h'ff'	; PRS = 1
+		PRS	h'fe',h'ff',h'ff',h'ff',h'ff'	; PRS = 2
+		PRS	h'fc',h'ff',h'ff',h'ff',h'ff'	; PRS = 3
+		PRS	h'f8',h'ff',h'ff',h'ff',h'ff'	; PRS = 4
+		PRS	h'f0',h'ff',h'ff',h'ff',h'ff'	; PRS = 5
+		PRS	h'e0',h'ff',h'ff',h'ff',h'ff'	; PRS = 6
+		PRS	h'00',h'fe',h'ff',h'ff',h'ff'	; PRS = 7
+		PRS	h'00',h'fc',h'ff',h'ff',h'ff'	; PRS = 8
+		PRS	h'00',h'f8',h'ff',h'ff',h'ff'	; PRS = 9
+		PRS	h'00',h'f0',h'ff',h'ff',h'ff'	; PRS = 10
+		PRS	h'00',h'00',h'fc',h'ff',h'ff'	; PRS = 11
+		PRS	h'00',h'00',h'00',h'ff',h'ff'	; PRS = 12
+		PRS	h'00',h'00',h'00',h'f0',h'ff'	; PRS = 13
+		PRS	h'00',h'00',h'00',h'80',h'ff'	; PRS = 14
+		PRS	h'00',h'00',h'00',h'00',h'fe'	; PRS = 15
+		 
 RtcRdStat:
                 movf    RTC_STAT,W              ; Copy from register
                 clrf    DATA_TRIS               ; .. to the data bus
@@ -1406,7 +1510,8 @@ RtcRdStat:
         
 RtcWrStat:
                 clrf    RTC_STAT                ; Any write to STAT clears
-                nop                             ; .. all the flags
+		bcf	INT_FLAG,INT_SW_TMR     ; .. all the flags
+                nop                        
                 nop
                 bra     NormalLo
         

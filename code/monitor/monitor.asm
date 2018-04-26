@@ -517,9 +517,10 @@ RptCommand:
 		   jsr	ShowHex2
 		   
 		   jsr	Disassemble
-		   jsr	BumpAddr		   
+		   jsr	BumpAddr
+		   break cs
 		   jsr	CheckEnd
-		  until	pl
+		  until	cs
 		  jmp	NewCommand
 		 endif
 		 jmp	Error		
@@ -548,8 +549,9 @@ RptCommand:
 		   iny
 		   tya
 		   jsr	BumpAddr	; Until the end
+		   break cs
 		   jsr	CheckEnd
-		  until pl
+		  until cs
 		 else
 .FillFail:	  jmp	Error
 		 endif
@@ -625,8 +627,9 @@ RptCommand:
 		   
 		   tya
 		   jsr	BumpAddr
+		   break cs
 		   jsr	CheckEnd
-		  until	pl
+		  until	cs
 		  jmp	NewCommand
 		 endif
 		 jmp	Error
@@ -712,6 +715,21 @@ RptCommand:
 		 jmp	Error		; Handle syntax errors
 		endif
 		
+	cmp	#'C'
+	if	eq
+	 lda	#$C0
+	 sta	RTC_CTLA
+	 jsr	NewLine
+	 repeat
+	  lda	RTC_SEC0
+	  repeat
+	   cmp 	RTC_SEC0
+	  until ne
+	  lda	#'.'
+	  jsr	UartTx
+	 forever
+	endif
+		
 ;===============================================================================
 ; '?' - Display Help
 ;-------------------------------------------------------------------------------
@@ -746,17 +764,20 @@ BumpAddr:
 		clc
 		adc	ADDR_S+0
 		sta	ADDR_S+0
-		if	cs
-		 inc	ADDR_S+1
-		endif
+		lda	#0
+		adc	ADDR_S+1
+		sta	ADDR_S+1
 		rts
 		
-CheckEnd:
-		sec
-		lda	ADDR_S+0
-		sbc	ADDR_E+0
+CheckEnd:	
 		lda	ADDR_S+1
-		sbc	ADDR_E+1
+		cmp	ADDR_E+1
+		if 	cs
+		 if 	eq
+		  lda	ADDR_S+0
+		  cmp	ADDR_E+0
+		 endif
+		endif
 		rts
 
 ; Create a prompt string in the command buffer for the command in A using the
