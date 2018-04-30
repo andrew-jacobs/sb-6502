@@ -34,9 +34,11 @@ Once the PIC knows what type of microprocessor is installed it can generate the 
 
 Every 256 bytes a JMP $1000 instruction is generated to reset the program counter to a lower value. When all of the image has been transferred a JMP ($FFFC) instruction is generated to restart the microprocessor through the ROM's reset vector and the PIC firmware changes to normal operation mode.
 
-## Normal Operation
+### Normal Operation
 
 In normal operation the PIC becomes subservient to the microprocessor. It continues to generate the clock pulse but now it examines the control signals and address bus value to determine what data the microprocessor is trying to access. Most of the time the microprocessor will be accessing the SRAM memory chip but if the address is in the $FE00-$FE3F range then the address is interpreted as a virtual peripheral access.
+
+## Virtual Devices
 
 The PIC code implements three virtual peripherals, an 6551 ACIA, a DS1318 RTS and a 65SPI (a SPI controller implemented in a CPLD designed by members of the 6502.org web forum). The features of these three chips are mapped to the PIC's hardware.
 
@@ -75,9 +77,25 @@ In program code the following addresses should be used to access the peripheral 
 
 Accessing some of these registers takes an extended period of time during which the microprocessor experiences clock stretching.
 
+### ACIA
+
+TBC
+
+### SPI65
+
+TBC
+
+### DS1318
+
+The DS1318 is a relatively simple real time clock chip that counts elapsed time and can generate a periodic interrupt at a configurable rate. Once enabled the sub-second counter in the DS1318 is incremented 4096 times per second. If the seconds portion of this value is the same as the that held in the alarm then an interrupt can be raised.
+
+A real DS1318 chip has the ability to generate a square wave output at different frequencies. This feature has not been emulated (as there are no spare pins to output it through).
+
 ## Firmware
 
 The PIC contains three 4K ROM images, one for each supported processor type, containing a simple boot monitor that allows you to examine and change the memory, download S19 records and execute code.
+
+### Memory Usage
 
 The monitor resides in the top 4K of memory from $F000 to $FFFF. The code needed to provide interrupt driven serial I/O is held in the area above the I/O registers (e.g. $FE40-$FFFF) and provides a set of entry points for user programs to call.
 
@@ -100,23 +118,30 @@ The vectors are initialised to point at a default handlers. The IRQNV and NMINV 
 
 If you write your own program then you can use the zero page locations $00 to $DF and the main RAM area between $0300 to $EFFF without corrupting the monitor.
 
-As the monitor image is entirely held in RAM it can be completely overwritten (provided you disable interrupts while doing so) but it is probably more practical to preserve the interrupt handler code at $FE40-$FFFF, the associated vectors/buffers area at $0200 to $027F and the zero page temporary area at $FE-$FF (used by the 6502 and 65C02 code). Everything else is up for grabs. 
+As the monitor image is entirely held in RAM it can be completely overwritten (provided you disable interrupts while doing so) but it is probably more practical to preserve the interrupt handler code at $FE40-$FFFF, the associated vectors/buffers area at $0200 to $027F and the zero page temporary area at $FE-$FF (used by the 6502 and 65C02 code). Everything else is up for grabs.
 
-## Virtual Devices
+### Monitor Commands
 
-### ACIA
+When the firmware boots it configures the UART to work at 19200 baud, 8-bits with no parity and XON/XOFF flow control then prints a message showing the type of device detected and the version of the firmware. It then executes a BRK instruction to enter the monitor which displays the registers and prompts for user input.
 
-TBC
+    Boot 6502 [18.04]
+    PC=xxxx
+    .
 
-### SPI65
+The monitor supports a small set of commands, shown in the following table, sufficient to load more elaborate applications into memory and perform basic memory examination and changes.
 
-TBC
+Command | Description
+------------|-----------
+D xxxx [yyyy] | Disassmble the memory between addresses xxxx and yyyy
+M xxxx yyyy | Display the memory between addresses xxxx and yyyy in bytes
+F xxxx yyyy bb | File the memory between xxxx and yyyy with the byte bb
+G [xxxx] | Start program execution at xxxx or the last break location if not specified.
+R | Displays the values of all the registers
+S... | Interprets an S19 record and load it into memory
+W xxxx bb | Set memory address xxxx to byte bb. Automatically prompts for the next address
+? | Print a summary of all the commands
 
-### DS1318
-
-The DS1318 is a relatively simple real time clock chip that counts elapsed time and can generate a periodic interrupt. Once enabled the sub-second counter in the DS1318 is incremented 4096 times per seconds. If the seconds portion of this value is the same as the that held in the alarm then an interrupt can be raised.
-
-A real DS1318 chip has the ability to generate a square wave output at different frequencies. This feature has not been emulated.
+The easiest way to load a new application is to assemble your program code and produce an S19 output file. Then use the file transfer capabilities of your serial terminal application to send the S19 file to the SB-6502. If possible set an inter-line delay to give the SB-6502 time to process the line before the next is sent.
 
 ## Notes
 
