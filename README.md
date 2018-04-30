@@ -96,7 +96,7 @@ $0200 | NMIV | 65(C)02 Non-Maskable Interrupt Vector
 $0204 | IRQNV | 65C802 Native Interrupt Vector
 $0206 | NMINV | 65C802 Native Non-Maskable Vector
 
-The vectors are initialised to point at a default handlers. The BRKN and IRQN vectors are only used by the WDC 65C802 version of the monitor.
+The vectors are initialised to point at a default handlers. The IRQNV and NMINV vectors are only used by the WDC 65C802 version of the monitor.
 
 If you write your own program then you can use the zero page locations $00 to $DF and the main RAM area between $0300 to $EFFF without corrupting the monitor.
 
