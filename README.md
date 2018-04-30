@@ -91,10 +91,10 @@ The memory area from $0200 to $027F is used to hold some interrupt vectors, the 
 
 Address | Name | Description
 ------|--------|------------
-$0200 | BRKVE | 65(C)02 Break Vector
-$0200 | IRQVE | 65(C)02 Interrupt Vector
-$0204 | BRKVN | 65C802 Break Vector
-$0206  | IRQVN | 65C802 Interrupt Vector
+$0200 | IRQV | 65(C)02 Interrupt Vector
+$0200 | NMIV | 65(C)02 Non-Maskable Interrupt Vector
+$0204 | IRQNV | 65C802 Native Interrupt Vector
+$0206 | NMINV | 65C802 Native Non-Maskable Vector
 
 The vectors are initialised to point at a default handlers. The BRKN and IRQN vectors are only used by the WDC 65C802 version of the monitor.
 
