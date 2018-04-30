@@ -91,7 +91,7 @@ The memory area from $0200 to $027F is used to hold some interrupt vectors, the 
 
 Address | Name | Description
 ------|--------|------------
-$0200 | BRKVE | 65(2)02 Break Vector
+$0200 | BRKVE | 65(C)02 Break Vector
 $0200 | IRQVE | 65(C)02 Interrupt Vector
 $0204 | BRKVN | 65C802 Break Vector
 $0206  | IRQVN | 65C802 Interrupt Vector
