@@ -199,8 +199,6 @@ BUF_SIZE	.equ	58		; UART buffer sizes
 
 		.space	8		; Vectors
 
-; Communications buffer offsets
-
 RX_HEAD		.space	1		; UART recieve buffer offsets
 RX_TAIL		.space	1
 TX_HEAD		.space	1		; UART transmit buffer offsets
@@ -413,6 +411,7 @@ ShowRegisters:
 		jsr	ShowHex2
 		
 ;===============================================================================
+; Command Line
 ;-------------------------------------------------------------------------------
 
 NewCommand:
@@ -698,10 +697,10 @@ RptCommand:
 
 		cmp	#'W'
 		if	eq
-		 jsr	GetWord	; Get the target address
+		 jsr	GetWord		; Get the target address
 		 if	cc
 		  jsr	SetStartAddr	; Copy to start address
-		  jsr	GetByte	; Get the value
+		  jsr	GetByte		; Get the value
 		  if	cc
 		   ldy	#0		; Write to memory
 		   lda	TEMP+0
@@ -715,6 +714,7 @@ RptCommand:
 		 jmp	Error		; Handle syntax errors
 		endif
 		
+; Clock test. Remove
 	cmp	#'C'
 	if	eq
 	 lda	#$C0
@@ -859,15 +859,14 @@ SkipSpaces:
 		until 	ne
 		rts			; Done
 
-; Parse a word from the command buffer and store it at 0,Y. Return if the
+; Parse a word from the command buffer and store it in TEMP. Return if the
 ; carry set if there is a syntax error.
 
 GetWord:
 		ldy	#4		; Set maximim number of nybbles
 		bne	GetByte+2
 
-
-; Parse a word from the command buffer and store it at 0,Y. Return if the
+; Parse a word from the command buffer and store it in TEMP. Return if the
 ; carry set if there is a syntax error.
 
 GetByte:
@@ -909,8 +908,8 @@ GetByte:
 		clc			; Conversion sucessfull
 		rts
 
-;
-;
+; Try to parse a nybble from the command line. If not a valid hex digit then
+; return with the carry set.
 
 GetNybble:
 		jsr	IsHex		; Got a hex digit?
@@ -919,7 +918,7 @@ GetNybble:
 		 if	cs
 		  sbc	#7
 		 endif
-		 and	#$0f		; Skip out nybble
+		 and	#$0f		; Strip out nybble
 		 clc			; Done
 		 rts
 		endif
@@ -942,6 +941,8 @@ IsHex:
 		clc
 		rts
 		
+; Return with the carry set of the character in A is not printable.
+
 IsPrintable:
 		cmp	#' '
 		if	cs
@@ -955,6 +956,7 @@ IsPrintable:
 		rts
 		
 ;===============================================================================
+; Disassembly
 ;-------------------------------------------------------------------------------
 
 Disassemble:
@@ -1214,26 +1216,29 @@ Bar:
 		lda	#'|'
 		jmp	UartTx
 
+;===============================================================================
+; Strings
 ;-------------------------------------------------------------------------------
 
+; Output the string in the string table starting at the offset in X until a
+; null byte is reached.
 
 ShowString:
 		repeat
-		 lda	STRINGS,x
-		 if	eq
-		  rts
-		 endif
-		 jsr	UartTx
-		 inx
-		forever
+		 lda	STRINGS,x	; Fetch the next character
+		 break	eq		; Reached the end?
+		 jsr	UartTx		; No, display it
+		 inx			; Bump the index
+		forever		
+		rts			; Done.
 
 STRINGS:
 TTL_STR		.equ	.-STRINGS
 		.if	__6502__
-		.byte	CR,LF,"Boot 6502 [18.04]"
+		.byte	CR,LF,"Boot 6502 [18.05]"
 		.endif
 		.if	__65C02__
-		.byte	CR,LF,"Boot 65C02 [18.04]"
+		.byte	CR,LF,"Boot 65C02 [18.05]"
 		.endif
 		.byte	0
 PC_STR		.equ	.-STRINGS

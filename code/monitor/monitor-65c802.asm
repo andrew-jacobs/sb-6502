@@ -217,20 +217,19 @@ CMD_LEN		.space	1			; Command buffer length
 ADDR_S		.space	2
 ADDR_E		.space	2
 
-;TEMP		.SPACE	2
-;COUNT		.SPACE	1
-
-		
+TEMP		.space	2
+COUNT		.space	1
+	
 ;===============================================================================
 ; UART Buffers
 ;-------------------------------------------------------------------------------
 		
+BUF_SIZE	.equ	58
+
 		.bss
 		.org	$0200
 		
 		.space	8		; Vectors
-
-BUF_SIZE	.equ	58
 
 RX_HEAD		.space	1		; UART recieve buffer offsets
 RX_TAIL		.space	1
@@ -371,7 +370,7 @@ RESET:
 		 lda	VECTORS,x	; Setup the vectors
 		 sta	IRQV,x
 		 inx
-		 cmp	#8
+		 cpx	#8
 		until eq
 		
                 lda     #%00011111	; 8 bits, 1 stop bit, 19200 baud
@@ -392,10 +391,10 @@ RESET:
 
 ;-------------------------------------------------------------------------------
 
-VECTORS:	.space	IRQE
-		.space	NMIE
-		.space	IRQN
-		.space	NMIN
+VECTORS:	.word	IRQE
+		.word	NMIE
+		.word	IRQN
+		.word	NMIN
 		
 ;===============================================================================
 ; Break Handler
@@ -432,9 +431,10 @@ BRKN:
 		tsx			; Save SP
 		stx	SP_REG
 		
-		cli
+		cli			; Allow interrupts
 		
 ;===============================================================================
+; Show Registers
 ;-------------------------------------------------------------------------------
 
 		.longa	off
@@ -540,19 +540,19 @@ RptCommand:
 		 break	eq
 		 
 		 cmp 	#ESC		; Cancel input?
-		 if	EQ
+		 if	eq
 		  beq	NewCommand	; Yes
 		 endif
 
 		 cmp	#DEL		; Turn a delete
-		 if eq
+		 if 	eq
 		  lda	#BS		; .. into a backspace
 		 endif
 		 
 		 cmp	#BS		; Handle backspace
-		 if eq
+		 if 	eq
 		  cpx   #0
-		  if ne
+		  if 	ne
 		   pha
 		   jsr	UartTx
 		   jsr	Space
@@ -564,7 +564,7 @@ RptCommand:
 		 endif
 		 
 		 cmp	#' '		; Beep if non-printable
-		 if cc
+		 if 	cc
 		  lda	#BEL
 		  jsr	UartTx
 		  continue
@@ -590,15 +590,23 @@ RptCommand:
 ;-------------------------------------------------------------------------------
 
 		cmp	#'D'
-		if eq
+		if 	eq
 		endif
 	
+;===============================================================================
+; 'F' - Fill
+;-------------------------------------------------------------------------------
+
+		cmp	#'F'
+		if	eq
+		endif
+		
 ;===============================================================================
 ; 'G' - Go
 ;-------------------------------------------------------------------------------
 
 		cmp	#'G'
-		if eq
+		if 	eq
 		endif
 		
 ;===============================================================================
@@ -627,7 +635,30 @@ RptCommand:
 		endif
 		
 ;===============================================================================
-; Display Help/Bad Command
+; 'W' - Write memory
+;-------------------------------------------------------------------------------
+
+		cmp	#'W'
+		if	eq
+		 jsr	GetWord	;	 Get the target address
+		 if	cc
+		  jsr	SetStartAddr	; Copy to start address
+		  jsr	GetByte		; Get the value
+		  if	cc
+		   ldy	#0		; Write to memory
+		   lda	TEMP+0
+		   sta	(ADDR_S),Y
+		   lda	#1		; Increment address
+		   jsr	BumpAddr
+		   lda	#'W'		; Create prompt for next byte
+		   jmp	SetPrompt
+		  endif
+		 endif
+		 jmp	Error		; Handle syntax errors
+		endif
+		
+;===============================================================================
+; '?' - Display Help
 ;-------------------------------------------------------------------------------
 
 		cmp 	#'?'
@@ -642,11 +673,87 @@ Error:		 ldx	#ERR_STR
 ;===============================================================================
 ;-------------------------------------------------------------------------------		
 		
-	
-	
-	
-	
+		.longa	off
+SetStartAddr:
+		lda	TEMP+0
+		sta	ADDR_S+0
+		lda	TEMP+1
+		sta	ADDR_S+1
+		rts
 		
+		.longa	off
+SetEndAddr:
+		lda	TEMP+0
+		sta	ADDR_E+0
+		lda	TEMP+1
+		sta	ADDR_E+1
+		rts
+		
+		.longa	off
+BumpAddr:
+		inc	ADDR_S+0
+		if	eq
+		 inc	ADDR_S+1
+		endif
+		rts
+	
+		.longa	off
+CheckEnd:
+		lda	ADDR_S+1
+		cmp	ADDR_E+1
+		if 	cs
+		 if 	eq
+		  lda	ADDR_S+0
+		  cmp	ADDR_E+0
+		 endif
+		endif
+		rts
+		
+; Create a prompt string in the command buffer for the command in A using the
+; current value of the starting address.
+
+		.longa	off
+		.longi	off
+SetPrompt:
+		ldx	#0		; Clear buffer and add command letter
+		jsr	AppendChar
+		lda	#' '		; Then a space
+		jsr	AppendChar
+		
+		lda	ADDR_S+1	; Followed by the address
+		jsr	AppendHex2
+		lda	ADDR_S+0
+		jsr	AppendHex2
+		lda	#' '		; And another space
+		jsr	AppendChar
+		jmp	RptCommand	; Then output it
+
+; Convert the byte in A into hexadecimal digits and append to the command buffer.		
+		
+		.longa	off
+		.longi	off
+AppendHex2:
+		pha
+		lsr	a
+		lsr	a
+		lsr	a
+		lsr	a
+		jsr	AppendHex
+		pla
+AppendHex:
+		jsr	ToHex
+
+; Append the character in A to the command buffer to create the next prompt
+; string.
+
+		.longa	off
+		.longi	off
+AppendChar:
+		sta	COMMAND,x
+		inx
+		stx	CMD_LEN
+		rts
+	
 ;===============================================================================
 ; Parsing Utilities
 ;-------------------------------------------------------------------------------
@@ -693,9 +800,115 @@ SkipSpaces:
 		until ne
 		rts			; Done
 
-;
+; Parse a word from the command buffer and store it at 0,Y. Return if the
+; carry set if there is a syntax error.
+
+		.longa	off
+		.longi	off
+GetWord:
+		ldy	#4		; Set maximim number of nybbles
+		bne	GetByte+2
+
+; Parse a word from the command buffer and store it at 0,Y. Return if the
+; carry set if there is a syntax error.
+
+		.longa	off
+		.longi	off
+GetByte:
+		ldy	#2		; Set maximum number of nybble
+		sty	COUNT
+		
+		stz	TEMP+0		; Clear conversion area
+		stz	TEMP+1
+
+		jsr	SkipSpaces	; Fetch first character
+		jsr	GetNybble	; And try to convert
+		if	cs
+		 rts			; Syntax error
+		endif
+		repeat
+		 asl	TEMP+0		; Fold into the result
+		 rol	TEMP+1
+		 asl	TEMP+0
+		 rol	TEMP+1
+		 asl	TEMP+0
+		 rol	TEMP+1
+		 asl	TEMP+0
+		 rol	TEMP+1
+		 ora	TEMP+0
+		 sta	TEMP+0
+		 
+		 dec	COUNT		; Reach maximum length?
+		 break	eq
+		 
+		 jsr	NextChar	; Try for another nybble
+		 jsr	GetNybble
+		until 	cs		
+		clc			; Conversion sucessfull
+		rts
+
+; Try to parse a nybble from the command line. If not a valid hex digit then
+; return with the carry set.
+
+		.longa	off
+		.longi	off
+GetNybble:
+		jsr	IsHex		; Got a hex digit?
+		if	cs
+		 cmp	#'A'		; Handle letters
+		 if	cs
+		  sbc	#7
+		 endif
+		 and	#$0f		; Strip out nybble
+		 clc			; Done
+		 rts
+		endif
+		sec			; Set carry -- not hex
+		rts
+
+; Return with the carry set of the character in A is a digit or 'A' thru 'F'.
+
+IsHex:
+		cmp	#'9'+1
+		if 	cc
+		 cmp	#'0'
+		 rts
+		endif
+		cmp	#'F'+1
+		if	cc
+		 cmp	#'A'
+		 rts
+		endif
+		clc
+		rts
+		
+IsPrintable:
+		cmp	#' '
+		if	cs
+		 cmp	#DEL
+		 if	CC
+		  sec
+		  rts
+		 endif
+		endif
+		clc
+		rts
+
+;===============================================================================
+; Disassembly
+;-------------------------------------------------------------------------------
+
+Disassemble:
+		rts
 
 
+
+;===============================================================================
+; Display Utilities
+;-------------------------------------------------------------------------------
+
+; Show the value of the accumulator with brackets inserted to show its current
+; size based on the M bit.
 
 		.longa	off
 ShowAcc:
@@ -714,6 +927,9 @@ ShowLong:
 		jsr	ShowHex2
 		jmp	CloseBracket
 		
+; Show the value of the accumulator with brackets inserted to show its current
+; size based on the X bit.
+
 		.longa	off
 ShowReg:
 		pha
@@ -733,12 +949,18 @@ ShowShort:
 
 ;-------------------------------------------------------------------------------
 
+; Display the byte in A as four hexadecimal digits. The values in A & Y are
+; destroyed.
+
 		.longa	off
 ShowHex4:
 		xba			; Recover the MS byte
 		jsr	ShowHex2	; Print it
 		xba			; Recover the LS byte
 		
+; Display the byte in A as two hexadecimal digits. The values in A & Y are
+; destroyed.
+
 		.longa	off
 ShowHex2:
 		pha			; Save the data byte
@@ -746,42 +968,50 @@ ShowHex2:
 		lsr	a
 		lsr	a
 		lsr	a
-		jsr	ShowHex1	; Display it
+		jsr	ShowHex 	; Display it
 		pla			; Recover the lo nybble
 
+; Display the lo nybble of A as a hexadecimal digit. The values in A & Y are
+; destroyed.
 		.longa	off
-ShowHex1:
+ShowHex:
+		jsr	ToHex
+		jmp	UartTx
+		
+; Convert the lo nybble of A to a hexadecimal digit.
+		
+ToHex:
 		and	#$0f		; Extract the lo nybble
-		ora	#'0'		; And convert to ASCII
-		cmp	#'9'+1		; Not a digit?
-		if cs
-		 adc	#6		; Yes, make it a letter
-		endif
-CharOut:	jmp	UartTx		; Then print it.
+		sed			; Convert to ASCII using BCD
+		clc
+		adc	#$90
+		adc	#$40
+		cld
+		rts			; Done
 
 ;-------------------------------------------------------------------------------		
 
 		.longa	off
 Space:
 		lda	#' '
-		bne	CharOut
+		jmp	UartTx
 		
 		.longa	off
 OpenBracket:
 		lda	#'['
-		bne	CharOut
+		jmp	UartTx
 		
 		.longa	off
 CloseBracket:
 		lda	#']'
-		bne	CharOut
+		jmp	UartTx
 	
 ;===============================================================================
 ; Strings
 ;-------------------------------------------------------------------------------
 
-
-
+; Output the string in the string table starting at the offset in X until a
+; null byte is reached.
 
 		.longa	off		; A must be 8-bit. X can be either
 ShowString:
@@ -793,12 +1023,9 @@ ShowString:
 		forever		
 		rts			; Done.
 		
-		
-;-------------------------------------------------------------------------------
-
-STRINGS		.equ	$
+STRINGS:
 TTL_STR		.equ	$-STRINGS
-		.byte	"Boot 65C802 [18.04]"
+		.byte	"Boot 65C802 [18.05]"
 		.byte	0
 PC_STR		.equ	$-STRINGS
 		.byte	"PC=",0
@@ -820,6 +1047,7 @@ ERR_STR		.equ	$-STRINGS
 		.byte	CR,LF,"?",0
 HLP_STR		.equ	$-STRINGS
 		.byte 	CR,LF,"D xxxx yyyy\t\tDisassemble"
+		.byte	CR,LF,"F xxxx yyyy bb\t\tFill Memory"
 		.byte	CR,LF,"G [xxxx]\t\tGoto"
 		.byte	CR,LF,"M xxxx yyyy\t\tDisplay Memory"
 		.byte	CR,LF,"R\t\t\tDisplay Registers"
@@ -837,136 +1065,72 @@ BITS		.byte	$01,$02,$04,$08,$10,$20,$40,$80
 		.org	$fc00
 
 OPCODES:
-		.byte	OP_BRK,OP_ORA,OP_COP,OP_ORA	; 00
-		.byte	OP_TSB,OP_ORA,OP_ASL,OP_ORA
-		.byte	OP_PHP,OP_ORA,OP_ASL,OP_PHD
-		.byte	OP_TSB,OP_ORA,OP_ASL,OP_ORA
-		.byte	OP_BPL,OP_ORA,OP_ORA,OP_ORA	; 10
-		.byte	OP_TRB,OP_ORA,OP_ASL,OP_ORA
-		.byte	OP_CLC,OP_ORA,OP_INC,OP_TCS
-		.byte	OP_TRB,OP_ORA,OP_ASL,OP_ORA
-		.byte	OP_JSR,OP_AND,OP_JSL,OP_AND	; 20
-		.byte	OP_BIT,OP_AND,OP_ROL,OP_AND
-		.byte	OP_PLP,OP_AND,OP_ROL,OP_PLD
-		.byte	OP_BIT,OP_AND,OP_ROL,OP_AND
-		.byte	OP_BMI,OP_AND,OP_AND,OP_AND	; 30
-		.byte	OP_BIT,OP_AND,OP_ROL,OP_AND
-		.byte	OP_SEC,OP_AND,OP_DEC,OP_TSC
-		.byte	OP_BIT,OP_AND,OP_ROL,OP_AND
-		.byte	OP_rti,OP_EOR,OP_WDM,OP_EOR	; 40
-		.byte	OP_MVP,OP_EOR,OP_LSR,OP_EOR
-		.byte	OP_PHA,OP_EOR,OP_LSR,OP_PHK
-		.byte	OP_JMP,OP_EOR,OP_LSR,OP_EOR
-		.byte	OP_BVC,OP_EOR,OP_EOR,OP_EOR	; 50
-		.byte	OP_MVN,OP_EOR,OP_LSR,OP_EOR
-		.byte	OP_CLI,OP_EOR,OP_PHY,OP_TCD
-		.byte	OP_JMP,OP_EOR,OP_LSR,OP_EOR
-		.byte	OP_RTS,OP_ADC,OP_PER,OP_ADC	; 60
-		.byte	OP_STZ,OP_ADC,OP_ROR,OP_ADC
-		.byte	OP_PLA,OP_ADC,OP_ROR,OP_RTL
-		.byte	OP_JMP,OP_ADC,OP_ROR,OP_ADC
-		.byte	OP_BVS,OP_ADC,OP_ADC,OP_ADC	; 70
-		.byte	OP_STZ,OP_ADC,OP_ROR,OP_ADC
-		.byte	OP_SEI,OP_ADC,OP_PLY,OP_TDC
-		.byte	OP_JMP,OP_ADC,OP_ROR,OP_ADC
-		.byte	OP_BRA,OP_STA,OP_BRL,OP_STA	; 80
-		.byte	OP_STY,OP_STA,OP_STX,OP_STA
-		.byte	OP_DEY,OP_BIT,OP_TXA,OP_PHB
-		.byte	OP_STY,OP_STA,OP_STX,OP_STA
-		.byte	OP_BCC,OP_STA,OP_STA,OP_STA	; 90
-		.byte	OP_STY,OP_STA,OP_STX,OP_STA
-		.byte	OP_TYA,OP_STA,OP_TXS,OP_TXY
-		.byte	OP_STZ,OP_STA,OP_STZ,OP_STA
-		.byte	OP_LDY,OP_LDA,OP_LDX,OP_LDA	; A0
-		.byte	OP_LDY,OP_LDA,OP_LDX,OP_LDA
-		.byte	OP_TAY,OP_LDA,OP_TAX,OP_PLB
-		.byte	OP_LDY,OP_LDA,OP_LDX,OP_LDA
-		.byte	OP_BCS,OP_LDA,OP_LDA,OP_LDY	; B0
-		.byte	OP_LDA,OP_LDY,OP_LDX,OP_LDA
-		.byte	OP_CLV,OP_LDA,OP_TSX,OP_TYX
-		.byte	OP_LDY,OP_LDA,OP_LDX,OP_LDA
-		.byte	OP_CPY,OP_CMP,OP_REP,OP_CMP	; C0
-		.byte	OP_CPY,OP_CMP,OP_DEC,OP_CMP
-		.byte	OP_INY,OP_CMP,OP_DEX,OP_WAI
-		.byte	OP_CPY,OP_CMP,OP_DEC,OP_CMP
-		.byte	OP_BNE,OP_CMP,OP_CMP,OP_CMP	; D0
-		.byte	OP_PEI,OP_CMP,OP_DEC,OP_CMP
-		.byte	OP_CLD,OP_CMP,OP_PHX,OP_STP
-		.byte	OP_JML,OP_CMP,OP_DEC,OP_CMP
-		.byte	OP_CPX,OP_SBC,OP_SEP,OP_SBC	; E0
-		.byte	OP_CPX,OP_SBC,OP_INC,OP_SBC
-		.byte	OP_INX,OP_SBC,OP_NOP,OP_XBA
-		.byte	OP_CPX,OP_SBC,OP_INC,OP_SBC
-		.byte	OP_BEQ,OP_SBC,OP_SBC,OP_SBC	; F0
-		.byte	OP_PEA,OP_SBC,OP_INC,OP_SBC
-		.byte	OP_SED,OP_SBC,OP_PLX,OP_XCE
-		.byte	OP_JSR,OP_SBC,OP_INC,OP_SBC
+		.byte	OP_BRK,OP_ORA,OP_COP,OP_ORA,OP_TSB,OP_ORA,OP_ASL,OP_ORA	; 00
+		.byte	OP_PHP,OP_ORA,OP_ASL,OP_PHD,OP_TSB,OP_ORA,OP_ASL,OP_ORA
+		.byte	OP_BPL,OP_ORA,OP_ORA,OP_ORA,OP_TRB,OP_ORA,OP_ASL,OP_ORA	; 10
+		.byte	OP_CLC,OP_ORA,OP_INC,OP_TCS,OP_TRB,OP_ORA,OP_ASL,OP_ORA
+		.byte	OP_JSR,OP_AND,OP_JSL,OP_AND,OP_BIT,OP_AND,OP_ROL,OP_AND	; 20
+		.byte	OP_PLP,OP_AND,OP_ROL,OP_PLD,OP_BIT,OP_AND,OP_ROL,OP_AND
+		.byte	OP_BMI,OP_AND,OP_AND,OP_AND,OP_BIT,OP_AND,OP_ROL,OP_AND	; 30
+		.byte	OP_SEC,OP_AND,OP_DEC,OP_TSC,OP_BIT,OP_AND,OP_ROL,OP_AND
+		.byte	OP_rti,OP_EOR,OP_WDM,OP_EOR,OP_MVP,OP_EOR,OP_LSR,OP_EOR	; 40
+		.byte	OP_PHA,OP_EOR,OP_LSR,OP_PHK,OP_JMP,OP_EOR,OP_LSR,OP_EOR
+		.byte	OP_BVC,OP_EOR,OP_EOR,OP_EOR,OP_MVN,OP_EOR,OP_LSR,OP_EOR	; 50
+		.byte	OP_CLI,OP_EOR,OP_PHY,OP_TCD,OP_JMP,OP_EOR,OP_LSR,OP_EOR
+		.byte	OP_RTS,OP_ADC,OP_PER,OP_ADC,OP_STZ,OP_ADC,OP_ROR,OP_ADC	; 60
+		.byte	OP_PLA,OP_ADC,OP_ROR,OP_RTL,OP_JMP,OP_ADC,OP_ROR,OP_ADC
+		.byte	OP_BVS,OP_ADC,OP_ADC,OP_ADC,OP_STZ,OP_ADC,OP_ROR,OP_ADC	; 70
+		.byte	OP_SEI,OP_ADC,OP_PLY,OP_TDC,OP_JMP,OP_ADC,OP_ROR,OP_ADC
+		.byte	OP_BRA,OP_STA,OP_BRL,OP_STA,OP_STY,OP_STA,OP_STX,OP_STA	; 80
+		.byte	OP_DEY,OP_BIT,OP_TXA,OP_PHB,OP_STY,OP_STA,OP_STX,OP_STA
+		.byte	OP_BCC,OP_STA,OP_STA,OP_STA,OP_STY,OP_STA,OP_STX,OP_STA	; 90
+		.byte	OP_TYA,OP_STA,OP_TXS,OP_TXY,OP_STZ,OP_STA,OP_STZ,OP_STA
+		.byte	OP_LDY,OP_LDA,OP_LDX,OP_LDA,OP_LDY,OP_LDA,OP_LDX,OP_LDA	; A0
+		.byte	OP_TAY,OP_LDA,OP_TAX,OP_PLB,OP_LDY,OP_LDA,OP_LDX,OP_LDA
+		.byte	OP_BCS,OP_LDA,OP_LDA,OP_LDY,OP_LDA,OP_LDY,OP_LDX,OP_LDA	; B0
+		.byte	OP_CLV,OP_LDA,OP_TSX,OP_TYX,OP_LDY,OP_LDA,OP_LDX,OP_LDA
+		.byte	OP_CPY,OP_CMP,OP_REP,OP_CMP,OP_CPY,OP_CMP,OP_DEC,OP_CMP	; C0
+		.byte	OP_INY,OP_CMP,OP_DEX,OP_WAI,OP_CPY,OP_CMP,OP_DEC,OP_CMP
+		.byte	OP_BNE,OP_CMP,OP_CMP,OP_CMP,OP_PEI,OP_CMP,OP_DEC,OP_CMP	; D0
+		.byte	OP_CLD,OP_CMP,OP_PHX,OP_STP,OP_JML,OP_CMP,OP_DEC,OP_CMP
+		.byte	OP_CPX,OP_SBC,OP_SEP,OP_SBC,OP_CPX,OP_SBC,OP_INC,OP_SBC	; E0
+		.byte	OP_INX,OP_SBC,OP_NOP,OP_XBA,OP_CPX,OP_SBC,OP_INC,OP_SBC
+		.byte	OP_BEQ,OP_SBC,OP_SBC,OP_SBC,OP_PEA,OP_SBC,OP_INC,OP_SBC	; F0
+		.byte	OP_SED,OP_SBC,OP_PLX,OP_XCE,OP_JSR,OP_SBC,OP_INC,OP_SBC	
 
 MODES:
-		.byte	MO_INT,MO_DIX,MO_INT,MO_STK	; 00
-		.byte	MO_DPG,MO_DPG,MO_DPG,MO_DLI
-		.byte	MO_IMP,MO_IMM,MO_ACC,MO_IMP
-		.byte	MO_ABS,MO_ABS,MO_ABS,MO_ALG
-		.byte	MO_REL,MO_DIY,MO_DIN,MO_SKY	; 10
-		.byte	MO_DPG,MO_DPX,MO_DPX,MO_DLY
-		.byte	MO_IMP,MO_ABY,MO_ACC,MO_IMP
-		.byte	MO_ABS,MO_ABX,MO_ABX,MO_ALX
-		.byte	MO_ABS,MO_DIX,MO_ALG,MO_STK	; 20
-		.byte	MO_DPG,MO_DPG,MO_DPG,MO_DLI
-		.byte	MO_IMP,MO_IMM,MO_ACC,MO_IMP
-		.byte	MO_ABS,MO_ABS,MO_ABS,MO_ALG
-		.byte	MO_REL,MO_DIY,MO_DIN,MO_SKY	; 30
-		.byte	MO_DPX,MO_DPX,MO_DPX,MO_DLY
-		.byte	MO_IMP,MO_ABY,MO_ACC,MO_IMP
-		.byte	MO_ABX,MO_ABX,MO_ABX,MO_ALX
-		.byte	MO_IMP,MO_DIX,MO_INT,MO_STK	; 40
-		.byte	MO_MOV,MO_DPG,MO_DPG,MO_DLI
-		.byte	MO_IMP,MO_IMM,MO_ACC,MO_IMP
-		.byte	MO_ABS,MO_ABS,MO_ABS,MO_ALG
-		.byte	MO_REL,MO_DIY,MO_DIN,MO_SKY	; 50
-		.byte	MO_MOV,MO_DPX,MO_DPX,MO_DLY
-		.byte	MO_IMP,MO_ABY,MO_IMP,MO_IMP
-		.byte	MO_ALG,MO_ABX,MO_ABX,MO_ALX
-		.byte	MO_IMP,MO_DIX,MO_IMP,MO_STK	; 60
-		.byte	MO_DPG,MO_DPG,MO_DPG,MO_DLI
-		.byte	MO_IMP,MO_IMM,MO_ACC,MO_IMP
-		.byte	MO_AIN,MO_ABS,MO_ABS,MO_ALG
-		.byte	MO_REL,MO_DIY,MO_DIN,MO_SKY	; 70
-		.byte	MO_DPX,MO_DPX,MO_DPX,MO_DLY
-		.byte	MO_IMP,MO_ABY,MO_IMP,MO_IMP
-		.byte	MO_AIX,MO_ABX,MO_ABX,MO_ALX
-		.byte	MO_REL,MO_DIX,MO_RLG,MO_STK	; 80
-		.byte	MO_DPG,MO_DPG,MO_DPG,MO_DLI
-		.byte	MO_IMP,MO_IMM,MO_IMP,MO_IMP
-		.byte	MO_ABS,MO_ABS,MO_ABS,MO_ALG
-		.byte	MO_REL,MO_DIY,MO_DIN,MO_SKY	; 90
-		.byte	MO_DPX,MO_DPX,MO_DPY,MO_DLY
-		.byte	MO_IMP,MO_ABY,MO_IMP,MO_IMP
-		.byte	MO_ABS,MO_ABX,MO_ABX,MO_ALX
-		.byte	MO_IMX,MO_DIX,MO_IMX,MO_STK	; A0
-		.byte	MO_DPG,MO_DPG,MO_DPG,MO_DLI
-		.byte	MO_IMP,MO_IMM,MO_IMP,MO_IMP
-		.byte	MO_ABS,MO_ABS,MO_ABS,MO_ALG
-		.byte	MO_REL,MO_DIY,MO_DIN,MO_SKY	; B0
-		.byte	MO_DPX,MO_DPX,MO_DPY,MO_DLY
-		.byte	MO_IMP,MO_ABY,MO_IMP,MO_IMP
-		.byte	MO_ABX,MO_ABX,MO_ABY,MO_ALX
-		.byte	MO_IMX,MO_DIX,MO_INT,MO_STK	; C0
-		.byte	MO_DPG,MO_DPG,MO_DPG,MO_DLI
-		.byte	MO_IMP,MO_IMM,MO_IMP,MO_IMP
-		.byte	MO_ABS,MO_ABS,MO_ABS,MO_ALG
-		.byte	MO_REL,MO_DIY,MO_DIN,MO_SKY	; D0
-		.byte	MO_IMP,MO_DPX,MO_DPX,MO_DLY
-		.byte	MO_IMP,MO_ABY,MO_IMP,MO_IMP
-		.byte	MO_AIN,MO_ABX,MO_ABX,MO_ALX
-		.byte	MO_IMX,MO_DIX,MO_INT,MO_STK	; E0
-		.byte	MO_DPG,MO_DPG,MO_DPG,MO_DLI
-		.byte	MO_IMP,MO_IMM,MO_IMP,MO_IMP
-		.byte	MO_ABS,MO_ABS,MO_ABS,MO_ALG
-		.byte	MO_REL,MO_DIY,MO_DIN,MO_SKY	; F0
-		.byte	MO_IMP,MO_DPX,MO_DPX,MO_DLY
-		.byte	MO_IMP,MO_ABY,MO_IMP,MO_IMP
-		.byte	MO_AIX,MO_ABX,MO_ABX,MO_ALX
+		.byte	MO_INT,MO_DIX,MO_INT,MO_STK,MO_DPG,MO_DPG,MO_DPG,MO_DLI	; 00
+		.byte	MO_IMP,MO_IMM,MO_ACC,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_ALG	
+		.byte	MO_REL,MO_DIY,MO_DIN,MO_SKY,MO_DPG,MO_DPX,MO_DPX,MO_DLY	; 10
+		.byte	MO_IMP,MO_ABY,MO_ACC,MO_IMP,MO_ABS,MO_ABX,MO_ABX,MO_ALX	
+		.byte	MO_ABS,MO_DIX,MO_ALG,MO_STK,MO_DPG,MO_DPG,MO_DPG,MO_DLI	; 20
+		.byte	MO_IMP,MO_IMM,MO_ACC,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_ALG	
+		.byte	MO_REL,MO_DIY,MO_DIN,MO_SKY,MO_DPX,MO_DPX,MO_DPX,MO_DLY	; 30	
+		.byte	MO_IMP,MO_ABY,MO_ACC,MO_IMP,MO_ABX,MO_ABX,MO_ABX,MO_ALX
+		.byte	MO_IMP,MO_DIX,MO_INT,MO_STK,MO_MOV,MO_DPG,MO_DPG,MO_DLI	; 40
+		.byte	MO_IMP,MO_IMM,MO_ACC,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_ALG
+		.byte	MO_REL,MO_DIY,MO_DIN,MO_SKY,MO_MOV,MO_DPX,MO_DPX,MO_DLY	; 50
+		.byte	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_ALG,MO_ABX,MO_ABX,MO_ALX
+		.byte	MO_IMP,MO_DIX,MO_IMP,MO_STK,MO_DPG,MO_DPG,MO_DPG,MO_DLI	; 60
+		.byte	MO_IMP,MO_IMM,MO_ACC,MO_IMP,MO_AIN,MO_ABS,MO_ABS,MO_ALG
+		.byte	MO_REL,MO_DIY,MO_DIN,MO_SKY,MO_DPX,MO_DPX,MO_DPX,MO_DLY	; 70
+		.byte	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_AIX,MO_ABX,MO_ABX,MO_ALX
+		.byte	MO_REL,MO_DIX,MO_RLG,MO_STK,MO_DPG,MO_DPG,MO_DPG,MO_DLI	; 80
+		.byte	MO_IMP,MO_IMM,MO_IMP,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_ALG
+		.byte	MO_REL,MO_DIY,MO_DIN,MO_SKY,MO_DPX,MO_DPX,MO_DPY,MO_DLY	; 90
+		.byte	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_ABS,MO_ABX,MO_ABX,MO_ALX
+		.byte	MO_IMX,MO_DIX,MO_IMX,MO_STK,MO_DPG,MO_DPG,MO_DPG,MO_DLI	; A0
+		.byte	MO_IMP,MO_IMM,MO_IMP,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_ALG
+		.byte	MO_REL,MO_DIY,MO_DIN,MO_SKY,MO_DPX,MO_DPX,MO_DPY,MO_DLY	; B0
+		.byte	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_ABX,MO_ABX,MO_ABY,MO_ALX
+		.byte	MO_IMX,MO_DIX,MO_INT,MO_STK,MO_DPG,MO_DPG,MO_DPG,MO_DLI	; C0
+		.byte	MO_IMP,MO_IMM,MO_IMP,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_ALG
+		.byte	MO_REL,MO_DIY,MO_DIN,MO_SKY,MO_IMP,MO_DPX,MO_DPX,MO_DLY	; D0
+		.byte	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_AIN,MO_ABX,MO_ABX,MO_ALX
+		.byte	MO_IMX,MO_DIX,MO_INT,MO_STK,MO_DPG,MO_DPG,MO_DPG,MO_DLI	; E0
+		.byte	MO_IMP,MO_IMM,MO_IMP,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_ALG
+		.byte	MO_REL,MO_DIY,MO_DIN,MO_SKY,MO_IMP,MO_DPX,MO_DPX,MO_DLY	; F0
+		.byte	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_AIX,MO_ABX,MO_ABX,MO_ALX
 
 ;===============================================================================
 ; Virtual Hardware Area
