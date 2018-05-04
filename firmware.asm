@@ -346,6 +346,7 @@ BumpTime:
 ; Power On Reset
 ;-------------------------------------------------------------------------------
 
+		code
 PowerOnReset:
                 banksel ANSELA
                 clrf    ANSELA                  ; Turn analog off
@@ -1576,20 +1577,48 @@ UartTx:
                 return
 
                 endif
-              
+		              
 ;===============================================================================
 ; Boot ROM Images
 ;-------------------------------------------------------------------------------
+; Each device has its own boot ROM image which is up to 16K in size. The
+; default images included in this code are only 4K so each section is padded
+; to 16K.
+;
+; The storage areas must be aligned with eraseable page boundaries in the
+; PICs program memory area.
 
-.BootROM        code_pack
+.ROM6502        code_pack   h'004000'
 
 ROM6502:
                 include "boot-6502.asm"
+		res	.12 * .1024
+
+.ROM65C02       code_pack   h'008000'
 
 ROM65C02:
                 include "boot-65c02.asm"
+		res	.12 * .1024
+
+.ROM65C802      code_pack   h'00c000'
 
 ROM65C802:
                 include "boot-65c802.asm"
+		res	.12 * .1024
+
+;===============================================================================
+; EEPROM
+;-------------------------------------------------------------------------------
+		
+.EEPROM		code_pack   h'f00000'
+		
+		de	h'00',h'f0'
+		de	h'00',h'10'
+		
+		de	h'00',h'f0'
+		de	h'00',h'10'
+
+		de	h'00',h'f0'
+		de	h'00',h'10'
 
                 end
