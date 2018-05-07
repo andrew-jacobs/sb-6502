@@ -95,7 +95,7 @@ TRACE_DATA      macro
 ;-------------------------------------------------------------------------------
 
 BOOT_ADDR       equ     h'1000'                 ; Dummy reset address
-ROM_BASE        equ     h'f000'                 ; Base address of ROM image
+ROM_BASE        equ     h'c000'                 ; Base address of ROM image
 
 ; ASCII Control Characters
        
@@ -188,9 +188,13 @@ TMR2_PR         equ     FOSC / (.4 * TMR2_HZ * TMR2_PRE * TMR2_POST) - .1
 
 EXTRA_CYCLE     res     .1                      ; 'ff' if JMP (aa) is longer
 CAPTURE         res     .1
+	 
+ROML		res	.1			; Base address of ROM image
+ROMH		res	.1
+ROMU		res	.1
          
-ADDRL           res     .1                      ; Address next ROM byte to force
-ADDRH           res     .1                      ; .. load
+ADDRL           res     .1                      ; Address of next ROM byte to
+ADDRH           res     .1                      ; .. force load
 
 SCRATCH         res     .1                      ; Scratch area
 
@@ -233,6 +237,12 @@ RTC_STAT        res     .1
 	
 RTC_PERIOD	res	.5			; Periodic interrupt period
 RTC_COUNT	res	.5			; Periodic interrupt count
+	
+ROM_OFF0	res	.1			; Current offset
+ROM_OFF1	res	.1
+	
+ROM_LK0		res	.1			; Unlock sequence
+ROM_LK1		res	.1
 
 ;===============================================================================
 ; Reset Vector
@@ -292,6 +302,9 @@ BumpTime:
                 movwf   RTC_SUB1R
                 btfsc   RTC_CTLA,.7
                 movwf   RTC_SUB1
+		
+		btfss	STATUS,C	; Exit early if no change to
+		retfie	FAST		; .. the seconds
                 
                 movlw   .0
                 addwfc  RTC_SEC0R,W
@@ -591,33 +604,40 @@ NoReread:
                 bz      W65C802
  
 R6502:
-                movlw   low ROM6502             ; Point table pointer at ROM
-                movwf   TBLPTRL
+                movlw   low ROM6502             ; Fix 6502 ROM address
+                movwf   ROML
                 movlw   high ROM6502
-                movwf   TBLPTRH
-                clrf    TBLPTRU
+                movwf   ROMH
+		movlw	upper ROM6502
+                movwf	ROMU
                 bra     StartLoad
 
 W65C02:
-                movlw   low ROM65C02            ; Point table pointer at ROM
-                movwf   TBLPTRL
+                movlw   low ROM65C02            ; Fix 65C02 ROM address
+                movwf   ROML
                 movlw   high ROM65C02
-                movwf   TBLPTRH
-                clrf    TBLPTRU
+                movwf   ROMH
+		movlw	upper ROM65C02
+                movwf	ROMU
                 bra     StartLoad
                       
 W65C802:
-                movlw   low ROM65C802           ; Point table pointer at ROM
-                movwf   TBLPTRL
+                movlw   low ROM65C802           ; Fix 65C802 ROM address
+                movwf   ROML
                 movlw   high ROM65C802
-                movwf   TBLPTRH
-                clrf    TBLPTRU
+                movwf   ROMH
+		movwf	upper ROM65C802
+                movwf	ROMU
 
 ;-------------------------------------------------------------------------------
 
 StartLoad:
+		movff	ROML,TBLPTRL		; Load pointer to ROM image
+		movff	ROMH,TBLPTRH
+		movff	ROMU,TBLPTRU
+		
                 clrf    ADDRL                   ; Reset ROM load location
-                movlw   high(ROM_BASE)
+                movlw   high ROM_BASE
                 movwf   ADDRH
 
 LoadImage:
@@ -803,6 +823,15 @@ Execute:
                 clrf    RTC_CTLA
                 clrf    RTC_CTLB
                 clrf    RTC_STAT
+		
+		clrf	ROM_OFF0
+		clrf	ROM_OFF1
+		clrf	ROM_LK0
+		clrf	ROM_LK1
+		
+		movff	ROML,TBLPTRL
+		movff	ROMH,TBLPTRH
+		movff	ROMU,TBLPTRU
                 
                 bsf     INTCON,GIE
                 
@@ -901,10 +930,10 @@ IOAccess:
                 bra     BlankRd
                 bra     BlankRd
                 
-                bra     BlankRd                 ; Empty $FE30 RD
-                bra     BlankRd
-                bra     BlankRd
-                bra     BlankRd
+                bra     RomRdOff0		; EEPROM $FE30 RD
+                bra     RomRdOff1
+                bra     RomRdData
+                bra     RomRdLock
                 bra     BlankRd
                 bra     BlankRd
                 bra     BlankRd
@@ -971,10 +1000,10 @@ IOAccess:
                 bra     BlankRd
                 bra     BlankRd
                 
-                bra     BlankWr                 ; Empty $FE30 WR
-                bra     BlankWr
-                bra     BlankWr
-                bra     BlankWr
+                bra     RomWrOff0             ; EEPROM $FE30 RD
+                bra     RomWrOff1
+                bra     RomWrData
+                bra     RomWrLock
                 bra     BlankWr
                 bra     BlankWr
                 bra     BlankWr
@@ -1515,6 +1544,119 @@ RtcWrStat:
                 nop                        
                 nop
                 bra     NormalLo
+		
+;===============================================================================
+; EEPROM Access
+;-------------------------------------------------------------------------------
+		
+RomRdOff0:
+		movf	ROM_OFF0,W		; Copy from register
+		clrf	DATA_TRIS
+		movwf	DATA_LAT
+		clrf	ROM_LK0			; Clear lock key
+		clrf	ROM_LK1
+		bra	NormalLo
+    
+RomWrOff0:
+		movf	DATA_PORT,W		; Copy to register
+		movwf	ROM_OFF0
+		addwf	ROML,W			; And update TBLPTR
+		movwf	TBLPTRL
+		clrf	ROM_LK0			; Clear lock key
+		clrf	ROM_LK1
+		bra	NormalLo
+		
+RomRdOff1:
+		movf	ROM_OFF1,W		; Copy from register
+		clrf	DATA_TRIS
+		movwf	DATA_LAT
+		clrf	ROM_LK0			; Clear lock key
+		clrf	ROM_LK1
+		bra	NormalLo
+    
+RomWrOff1:
+		movf	DATA_PORT,W		; Update register
+		movwf	ROM_OFF1
+		andlw	h'3f'			; Limit to 16K
+		addwf	ROMH,W			; And update TBLPTR
+		movwf	TBLPTRH
+		clrf	ROM_LK0			; Clear lock key
+		clrf	ROM_LK1
+		bra	NormalLo
+    
+RomRdData:
+		tblrd	*+			; Read a byte from ROM
+		movf	TABLAT,W
+		clrf	DATA_TRIS
+		movwf	DATA_LAT
+		infsnz	ROM_OFF0,F
+		incf	ROM_OFF1,F
+		clrf	ROM_LK0			; Clear lock key
+		clrf	ROM_LK1
+		bra	NormalLo
+    
+RomWrData:
+		bsf	EECON1,EEPGD		; Set to access program memory
+		bcf	EECON1,CFGS
+		
+		movf	ROM_LK0,W		; Is ROM unlocked?
+		xorwf	h'aa'
+		bnz	WrSkip
+		movf	ROM_LK1,W
+		xorwf	h'55'
+		bnz	WrSkip
+		
+		bcf	INTCON,GIE		; Disable interrupts
+
+		movf	TBLPTRL,W		; Start of new page?
+		andwf	.63
+		bnz	WrByte			; No, already erased
+
+		bsf	EECON1,WREN
+		bsf	EECON1,FREE
+		movlw	h'55'			; Perform unlock sequence
+		movwf	EECON2
+		movlw	h'aa'
+		movwf	EECON2
+		bsf	EECON1,WR		; Erase a block
+		
+WrByte:
+		movf	DATA_PORT,W		; Fetch byte to write
+		movwf	TABLAT
+		tblwt	*+			; Write to holding buffer
+		
+		movf	TBLPTRL,W		; Reached end of block?
+		andlw	.63
+		bnz	WrDone			; No, not yet
+
+		bsf	EECON1,WREN
+		movlw	h'55'			; Perform unlock sequence
+		movwf	EECON2
+		movlw	h'aa'
+		movwf	EECON2
+		bsf	EECON1,WR		; Write block
+	
+WrDone:	
+		infsnz	ROM_OFF0,W		; Bump Offset
+		incf	ROM_OFF1,W
+		bsf	INTCON,GIE		; Allow interrupts again
+WrSkip:		bra	NormalLo		; Continue
+    
+RomRdLock:
+		movf	ROM_LK0,W
+		clrf	DATA_TRIS
+		movwf	DATA_LAT
+		nop
+		nop
+		bra	NormalLo
+    
+RomWrLock:
+		movf	DATA_PORT,W		; Shuffle lock values
+		movff	ROM_LK0,ROM_LK1
+		movwf	ROM_LK0
+		nop
+		nop
+		bra	NormalLo
         
 ;===============================================================================
 ; Computed Jump
@@ -1591,34 +1733,19 @@ UartTx:
 .ROM6502        code_pack   h'004000'
 
 ROM6502:
-                include "boot-6502.asm"
 		res	.12 * .1024
+                include "boot-6502.asm"
 
 .ROM65C02       code_pack   h'008000'
 
 ROM65C02:
-                include "boot-65c02.asm"
 		res	.12 * .1024
+                include "boot-65c02.asm"
 
 .ROM65C802      code_pack   h'00c000'
 
 ROM65C802:
-                include "boot-65c802.asm"
 		res	.12 * .1024
-
-;===============================================================================
-; EEPROM
-;-------------------------------------------------------------------------------
-		
-.EEPROM		code_pack   h'f00000'
-		
-		de	h'00',h'f0'
-		de	h'00',h'10'
-		
-		de	h'00',h'f0'
-		de	h'00',h'10'
-
-		de	h'00',h'f0'
-		de	h'00',h'10'
+                include "boot-65c802.asm"
 
                 end
