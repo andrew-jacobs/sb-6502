@@ -74,7 +74,7 @@ ADRH_MASK       equ     h'ff'                   ; ff when PORTB is full byte
                 
 TRACE_NEWL      macro
                 if      CYCLE_DEBUG
-                rcall   NewLine
+                rcall	NewLine
                 endif
                 endm
                 
@@ -788,6 +788,57 @@ HiPhaseWrite:
                 nop
                 return
 
+;===============================================================================
+; Uart Interface
+;-------------------------------------------------------------------------------
+
+                if      CYCLE_DEBUG
+
+ShowAddr:
+                movf    ADRH_PORT,W             ; Output full 16-bit
+                rcall   Hex2                    ; .. address value
+                movf    ADRL_PORT,W             
+                rcall   Hex2
+                movlw   ' '
+                rcall   UartTx
+                movlw   'R'                     ; And R/W direction
+                btfss   RW_PORT,RW_PIN
+                movlw   'W'
+                bra     UartTx
+                
+ShowData:
+                movlw   ' '
+                rcall   UartTx
+                movf    DATA_PORT,W
+                btfss   RW_PORT,RW_PIN
+                movf    DATA_LAT,W
+             
+Hex2:
+                movwf   PRODL                   ; Save byte
+                swapf   WREG,W                  ; Switch nybbles
+                rcall   Hex
+                movf    PRODL,W
+Hex:
+                andlw   h'0f'
+                addlw   .6
+                btfsc   STATUS,DC
+                addlw   .7
+                addlw   '0'-.6
+                bra     UartTx
+                
+NewLine:
+                movlw   '\r'                    ; Output CR/LF
+                rcall   UartTx
+                movlw   '\n'
+
+UartTx:
+                btfss   PIR1,TX1IF              ; Wait until able to TX
+                bra     UartTx
+                movwf   TXREG1                  ; Then send the character
+                return
+
+                endif
+		              
 ;===============================================================================
 ; Normal Execution
 ;-------------------------------------------------------------------------------
@@ -1669,57 +1720,6 @@ ComputedJump:
                 addwfc  TOSH,F
                 return                          ; And go there
                 
-;===============================================================================
-; Uart Interface
-;-------------------------------------------------------------------------------
-
-                if      CYCLE_DEBUG
-
-ShowAddr:
-                movf    ADRH_PORT,W             ; Output full 16-bit
-                rcall   Hex2                    ; .. address value
-                movf    ADRL_PORT,W             
-                rcall   Hex2
-                movlw   ' '
-                rcall   UartTx
-                movlw   'R'                     ; And R/W direction
-                btfss   RW_PORT,RW_PIN
-                movlw   'W'
-                bra     UartTx
-                
-ShowData:
-                movlw   ' '
-                rcall   UartTx
-                movf    DATA_PORT,W
-                btfss   RW_PORT,RW_PIN
-                movf    DATA_LAT,W
-             
-Hex2:
-                movwf   PRODL                   ; Save byte
-                swapf   WREG,W                  ; Switch nybbles
-                rcall   Hex
-                movf    PRODL,W
-Hex:
-                andlw   h'0f'
-                addlw   .6
-                btfsc   STATUS,DC
-                addlw   .7
-                addlw   '0'-.6
-                bra     UartTx
-                
-NewLine:
-                movlw   '\r'                    ; Output CR/LF
-                rcall   UartTx
-                movlw   '\n'
-
-UartTx:
-                btfss   PIR1,TX1IF              ; Wait until able to TX
-                bra     UartTx
-                movwf   TXREG1                  ; Then send the character
-                return
-
-                endif
-		              
 ;===============================================================================
 ; Boot ROM Images
 ;-------------------------------------------------------------------------------
