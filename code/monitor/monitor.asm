@@ -321,6 +321,9 @@ RESET:
                 sta     ACIA_CMND
                 lda     ACIA_DATA	; Clear receive buffer
 
+		lda	#$C0		; Start the timer
+		sta	RTC_CTLA
+		
 		cli			; Allow interrupts
 		
 		jsr	NewLine
@@ -717,8 +720,6 @@ RptCommand:
 ; Clock test. Remove
 	cmp	#'C'
 	if	eq
-	 lda	#$C0
-	 sta	RTC_CTLA
 	 jsr	NewLine
 	 repeat
 	  lda	RTC_SEC0
@@ -1199,10 +1200,12 @@ ToHex		and	#$0f		; Isolate the lo nybble
 		cld
 		rts			; Done
 
+;-------------------------------------------------------------------------------		
+
 ; Output two spaces.
 
 Space2:
-		jsr	Space
+		jsr	Space		; Print one space then drop into ..
 		
 ; Output a single space. The values in A & Y are destroyed.
 

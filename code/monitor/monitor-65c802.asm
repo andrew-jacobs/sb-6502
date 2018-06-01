@@ -210,8 +210,8 @@ Y_REG		.space	2
 DP_REG		.space	2
 SP_REG		.space	2
 PC_REG		.space	2
-B_REG		.space	1
-K_REG		.space	1
+PB_REG		.space	1
+DB_REG		.space	1
 
 CMD_LEN		.space	1			; Command buffer length
 ADDR_S		.space	2
@@ -379,6 +379,9 @@ RESET:
                 sta     ACIA_CMND
                 lda     ACIA_DATA	; Clear receive buffer
 		
+		lda	#$C0		; Start the timer
+		sta	RTC_CTLA
+		
 		cli			; Allow interrupts
 		
 		jsr	NewLine		; Show title string
@@ -407,7 +410,7 @@ BRKN:
 		clc			; Ensure native mode
 		xce
 		ror	E_BIT		; .. but save the original
-		
+				
 		LONG_AI			; Make all registers 16-bit
 		sta	C_REG		; Save A/B
 		stx	X_REG		; .. X
@@ -416,11 +419,9 @@ BRKN:
 		sta	DP_REG
 		
 		SHORT_A			; Make A register 8-bits
-		bit	E_BIT		; 
-		if pl
-	; Banks
-	
-		endif
+		phb			; Save DB
+		pla
+		sta	DB_REG
 		
 		pla			; Save P
 		sta	P_REG
@@ -428,6 +429,13 @@ BRKN:
 		dex
 		dex
 		stx	PC_REG
+		bit	E_BIT		; Save PB
+		if 	mi
+		 phk
+		endif
+		pla
+		sta	PB_REG
+
 		tsx			; Save SP
 		stx	SP_REG
 		
@@ -492,8 +500,16 @@ ShowRegisters:
 		 jsr	UartTx
 		 dex
 		until mi
-
-; TODO PBR:DBR		
+		
+		ldx	#PB_STR		; Display PB
+		jsr	ShowString
+		lda	PB_REG
+		jsr	ShowHex2
+		
+		ldx	#DB_STR		; Display DB
+		jsr	ShowString
+		lda	DB_REG
+		jsr	ShowHex2
 
 		ldx	#DP_STR		; Display DP
 		jsr	ShowString
@@ -599,6 +615,30 @@ RptCommand:
 
 		cmp	#'F'
 		if	eq
+		 jsr	GetWord		; Extract start address
+		 if cc
+		  jsr	SetStartAddr
+		  jsr	GetWord		; Extract end address
+		  bcs	.FillFail
+		  jsr	SetEndAddr
+		  jsr	GetByte		; Extract fill byte
+		  bcs	.FillFail
+
+		  repeat
+		   ldy	#0		; Perform the fill
+		   lda	TEMP+0
+		   sta 	(ADDR_S),y
+		   
+		   iny
+		   tya
+		   jsr	BumpAddr	; Until the end
+		   break cs
+		   jsr	CheckEnd
+		  until cs
+		 else
+.FillFail:	  jmp	Error
+		 endif
+		 jmp	NewCommand
 		endif
 		
 ;===============================================================================
@@ -615,6 +655,56 @@ RptCommand:
 
 		cmp	#'M'
 		if	eq
+		 jsr	GetWord		; Extract start address
+		 if	cc
+		  jsr	SetStartAddr
+		  jsr	SetEndAddr
+		  jsr	GetWord		; Extract end address
+		  if	cc
+		   jsr	SetEndAddr
+		  else
+		   inc	ADDR_E+1	; Or default to start + 256
+		  endif
+		  
+		  repeat
+		   jsr	NewLine		; Print the memory address
+		   lda	ADDR_S+1
+		   jsr	ShowHex2
+		   lda	ADDR_S+0
+		   jsr	ShowHex2
+		   
+		   ldy	#0		; Dump 16 bytes of data
+		   repeat
+		    jsr	Space
+		    lda	(ADDR_S),Y
+		    iny
+		    jsr	ShowHex2
+		    cpy #16
+		   until eq
+		   
+		   jsr	Space		; Then show as characters
+		   jsr	Bar
+		   ldy	#0
+		   repeat
+		    lda	(ADDR_S),Y
+		    iny
+		    jsr	IsPrintable
+		    if 	cc
+		     lda #'.'
+		    endif
+		    jsr	UartTx
+		    cpy	#16
+		   until eq
+		   jsr	Bar
+		   
+		   tya
+		   jsr	BumpAddr
+		   break cs
+		   jsr	CheckEnd
+		  until	cs
+		  jmp	NewCommand
+		 endif
+		 jmp	Error
 		endif
 		
 ;===============================================================================
@@ -631,7 +721,42 @@ RptCommand:
 ;-------------------------------------------------------------------------------
 
 		cmp	#'S'
-		if eq
+		if 	eq
+		 jsr	NextChar
+		 cmp	#'1'		; Data record?
+		 if	eq
+		  jsr	GetByte		; Extract length
+		  bcs	.S19Fail
+		  sta	ADDR_E+0
+		  jsr	GetWord		; Extract address
+		  bcs	.S19Fail
+		  jsr	SetStartAddr
+		  dec	ADDR_E+0
+		  dec	ADDR_E+0
+		  dec	ADDR_E+0
+		  
+		  ldy	ADDR_S
+		  repeat
+		   jsr	GetByte		; Extract data byte
+		   bcs	.S19Fail
+		   lda	TEMP+0		; And save
+		   sta	!0,y
+		   iny
+		   dec	ADDR_E		; Until line processed
+		  until	eq
+		 else
+		  cmp	#'9'
+		  if	eq
+		   jsr	GetByte		; Extract length
+		   bcs	.S19Fail
+		   jsr	GetWord		; Extract start address
+		   ldy	TEMP		; And copy to PC
+		   sty	PC_REG
+		  else
+.S19Fail	   jmp Error
+		  endif
+		 endif
+		 jmp	NewCommand
 		endif
 		
 ;===============================================================================
@@ -640,7 +765,7 @@ RptCommand:
 
 		cmp	#'W'
 		if	eq
-		 jsr	GetWord	;	 Get the target address
+		 jsr	GetWord		; Get the target address
 		 if	cc
 		  jsr	SetStartAddr	; Copy to start address
 		  jsr	GetByte		; Get the value
@@ -656,6 +781,20 @@ RptCommand:
 		 endif
 		 jmp	Error		; Handle syntax errors
 		endif
+
+; Clock test. Remove
+	cmp	#'C'
+	if	eq
+	 jsr	NewLine
+	 repeat
+	  lda	RTC_SEC0
+	  repeat
+	   cmp 	RTC_SEC0
+	  until ne
+	  lda	#'.'
+	  jsr	UartTx
+	 forever
+	endif
 		
 ;===============================================================================
 ; '?' - Display Help
@@ -675,26 +814,28 @@ Error:		 ldx	#ERR_STR
 		
 		.longa	off
 SetStartAddr:
-		lda	TEMP+0
-		sta	ADDR_S+0
-		lda	TEMP+1
-		sta	ADDR_S+1
+		ldy	TEMP+0
+		sty	ADDR_S+0
+		ldy	TEMP+1
+		sty	ADDR_S+1
 		rts
 		
 		.longa	off
 SetEndAddr:
-		lda	TEMP+0
-		sta	ADDR_E+0
-		lda	TEMP+1
-		sta	ADDR_E+1
+		ldy	TEMP+0
+		sty	ADDR_E+0
+		ldy	TEMP+1
+		sty	ADDR_E+1
 		rts
 		
 		.longa	off
 BumpAddr:
-		inc	ADDR_S+0
-		if	eq
-		 inc	ADDR_S+1
-		endif
+		clc
+		adc	ADDR_S+0
+		sta	ADDR_S+0
+		lda	#0
+		adc	ADDR_S+1
+		sta	ADDR_S+1
 		rts
 	
 		.longa	off
@@ -991,16 +1132,35 @@ ToHex:
 
 ;-------------------------------------------------------------------------------		
 
+; Output two spaces.
+
+		.longa	off
+Space2:
+		jsr	Space		; Print one space then drop into ..
+		
+; Output a single space. The values in A & Y are destroyed.
+
 		.longa	off
 Space:
 		lda	#' '
 		jmp	UartTx
 		
+; Output a vertical bar character.
+
+		.longa	off
+Bar:
+		lda	#'|'
+		jmp	UartTx
+		
+; Output an opening bracket.
+
 		.longa	off
 OpenBracket:
 		lda	#'['
 		jmp	UartTx
-		
+
+; Output a closing bracket.
+
 		.longa	off
 CloseBracket:
 		lda	#']'
@@ -1025,7 +1185,7 @@ ShowString:
 		
 STRINGS:
 TTL_STR		.equ	$-STRINGS
-		.byte	"Boot 65C802 [18.05]"
+		.byte	"Boot 65C802 [18.06]"
 		.byte	0
 PC_STR		.equ	$-STRINGS
 		.byte	"PC=",0
@@ -1039,6 +1199,10 @@ Y_STR		.equ	$-STRINGS
 		.byte	" Y=",0
 P_STR		.equ	$-STRINGS
 		.byte	" P=",0
+PB_STR		.equ	$-STRINGS
+		.byte	" PB=",0
+DB_STR		.equ	$-STRINGS
+		.byte	" DB=",0
 DP_STR		.equ	$-STRINGS
 		.byte	" DP=",0
 SP_STR		.equ	$-STRINGS

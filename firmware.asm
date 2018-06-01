@@ -703,7 +703,34 @@ LoadImage:
                 incf    ADDRH,F                 ; Until complete
                 bnz     LoadImage
 
-                rcall   LoPhase                 ; Restart using real ROM
+;                rcall   LoPhase                 ; Restart using real ROM
+		
+                bcf     NRES_TRIS,NRES_PIN      ; Assert /RES line
+                movlw   .64
+ResetPulse:
+                bcf     PHI0_LAT,PHI0_PIN       ; Make PHI0 low
+                nop
+                nop
+                nop
+                nop
+                nop
+                nop
+
+                bsf     PHI0_LAT,PHI0_PIN       ; Make PHI0 high
+                nop
+                nop
+                nop
+                nop
+                decfsz  WREG,F                  ; Reduce pulse count
+                bra     ResetPulse
+
+                bsf     NRES_TRIS,NRES_PIN      ; Release /RES line
+                nop
+                nop
+                nop
+                nop
+		
+		if 0
                 TRACE_NEWL
                 TRACE_ADDR
                 movlw   h'6c'                   ; .. image
@@ -740,6 +767,7 @@ NoExtraRead:
                 TRACE_ADDR
                 rcall   HiPhaseRead
                 TRACE_DATA
+		endif
 
                 bra     Execute                 ; And start real execution
 
@@ -758,7 +786,7 @@ LoPhase:
 
 HiPhaseLoad:
                 bsf     PHI0_LAT,PHI0_PIN
-
+		nop
                 btfsc   RW_PORT,RW_PIN          ; Make DATA port an output
                 clrf    DATA_TRIS               ; .. if CPU reading
                 movwf   DATA_LAT                ; Save data to be read
@@ -770,7 +798,7 @@ HiPhaseLoad:
 
 HiPhaseRead:
                 bsf     PHI0_LAT,PHI0_PIN
-
+		nop
                 btfsc   RW_PORT,RW_PIN          ; Make RAM accessible
                 bcf     NRAM_LAT,NRAM_PIN       ; .. if CPU reading
                 nop
@@ -781,7 +809,8 @@ HiPhaseRead:
 
 HiPhaseWrite:
                 bsf     PHI0_LAT,PHI0_PIN
-
+		nop
+		nop
                 btfss   RW_PORT,RW_PIN          ; Make RAM accessible
                 bcf     NRAM_LAT,NRAM_PIN       ; .. if CPU writing
                 nop
