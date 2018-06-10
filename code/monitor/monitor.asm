@@ -56,7 +56,7 @@ OP_EOR		.equ	$36
 OP_INC		.equ	$38
 OP_INX		.equ	$3A
 OP_INY		.equ	$3C
-OP_jmp		.equ	$3E
+OP_JMP		.equ	$3E
 OP_JSR		.equ	$40
 OP_LDA		.equ	$42
 OP_LDX		.equ	$44
@@ -137,7 +137,7 @@ MO_IMP		.equ		      MB_IMP
 MO_IMM		.equ		      MB_IMM
 MO_REL		.equ		      MB_REL
 MO_ZPG		.equ		      MB_ZPG
-MO_ZPX		.equ	       MB_YRG|MB_ZPG
+MO_ZPX		.equ	       MB_XRG|MB_ZPG
 MO_ZPY		.equ	       MB_YRG|MB_ZPG
 		.if	__65C02__
 MO_IZP		.equ	MB_IND	     |MB_ZPG
@@ -694,6 +694,219 @@ RptCommand:
 		 jmp	NewCommand
 		endif
 		
+;===============================================================================
+; 'T' - Trace
+;-------------------------------------------------------------------------------
+
+		cmp	#'T'
+		if eq
+
+		 jsr	NewLine
+		 lda	RC_REG+1
+		 sta	ADDR_S+1
+		 jsr	Hex2
+		 lda	PC_REG+0
+		 sta	ADDR_S+0
+		 jsr	Hex2
+		 jsr	Dissassemble
+		 
+	; Show Registers
+	
+		 lda	#<A_REG		; Assume accumulator is target
+		 sta	ADDR_S+0
+		 lda	#>A_REG
+		 sta	ADDR_S+1
+	
+		 ldy	#0
+		 lda	(PC_REG),Y	; Fetch the next opcode
+		 inc	PC_REG+0	; .. and bump PC
+		 if eq
+		  inc	PC_REG+1
+		 endif
+		 tax
+		 lda	MODES,X		; Extract address type 
+		 and	#MB_ABS
+		 cmp	#MB_ZPG		; Zero page?
+		 if eq
+		  lda	(PC_REG),y
+		  sta	ADDR_S+0
+		  sty	ADDR_S+1
+		  inc 	PC_REG+0
+		  if eq
+		   inc	PC_REG+1
+		  endif
+		 else
+		  cmp	#MB_ABS		; Absolute ?
+		  if eq
+		   lda	(PC_REG),y
+		   sta	ADDR_S+0
+		   inc 	PC_REG+0
+		   if eq
+		    inc	PC_REG+1
+		   endif
+		   lda	(PC_REG),y
+		   sta	ADDR_S+1
+		   inc 	PC_REG+0
+		   if eq
+		    inc	PC_REG+1
+		   endif		  
+		  else
+		   cmp	#MB_IMM		; Immediate?
+		   if eq
+		    lda	PC_REG+0
+		    sta	ADDR_S+0
+		    lda	PC_REG+1
+		    sta	ADDR_S+1
+		    inc PC_REG+0
+		    if eq
+		     inc PC_REG+1
+		    endif
+		   endif
+		  endif
+		 endif
+		    
+		 lda	#MB_XRG		; Handle X index
+		 and	MODES,x
+		 if ne
+		  clc
+		  lda	X_REG
+		  adc	ADDR_S+0
+		  sta	ADDR_S+0
+		  if cs
+		   inc	ADDR_S+1
+		  endif
+		  
+		  lda	#MO_ZPX		; Force wrap around for ZPG,X
+		  cmp	MODES,x
+		  if ne
+		   sty	ADDR_S+1
+		  endif
+
+		  lda	#MO_IZX		; .. and (ZPG,X)
+		  cmp	MODES,x
+		  if ne
+		   sty	ADDR_S+1
+		  endif
+		 endif
+		 
+		 lda	#MB_IND		; Handle indirection
+		 and 	MODES,x
+		 if ne
+		  ldy	#1
+		  lda	(ADDR_S),y
+		  pha
+		  dey
+		  lda	(ADDR_S),y
+		  sta	ADDR_S+0
+		  pla
+		  sta	ADDR_S+1
+		 endif
+		  
+		 lda	#MB_YRG		; Handle Y index
+		 and	MODES,x
+		 if ne
+		  clc
+		  lda	Y_REG
+		  adc	ADDR_S+0
+		  sta	ADDR_S+0
+		  if cs
+		   inc	ADDR_S+1
+		  endif
+		  
+		  lda	#MB_ZPG		; Restrict to zero page
+		  and	MODES,x
+		  if ne
+		   ldy	ADDR_S+1
+		  endif
+		 endif
+		 
+		 lda	#MB_REL		; Relative address?
+		 and	MODES,x
+		 if ne
+		  lda	(PC_REG),y
+		  if mi
+		   dey
+		  endif
+		  inc	PC_REG+0
+		  if eq
+		   inc	PC_REG+1
+		  endif
+		  clc
+		  adc	PC_REG+0
+		  sta	ADDR_E+0
+		  tya
+		  adc	PC_REG+1
+		  sta	ADDR_E+1
+		 endif
+		  
+		 pla			; Recover the opcode
+		 asl	a		; .. convert to jump index
+		 tay
+		 lda	EMULATE+1,y
+		 pha
+		 lda	EMULATE+0,y
+		 pha
+		 ldy	#0
+		 lda	P_REG		; Restore status flags
+		 pha
+		 lda	A_REG		; .. and A
+		 php
+		 rts			; Go to emulation code
+	
+EMULATE:
+		.word	EM_ERR-1
+		.word	EM_ADC-1
+		.word	EM_AND-1
+		.word	EM_ASL-1
+		.word	EM_CLC-1
+		.word	EM_CLD-1
+		
+		.word	EM_SEC-1
+		
+
+EM_ADC:
+EM_AND:
+EM_ASL:
+
+EM_CLC:
+		 clc
+		 jmp	SaveStatus
+		 
+EM_CLD:
+		 cld
+		 jmp	SaveStatus
+
+EM_CLI:
+		 cli
+		 jmp	SaveStatus
+
+EM_CLV:
+		 clv
+		 jmp	SaveStatus
+
+EM_SEC:
+		 sec
+		 jmp	SaveStatus
+		 
+EM_SED:
+		 sed
+		 jmp	SaveStatus
+		 
+EM_SEI:		
+		 sei
+		 jmp	SaveStatus
+
+
+SaveStatus:
+		 php
+		 sta	A_REG
+		 pla
+		 sta	P_REG
+		 
+		 jmp	NewCommand
+		
+		endif
+
 ;===============================================================================
 ; 'W' - Write Memory
 ;-------------------------------------------------------------------------------
@@ -1288,11 +1501,11 @@ OPCODES:
 		.byte	OP_BMI,OP_AND,OP_ERR,OP_ERR,OP_BIT,OP_AND,OP_ROL,OP_ERR ; 3
 		.byte	OP_SEC,OP_AND,OP_DEC,OP_ERR,OP_BIT,OP_AND,OP_ROL,OP_ERR
 		.byte	OP_RTI,OP_EOR,OP_ERR,OP_ERR,OP_ERR,OP_EOR,OP_LSR,OP_ERR ; 4
-		.byte	OP_pha,OP_EOR,OP_LSR,OP_ERR,OP_jmp,OP_EOR,OP_LSR,OP_ERR
+		.byte	OP_pha,OP_EOR,OP_LSR,OP_ERR,OP_JMP,OP_EOR,OP_LSR,OP_ERR
 		.byte	OP_BVC,OP_EOR,OP_ERR,OP_ERR,OP_ERR,OP_EOR,OP_LSR,OP_ERR ; 5
 		.byte	OP_CLI,OP_EOR,OP_ERR,OP_ERR,OP_ERR,OP_EOR,OP_LSR,OP_ERR
 		.byte	OP_RTS,OP_ADC,OP_ERR,OP_ERR,OP_ERR,OP_ADC,OP_ROR,OP_ERR ; 6
-		.byte	OP_PLA,OP_ADC,OP_ROR,OP_ERR,OP_jmp,OP_ADC,OP_ROR,OP_ERR
+		.byte	OP_PLA,OP_ADC,OP_ROR,OP_ERR,OP_JMP,OP_ADC,OP_ROR,OP_ERR
 		.byte	OP_BVS,OP_ADC,OP_ERR,OP_ERR,OP_ERR,OP_ADC,OP_ROR,OP_ERR ; 7
 		.byte	OP_SEI,OP_ADC,OP_ERR,OP_ERR,OP_ERR,OP_ADC,OP_ROR,OP_ERR
 		.byte	OP_ERR,OP_STA,OP_ERR,OP_ERR,OP_STY,OP_STA,OP_STX,OP_ERR ; 8
@@ -1360,13 +1573,13 @@ OPCODES:
 		.byte	OP_BMI,OP_AND,OP_AND,OP_ERR,OP_BIT,OP_AND,OP_ROL,OP_RMB ; 3
 		.byte	OP_SEC,OP_AND,OP_DEC,OP_ERR,OP_BIT,OP_AND,OP_ROL,OP_BBR
 		.byte	OP_RTI,OP_EOR,OP_ERR,OP_ERR,OP_ERR,OP_EOR,OP_LSR,OP_RMB ; 4
-		.byte	OP_pha,OP_EOR,OP_LSR,OP_ERR,OP_jmp,OP_EOR,OP_LSR,OP_BBR
+		.byte	OP_pha,OP_EOR,OP_LSR,OP_ERR,OP_JMP,OP_EOR,OP_LSR,OP_BBR
 		.byte	OP_BVC,OP_EOR,OP_EOR,OP_ERR,OP_ERR,OP_EOR,OP_LSR,OP_RMB ; 5
 		.byte	OP_CLI,OP_EOR,OP_PHY,OP_ERR,OP_ERR,OP_EOR,OP_LSR,OP_BBR
 		.byte	OP_RTS,OP_ADC,OP_ERR,OP_ERR,OP_STZ,OP_ADC,OP_ROR,OP_RMB ; 6
-		.byte	OP_PLA,OP_ADC,OP_ROR,OP_ERR,OP_jmp,OP_ADC,OP_ROR,OP_BBR
+		.byte	OP_PLA,OP_ADC,OP_ROR,OP_ERR,OP_JMP,OP_ADC,OP_ROR,OP_BBR
 		.byte	OP_BVS,OP_ADC,OP_ADC,OP_ERR,OP_STZ,OP_ADC,OP_ROR,OP_RMB ; 7
-		.byte	OP_SEI,OP_ADC,OP_PLY,OP_ERR,OP_jmp,OP_ADC,OP_ROR,OP_BBR
+		.byte	OP_SEI,OP_ADC,OP_PLY,OP_ERR,OP_JMP,OP_ADC,OP_ROR,OP_BBR
 		.byte	OP_BRA,OP_STA,OP_ERR,OP_ERR,OP_STY,OP_STA,OP_STX,OP_SMB ; 8
 		.byte	OP_DEY,OP_BIT,OP_TXA,OP_ERR,OP_STY,OP_STA,OP_STX,OP_BBS
 		.byte	OP_BCC,OP_STA,OP_STA,OP_ERR,OP_STY,OP_STA,OP_STX,OP_SMB ; 9
