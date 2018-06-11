@@ -64,7 +64,7 @@ OP_LDY		.equ	$46
 OP_LSR		.equ	$48
 OP_NOP		.equ	$4A
 OP_ORA		.equ	$4C
-OP_pha		.equ	$4E
+OP_PHA		.equ	$4E
 OP_PHP		.equ	$50
 		.if	__65C02__
 OP_PHX		.equ	$52
@@ -377,41 +377,8 @@ ShowRegisters:
 		lda	PC_REG+0
 		jsr	ShowHex2
 
-		ldx	#A_STR		; Display A
-		jsr	ShowString
-		lda	A_REG
-		jsr	ShowHex2
-
-		ldx	#X_STR		; Display X
-		jsr	ShowString
-		lda	X_REG
-		jsr	ShowHex2
-
-		ldx	#Y_STR		; Display Y
-		jsr	ShowString
-		lda	Y_REG
-		jsr	ShowHex2
-		
-		ldx	#P_STR		; Display P
-		jsr	ShowString
-		ldx	#7
-		repeat
-		 ldy	#'.'
-		 lda	BITS,x
-		 bit	P_REG
-		 if	ne
-		  ldy	FLAG,x
-		 endif
-		 tya
-		 jsr	UartTx
-		 dex
-		until mi		  
-		
-		ldx	#SP_STR		; Display SP
-		jsr	ShowString
 		tsx
-		txa
-		jsr	ShowHex2
+		jsr	DumpRegisters
 		
 ;===============================================================================
 ; Command Line
@@ -701,16 +668,17 @@ RptCommand:
 		cmp	#'T'
 		if eq
 
-		 jsr	NewLine
-		 lda	RC_REG+1
+		 jsr	NewLine		; Show the current PC
+		 lda	PC_REG+1
 		 sta	ADDR_S+1
-		 jsr	Hex2
+		 jsr	ShowHex2
 		 lda	PC_REG+0
 		 sta	ADDR_S+0
-		 jsr	Hex2
-		 jsr	Dissassemble
+		 jsr	ShowHex2
 		 
-	; Show Registers
+		 jsr	Disassemble	; Disassembly opcode
+		 tsx
+		 jsr	DumpRegisters	; .. and show registers
 	
 		 lda	#<A_REG		; Assume accumulator is target
 		 sta	ADDR_S+0
@@ -792,14 +760,21 @@ RptCommand:
 		 lda	#MB_IND		; Handle indirection
 		 and 	MODES,x
 		 if ne
-		  ldy	#1
 		  lda	(ADDR_S),y
 		  pha
-		  dey
+		  cpx	#$6C		; Broken indirection?
+		  if eq
+		   inc	ADDR_S+0	; Yes.
+		  else
+		   inc	ADDR_S+0	; No.
+		   if eq
+		    inc ADDR_S+1
+		   endif
+		  endif
 		  lda	(ADDR_S),y
-		  sta	ADDR_S+0
-		  pla
 		  sta	ADDR_S+1
+		  pla
+		  sta	ADDR_S+0
 		 endif
 		  
 		 lda	#MB_YRG		; Handle Y index
@@ -839,8 +814,7 @@ RptCommand:
 		  sta	ADDR_E+1
 		 endif
 		  
-		 pla			; Recover the opcode
-		 asl	a		; .. convert to jump index
+		 pla			; Recover the opcode index
 		 tay
 		 lda	EMULATE+1,y
 		 pha
@@ -858,51 +832,530 @@ EMULATE:
 		.word	EM_ADC-1
 		.word	EM_AND-1
 		.word	EM_ASL-1
+		.word	EM_BBR-1
+		.word	EM_BBS-1
+		.word	EM_BCC-1
+		.word	EM_BCS-1
+		.word	EM_BEQ-1
+		.word	EM_BIT-1
+		.word	EM_BMI-1
+		.word	EM_BNE-1
+		.word	EM_BPL-1
+		.word	EM_BRA-1
+		.word	EM_BRK-1
+		.word	EM_BVC-1
+		.word	EM_BVS-1
 		.word	EM_CLC-1
 		.word	EM_CLD-1
-		
+		.word	EM_CLI-1
+		.word	EM_CLV-1
+		.word	EM_CMP-1
+		.word	EM_CPX-1
+		.word	EM_CPY-1
+		.word	EM_DEC-1
+		.word	EM_DEX-1
+		.word	EM_DEY-1
+		.word	EM_EOR-1
+		.word	EM_INC-1
+		.word	EM_INX-1
+		.word	EM_INY-1
+		.word	EM_JMP-1
+		.word	EM_JSR-1
+		.word	EM_LDA-1
+		.word	EM_LDX-1
+		.word	EM_LDY-1
+		.word	EM_LSR-1
+		.word	EM_NOP-1
+		.word	EM_ORA-1
+		.word	EM_PLA-1
+		.word	EM_PLP-1
+		.word	EM_PLX-1
+		.word	EM_PLY-1
+		.word	EM_PHA-1
+		.word	EM_PHP-1
+		.word	EM_PHX-1
+		.word	EM_PHY-1
+		.word	EM_RMB-1
+		.word	EM_ROL-1
+		.word	EM_ROR-1
+		.word	EM_RTI-1
+		.word	EM_RTS-1
+		.word	EM_SBC-1
 		.word	EM_SEC-1
+		.word	EM_SED-1
+		.word	EM_SEI-1
+		.word	EM_SMB-1
+		.word	EM_STA-1
+		.word	EM_STP-1
+		.word	EM_STX-1
+		.word	EM_STY-1
+		.word	EM_STZ-1
+		.word	EM_TAX-1
+		.word	EM_TAY-1
+		.word	EM_TSB-1
+		.word	EM_TRB-1
+		.word	EM_TXS-1
+		.word	EM_TXA-1
+		.word	EM_TXS-1
+		.word	EM_TYA-1
+		.word	EM_WAI-1
 		
-
-EM_ADC:
-EM_AND:
-EM_ASL:
+;-------------------------------------------------------------------------------
 
 EM_CLC:
 		 clc
-		 jmp	SaveStatus
+		 jmp	SaveP
 		 
 EM_CLD:
 		 cld
-		 jmp	SaveStatus
+		 jmp	SaveP
 
 EM_CLI:
 		 cli
-		 jmp	SaveStatus
+		 jmp	SaveP
 
 EM_CLV:
 		 clv
-		 jmp	SaveStatus
-
+		 jmp	SaveP
+		 
 EM_SEC:
 		 sec
-		 jmp	SaveStatus
+		 jmp	SaveP
 		 
 EM_SED:
 		 sed
-		 jmp	SaveStatus
+		 jmp	SaveP
 		 
 EM_SEI:		
 		 sei
-		 jmp	SaveStatus
+		 jmp	SaveP
+		 
+;-------------------------------------------------------------------------------
 
+EM_ADC:
+		 adc 	(ADDR_S),y
+		 jmp	SaveAP
 
-SaveStatus:
+EM_SBC:
+		 sbc 	(ADDR_S),y
+		 jmp	SaveAP
+
+;-------------------------------------------------------------------------------
+
+EM_CPX:
+		 lda	X_REG
+		 .byte	$2c		; BIT trick
+
+EM_CPY:
+		 lda	Y_REG
+
+EM_CMP:
+		 cmp	(ADDR_S),y
+		 jmp	SaveP
+
+;-------------------------------------------------------------------------------
+
+EM_AND:
+		 and	(ADDR_S),y
+		 jmp	SaveAP
+		 
+EM_EOR:
+		 eor	(ADDR_S),y
+		 jmp	SaveAP
+		 
+EM_ORA:
+		 and	(ADDR_S),y
+		 jmp	SaveAP
+		 
+EM_BIT:
+		 cpx	#$89		; Immediate does not affect NV
+		 if ne
+		  pha
+		  lda	(ADDR_S),y	; Extract NV bits from value
+		  eor	P_REG
+		  and	#$c0
+		  eor	P_REG
+		  sta	P_REG
+		  pla
+		 endif
+		 and	(ADDR_S),y	; Handle Z flag
 		 php
+		 pla
+		 eor	P_REG
+		 and	#$02
+		 eor	P_REG
+		 sta	P_REG
+		 jmp	SaveNone
+	
+;-------------------------------------------------------------------------------
+		
+EM_ASL:
+		 lda	(ADDR_S),y
+		 asl	a
+		 sta	(ADDR_S),y
+		 jmp	SaveP
+
+EM_LSR:
+		 lda	(ADDR_S),y
+		 lsr	a
+		 sta	(ADDR_S),y
+		 jmp	SaveP
+		 
+EM_ROL:
+		 lda	(ADDR_S),y
+		 rol	a
+		 sta	(ADDR_S),y
+		 jmp	SaveP
+
+EM_ROR:
+		 lda	(ADDR_S),y
+		 ror	a
+		 sta	(ADDR_S),y
+		 jmp	SaveP
+
+;-------------------------------------------------------------------------------
+
+EM_DEC:
+		 lda	(ADDR_S),y
+		 tax
+		 dex
+		 txa
+		 sta	(ADDR_S),y
+		 jmp	SaveP
+		 
+EM_DEX:
+		 dec 	X_REG
+		 jmp	SaveP
+		 
+EM_DEY:
+		 dec	Y_REG
+		 jmp	SaveP
+		 
+EM_INC:
+		 lda	(ADDR_S),y
+		 tax
+		 inx
+		 txa
+		 sta	(ADDR_S),y
+		 jmp	SaveP
+	
+EM_INX:
+		 inc	X_REG
+		 jmp	SaveP
+		 
+EM_INY:
+		 inc	Y_REG
+		 jmp	SaveP
+	
+;-------------------------------------------------------------------------------
+	 
+EM_BCC:
+		 bcc	EM_BRA
+		 jmp	SaveNone
+		 
+EM_BCS:
+		 bcs	EM_BRA
+		 jmp	SaveNone
+		 
+EM_BEQ:
+		 beq	EM_BRA
+		 jmp	SaveNone
+		 
+EM_BMI:
+		 bmi	EM_BRA
+		 jmp	SaveNone
+		 
+EM_BNE:
+		 bne	EM_BRA
+		 jmp	SaveNone
+		 
+EM_BPL:
+		 bpl	EM_BRA
+		 jmp	SaveNone
+		 
+EM_BRA:
+		 lda	ADDR_E+0
+		 sta	PC_REG+0
+		 lda	ADDR_E+1
+		 sta	PC_REG+1
+		 jmp	SaveNone
+		 
+EM_BVC:
+		 bvc	EM_BRA
+		 jmp	SaveNone
+		 
+EM_BVS:
+		 bvs	EM_BRA
+		 jmp	SaveNone
+		 
+;-------------------------------------------------------------------------------
+		 
+EM_JSR:
+		 lda	PC_REG+0	; Back up
+		 if eq
+		  dec 	PC_REG+1
+		 endif
+		 dec	PC_REG+0
+		 lda	PC_REG+1	; And push PC
+		 pha
+		 lda	PC_REG+0
+
+EM_JMP:
+		 lda	ADDR_S+0	; Set PC to target address
+		 sta 	PC_REG+0
+		 lda	ADDR_S+1
+		 sta	PC_REG+1
+		 jmp	SaveNone
+
+;-------------------------------------------------------------------------------
+
+EM_LDA:
+		 lda	(ADDR_S),y
+		 jmp	SaveAP
+		 
+EM_LDX:
+		 lda	(ADDR_S),y
+		 sta	X_REG
+		 jmp	SaveP
+		 
+EM_LDY:
+		 lda	(ADDR_S),y
+		 sta	Y_REG
+		 jmp	SaveP
+
+EM_STA:
+		 sta 	(ADDR_S),y
+		 jmp	SaveNone
+		 
+EM_STX:
+		 lda	X_REG
+		 JMP	EM_STA
+		 
+EM_STY:
+		 lda 	Y_REG
+		 jmp	EM_STA
+		 
+EM_STZ:
+		 lda	#0
+		 jmp	EM_STA
+
+;-------------------------------------------------------------------------------
+
+EM_PHA:
+		 pha
+		 jmp	SaveNone
+		 
+EM_PHP:
+		 lda	P_REG
+		 pha
+		 jmp	SaveNone
+		 
+EM_PHX:
+		 lda	X_REG
+		 pha
+		 jmp	SaveNone
+		 
+EM_PHY:
+		 lda	Y_REG
+		 pha
+		 jmp	SaveNone
+		 
+EM_PLA:
+		 pla
+		 jmp	SaveAP
+		 
+EM_PLP:
+		 pla
+		 ora	#$30
+		 sta	P_REG
+		 jmp	SaveNone
+		 
+EM_PLX:
+		 pla
+		 sta	X_REG
+		 jmp	SaveP
+		 
+EM_PLY:
+		 pla
+		 sta	Y_REG
+		 jmp	SaveP
+
+;-------------------------------------------------------------------------------
+
+EM_NOP:
+		 jmp	SaveNone
+
+;-------------------------------------------------------------------------------
+
+EM_BRK:
+		 php
+		 pla
+		 ora	#(1<<2)		; Set interrupt disable bit
+		 pha
+		 lda	PC_REG+1	; Push instruction address
+		 pha
+		 lda	PC_REG+0
+		 pha
+		 lda	$fffe		; Load vector address
+		 sta	PC_REG+0
+		 lda	$ffff
+		 sta	PC_REG+1
+		 jmp 	SaveNone
+
+EM_RTI:
+		 pla
+		 sta	PC_REG+0
+		 pla
+		 sta	PC_REG+1
+		 pla
+		 ora	#$30
+		 sta	P_REG
+		 jmp	SaveNone
+		 
+EM_RTS:
+		 pla
+		 sta	PC_REG+0
+		 pla
+		 sta	PC_REG+1
+		 inc	PC_REG+0
+		 if eq
+		  inc	PC_REG+1
+		 endif
+		 jmp	SaveNone
+		 
+EM_STP:
+
+EM_WAI:
+
+;-------------------------------------------------------------------------------
+
+EM_TAX:
+		 lda	A_REG
+		 sta	X_REG
+		 jmp	SaveP
+		 
+EM_TAY:
+		 lda	A_REG
+		 sta	Y_REG
+		 jmp	SaveP
+
+EM_TSX:
+		tsx
+		stx	X_REG
+		jmp	SaveP
+		
+EM_TXA:
+		lda	X_REG
+		jmp	SaveAP
+		
+EM_TXS:
+		ldx	X_REG
+		txs
+		jmp	SaveNone
+		
+EM_TYA:
+		lda	Y_REG
+		jmp	SaveAP
+		
+;-------------------------------------------------------------------------------
+
+		;.if __65C02__
+		
+EM_BBR:
+		txa			; Get bit number
+		and	#$70
+		lsr	a
+		lsr	a
+		lsr	a
+		lsr	a
+		tax
+		lda	BITS,x		; Map to bit mask
+		and	(ADDR_S),y	; And test value
+		bne	SaveNone
+		jmp	EM_BRA
+		
+EM_BBS:
+		txa			; Get bit number
+		and	#$70
+		lsr	a
+		lsr	a
+		lsr	a
+		lsr	a
+		tax
+		lda	BITS,x		; Map to bit mask
+		and	(ADDR_S),y	; And test value
+		beq	SaveNone
+		jmp	EM_BRA
+
+EM_RMB:
+		txa			; Get bit number
+		and	#$70
+		lsr	a
+		lsr	a
+		lsr	a
+		lsr	a
+		tax
+		lda	MASK,x		; Map to bit mask
+		and	(ADDR_S),y
+		sta	(ADDR_S),y
+		jmp	SaveNone
+		
+EM_SMB:
+		txa			; Get bit number
+		and	#$70
+		lsr	a
+		lsr	a
+		lsr	a
+		lsr	a
+		tax
+		lda	BITS,x		; Map to bit mask
+		ora	(ADDR_S),y
+		sta	(ADDR_S),y
+		jmp	SaveNone
+
+EM_TRB:
+		pha
+		and	(ADDR_S),Y
+		php
+		pla
+		eor	P_REG
+		and	#1<<1
+		eor	P_REG
+		sta	P_REG
+		pla
+		eor	#$ff
+		and	(ADDR_S),y
+		sta	(ADDR_S),y
+		jmp	SaveNone
+		
+EM_TSB:
+		pha
+		and	(ADDR_S),Y
+		php
+		pla
+		eor	P_REG
+		and	#1<<1
+		eor	P_REG
+		sta	P_REG
+		pla
+		ora	(ADDR_S),y
+		sta	(ADDR_S),y
+		jmp	SaveNone
+		
+		;.endif
+		
+;-------------------------------------------------------------------------------
+		
+SaveAP:
 		 sta	A_REG
+SaveP:
+		 php
 		 pla
 		 sta	P_REG
+SaveNone:
+
 		 
+EM_ERR:
 		 jmp	NewCommand
 		
 		endif
@@ -1168,7 +1621,52 @@ IsPrintable:
 		endif
 		clc
 		rts
+
+;===============================================================================
+; Register Dump
+;-------------------------------------------------------------------------------
+
+; Dump all the save registers and the SP which is passed in X
+
+DumpRegisters:
+		txa			; Save SP
+		pha
 		
+		ldx	#A_STR		; Display A
+		jsr	ShowString
+		lda	A_REG
+		jsr	ShowHex2
+
+		ldx	#X_STR		; Display X
+		jsr	ShowString
+		lda	X_REG
+		jsr	ShowHex2
+
+		ldx	#Y_STR		; Display Y
+		jsr	ShowString
+		lda	Y_REG
+		jsr	ShowHex2
+		
+		ldx	#P_STR		; Display P
+		jsr	ShowString
+		ldx	#7
+		repeat
+		 ldy	#'.'
+		 lda	BITS,x
+		 bit	P_REG
+		 if	ne
+		  ldy	FLAG,x
+		 endif
+		 tya
+		 jsr	UartTx
+		 dex
+		until mi		  
+		
+		ldx	#SP_STR		; Display SP
+		jsr	ShowString
+		pla
+		jmp	ShowHex2
+
 ;===============================================================================
 ; Disassembly
 ;-------------------------------------------------------------------------------
@@ -1483,6 +1981,7 @@ HLP_STR		.equ	.-STRINGS
 		
 FLAG		.byte	"CZID11VN"
 BITS		.byte	$01,$02,$04,$08,$10,$20,$40,$80
+MASK		.byte	$fe,$fd,$fb,$f7,$ef,$df,$bf,$7f
 
 ;===============================================================================
 ; Instruction Lookup Tables
@@ -1501,7 +2000,7 @@ OPCODES:
 		.byte	OP_BMI,OP_AND,OP_ERR,OP_ERR,OP_BIT,OP_AND,OP_ROL,OP_ERR ; 3
 		.byte	OP_SEC,OP_AND,OP_DEC,OP_ERR,OP_BIT,OP_AND,OP_ROL,OP_ERR
 		.byte	OP_RTI,OP_EOR,OP_ERR,OP_ERR,OP_ERR,OP_EOR,OP_LSR,OP_ERR ; 4
-		.byte	OP_pha,OP_EOR,OP_LSR,OP_ERR,OP_JMP,OP_EOR,OP_LSR,OP_ERR
+		.byte	OP_PHA,OP_EOR,OP_LSR,OP_ERR,OP_JMP,OP_EOR,OP_LSR,OP_ERR
 		.byte	OP_BVC,OP_EOR,OP_ERR,OP_ERR,OP_ERR,OP_EOR,OP_LSR,OP_ERR ; 5
 		.byte	OP_CLI,OP_EOR,OP_ERR,OP_ERR,OP_ERR,OP_EOR,OP_LSR,OP_ERR
 		.byte	OP_RTS,OP_ADC,OP_ERR,OP_ERR,OP_ERR,OP_ADC,OP_ROR,OP_ERR ; 6
@@ -1573,7 +2072,7 @@ OPCODES:
 		.byte	OP_BMI,OP_AND,OP_AND,OP_ERR,OP_BIT,OP_AND,OP_ROL,OP_RMB ; 3
 		.byte	OP_SEC,OP_AND,OP_DEC,OP_ERR,OP_BIT,OP_AND,OP_ROL,OP_BBR
 		.byte	OP_RTI,OP_EOR,OP_ERR,OP_ERR,OP_ERR,OP_EOR,OP_LSR,OP_RMB ; 4
-		.byte	OP_pha,OP_EOR,OP_LSR,OP_ERR,OP_JMP,OP_EOR,OP_LSR,OP_BBR
+		.byte	OP_PHA,OP_EOR,OP_LSR,OP_ERR,OP_JMP,OP_EOR,OP_LSR,OP_BBR
 		.byte	OP_BVC,OP_EOR,OP_EOR,OP_ERR,OP_ERR,OP_EOR,OP_LSR,OP_RMB ; 5
 		.byte	OP_CLI,OP_EOR,OP_PHY,OP_ERR,OP_ERR,OP_EOR,OP_LSR,OP_BBR
 		.byte	OP_RTS,OP_ADC,OP_ERR,OP_ERR,OP_STZ,OP_ADC,OP_ROR,OP_RMB ; 6
