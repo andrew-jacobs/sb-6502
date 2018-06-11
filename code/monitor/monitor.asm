@@ -667,7 +667,14 @@ RptCommand:
 
 		cmp	#'T'
 		if eq
-
+		 jsr	GetWord		; Extract start address
+		 if cc
+		  lda	TEMP+0
+		  sta	PC_REG+0
+		  lda	TEMP+1
+		  sta	PC_REG+1
+		 endif
+		 
 		 jsr	NewLine		; Show the current PC
 		 lda	PC_REG+1
 		 sta	ADDR_S+1
@@ -677,6 +684,12 @@ RptCommand:
 		 jsr	ShowHex2
 		 
 		 jsr	Disassemble	; Disassembly opcode
+		 repeat
+		  cpx	#16		; .. justify output
+		  break cs
+		  jsr	Space
+		  inx
+		 forever
 		 tsx
 		 jsr	DumpRegisters	; .. and show registers
 	
@@ -814,7 +827,7 @@ RptCommand:
 		  sta	ADDR_E+1
 		 endif
 		  
-		 pla			; Recover the opcode index
+		 lda	OPCODES,x	; Recover the opcode index
 		 tay
 		 lda	EMULATE+1,y
 		 pha
@@ -824,7 +837,7 @@ RptCommand:
 		 lda	P_REG		; Restore status flags
 		 pha
 		 lda	A_REG		; .. and A
-		 php
+		 plp
 		 rts			; Go to emulation code
 	
 EMULATE:
@@ -1674,18 +1687,18 @@ DumpRegisters:
 Disassemble:
 		jsr	Space
 		ldy	#0		; Fetch the opcode
-		lda	(ADDR_S),Y
+		lda	(ADDR_S),y
 		tax
 		jsr	ShowHex2	; And display it
 		
 		jsr	Space
-		lda	MODES,X		; Fetch the mode
+		lda	MODES,x		; Fetch the mode
 		pha			; And save some copies
 		pha
 		and	#MB_REL|MB_ABS	; Show second byte if relative,
 		if	ne		; .. zero page, immediate or absolute
 		 iny		
-		 lda	(ADDR_S),Y
+		 lda	(ADDR_S),y
 		 jsr	ShowHex2
 		else
 		 jsr	Space2
@@ -1701,7 +1714,7 @@ Disassemble:
 		cmp	#MB_ABS
 		if	eq
 .Skip:		 iny
-		 lda	(ADDR_S),Y
+		 lda	(ADDR_S),y
 		 jsr	ShowHex2
 		else
 		 jsr	Space2
@@ -1712,17 +1725,18 @@ Disassemble:
 
 		jsr	Space
 		ldy	#0		; Fetch the opcode
-		lda	(ADDR_S),Y
+		lda	(ADDR_S),y
 		tax
-		lda	OPCODES,X
+		lda	OPCODES,x
 		tax
-		lda	MNEMONICS+1,X
+		lda	MNEMONICS+1,x
 		sta	TEMP
-		lda	MNEMONICS+0,X
+		lda	MNEMONICS+0,x
 		jsr	ExtractLetter
 		jsr	ExtractLetter
 		jsr	ExtractLetter
 		jsr	Space
+		ldx	#4
 		
 		.if	__65C02__
 		pla
@@ -1730,12 +1744,18 @@ Disassemble:
 		and	#MB_BIT
 		if	ne
 		 ldy	#0
-		 lda	(ADDR_S),Y
-		 and	#7
+		 lda	(ADDR_S),y
+		 and	#$70
+		 lsr	a
+		 lsr	a
+		 lsr	a
+		 lsr	a
 		 ora	#'0'
 		 jsr	UartTx
 		 lda	#','
 		 jsr	UartTx
+		 inx
+		 inx
 		endif
 		.endif
 		
@@ -1744,6 +1764,7 @@ Disassemble:
 		if	mi
 		 lda	#'('
 		 jsr	UartTx
+		 inx
 		endif
 		
 		pla			; Has an address?
@@ -1755,19 +1776,25 @@ Disassemble:
 		 if	eq
 		  lda	#'#'
 		  jsr	UartTx
+		  inx
 		 endif
 		 lda	#'$'
 		 jsr	UartTx
+		 inx
 		 pla
 		 cmp	#MB_ABS		; Absolute?
 		 if	eq
 		  ldy	#2
-		  lda	(ADDR_S),Y	; Show hi byte
+		  lda	(ADDR_S),y	; Show hi byte
 		  jsr	ShowHex2
+		  inx
+		  inx
 		 endif
 		 ldy	#1
-		 lda	(ADDR_S),Y	; Then lo byte	
+		 lda	(ADDR_S),y	; Then lo byte	
 		 jsr	ShowHex2
+		 inx
+		 inx
 		endif
 		
 		.if	__65C02__
@@ -1778,6 +1805,7 @@ Disassemble:
 		if	eq
 		 lda	#','
 		 jsr	UartTx
+		 inx
 		endif
 		.endif
 		
@@ -1788,6 +1816,7 @@ Disassemble:
 		if	ne
 		 lda	#'$'
 		 jsr	UartTx
+		 inx
 		 tya
 		 ldy	#1
 		 and	#MB_BIT
@@ -1814,8 +1843,12 @@ Disassemble:
 		 endif
 		 adc	TEMP+1		; Work out hi byte
 		 jsr	ShowHex2	; And show result
+		 inx
+		 inx
 		 pla
 		 jsr	ShowHex2
+		 inx
+		 inx
 		endif
 		
 		pla
@@ -1824,6 +1857,7 @@ Disassemble:
 		if 	ne
 		 lda	#'A'
 		 jsr	UartTx
+		 inx
 		endif
 		
 		pla
@@ -1834,6 +1868,8 @@ Disassemble:
 		 jsr	UartTx
 		 lda	#'X'
 		 jsr	UartTx
+		 inx
+		 inx
 		endif
 		
 		pla
@@ -1841,6 +1877,7 @@ Disassemble:
 		if	mi
 		 lda	#')'
 		 jsr	UartTx
+		 inx
 		endif
 		
 		pla
@@ -1850,6 +1887,8 @@ Disassemble:
 		 jsr	UartTx
 		 lda	#'Y'
 		 jsr	UartTx
+		 inx
+		 inx
 		endif
 		
 		lda	COUNT		; Return the number of bytes
@@ -1949,10 +1988,10 @@ ShowString:
 STRINGS:
 TTL_STR		.equ	.-STRINGS
 		.if	__6502__
-		.byte	CR,LF,"Boot 6502 [18.05]"
+		.byte	CR,LF,"Boot 6502 [18.06]"
 		.endif
 		.if	__65C02__
-		.byte	CR,LF,"Boot 65C02 [18.05]"
+		.byte	CR,LF,"Boot 65C02 [18.06]"
 		.endif
 		.byte	0
 PC_STR		.equ	.-STRINGS
@@ -1976,6 +2015,7 @@ HLP_STR		.equ	.-STRINGS
 		.byte	CR,LF,"M xxxx yyyy\t\tDisplay Memory"
 		.byte	CR,LF,"R\t\t\tDisplay Registers"
 		.byte	CR,LF,"S...\t\t\tS19 Load"
+		.byte	CR,LF,"T [xxxx][,cccc]\t\tTrace"
 		.byte	CR,LF,"W xxxx yy\t\tWrite Memory"
 		.byte 	0
 		
