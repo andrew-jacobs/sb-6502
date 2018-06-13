@@ -1969,6 +1969,14 @@ Bar:
 		lda	#'|'
 		jmp	UartTx
 
+; Output a new line
+
+NewLine:
+		lda	#CR
+		jsr	UartTx
+		lda	#LF
+		jmp	UartTx
+		
 ;===============================================================================
 ; Strings
 ;-------------------------------------------------------------------------------
@@ -2183,13 +2191,16 @@ MODES:
 ;-------------------------------------------------------------------------------
 
 		jmp	UartTx
-		
 		jmp	UartRx
-		
-NewLine:	lda	#CR
-		jsr	UartTx
-		lda	#LF
-		jmp	UartTx
+		jmp	UartTxCount
+		jmp	UartRxCount
+		jmp	SpiGetControl
+		jmp	SpiSetControl
+		jmp	SpiGetStatus
+		jmp	SpiGetDivisor
+		jmp	SpiSetDivisor
+		jmp	SpiSendIdle
+		jmp	SpiSendData
 		
 ;===============================================================================
 ; IRQ Handler
@@ -2316,6 +2327,55 @@ BumpIdx:
 		 ldy	#0		; Yes, wrap around
 		endif
 		rts			; Done
+
+UartTxCount:
+		sec
+		lda	TX_HEAD
+		sbc	TX_TAIL
+		jmp	Correct
+		
+UartRxCount:
+		sec
+		lda	RX_HEAD
+		sbc	RX_TAIL
+Correct:	if mi
+		 clc
+		 adc	#BUF_SIZE
+		endif
+		rts
+
+;===============================================================================
+; SPI I/O
+;-------------------------------------------------------------------------------
+
+SpiGetControl:
+		lda	SPI_CTRL
+		rts
+		
+SpiSetControl:
+		sta	SPI_CTRL
+		rts
+		
+SpiGetStatus:
+		lda	SPI_STAT
+		rts
+		
+SpiGetDivisor:
+		lda	SPI_DVSR
+		rts
+		
+SpiSetDivisor:
+		sta	SPI_DVSR
+		rts
+
+SpiSendIdle:	lda	#$ff
+
+SpiSendData:	sta	SPI_DATA
+		repeat
+		 bit	SPI_STAT
+		until mi
+		lda	SPI_DATA
+		rts
 		
 ;===============================================================================
 ; Vector Locations

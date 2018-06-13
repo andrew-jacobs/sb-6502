@@ -1152,6 +1152,15 @@ Bar:
 		lda	#'|'
 		jmp	UartTx
 		
+; Output a new line.
+
+		.longa	off
+NewLine:
+		lda	#CR
+		jsr	UartTx
+		lda	#LF
+		jmp	UartTx
+
 ; Output an opening bracket.
 
 		.longa	off
@@ -1307,18 +1316,18 @@ MODES:
 ; I/O API
 ;-------------------------------------------------------------------------------
 
-		.longa	off
 		jmp	UartTx
-		
-		.longa	off
 		jmp	UartRx
-		
-		.longa	off
-NewLine:	lda	#CR
-		jsr	UartTx
-		lda	#LF
-		jmp	UartTx
-		
+		jmp	UartTxCount
+		jmp	UartRxCount
+		jmp	SpiGetControl
+		jmp	SpiSetControl
+		jmp	SpiGetStatus
+		jmp	SpiGetDivisor
+		jmp	SpiSetDivisor
+		jmp	SpiSendIdle
+		jmp	SpiSendData
+				
 ;===============================================================================
 ; IRQ Handlers
 ;-------------------------------------------------------------------------------
@@ -1455,6 +1464,62 @@ BumpIdx:
 		endif
 		rts			; Done
 
+;===============================================================================
+; SPI I/O
+;-------------------------------------------------------------------------------
+
+SpiGetControl:
+		php
+		SHORT_A
+		lda	SPI_CTRL
+		plp
+		rts
+
+SpiSetControl:
+		php
+		SHORT_A
+		sta	SPI_CTRL
+		plp
+		rts
+		
+SpiGetStatus:
+		php
+		SHORT_A
+		lda	SPI_STAT
+		plp
+		rts
+
+SpiGetDivisor:
+		php
+		SHORT_A
+		lda	SPI_DVSR
+		plp
+		rts
+
+SpiSetDivisor:
+		php
+		SHORT_A
+		sta	SPI_DVSR
+		plp
+		rts
+
+SpiSendIdle:
+		php
+		SHORT_A
+		lda	#$ff
+		bra	SpiSend
+
+SpiDataSend:	
+		php
+		SHORT_A
+SpiSend:	sta	SPI_DATA
+		repeat
+		 bit	SPI_STAT
+		until mi
+		lda	SPI_DATA
+		plp
+		rts
+		
 ;===============================================================================
 ; Vectors
 ;-------------------------------------------------------------------------------

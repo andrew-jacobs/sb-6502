@@ -40,7 +40,7 @@
 ; | FE00 | ACIA                  | ACIA                  |
 ; | FE10 | 65SPI                 | 65SPI                 |
 ; | FE20 | DS1318                | DS1318                |
-; | FE30 | Empty                 | Empty                 |
+; | FE30 | Flash Access          | Flash Access          |
 ; +------+-----------------------+-----------------------+
 ; | FE40 | I/O API & Drivers     | I/O API & Drivers     |
 ; | FFE8 |                       | 65C802 Vectors        |
@@ -143,4 +143,12 @@ NMINV		.equ	$0206
 
 UARTTX		.equ	$fe40
 UARTRX		.equ	$fe43
-UARTCRLF	.equ	$fe46
+UARTTXCOUNT	.equ	$fe46
+UARTRXCOUNT	.equ	$fe49
+
+SPIGETCTRL	.equ	$fe4c
+SPISETCTRL	.equ	$fe4f
+
+SPISETSPEED	.equ	$fe00
+SPIIDLE		.equ	$fe00
+SPISEND		.equ	$fe00
