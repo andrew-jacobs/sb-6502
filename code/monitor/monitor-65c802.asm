@@ -1316,6 +1316,9 @@ MODES:
 ; I/O API
 ;-------------------------------------------------------------------------------
 
+; These routines can be called in native or emulation mode and with either 8- or
+; 16- bit register sizes.
+
 		jmp	UartTx
 		jmp	UartRx
 		jmp	UartTxCount
@@ -1325,6 +1328,8 @@ MODES:
 		jmp	SpiGetStatus
 		jmp	SpiGetDivisor
 		jmp	SpiSetDivisor
+		jmp	SpiGetSelect
+		jmp	SpiSetSelect
 		jmp	SpiSendIdle
 		jmp	SpiSendData
 				
@@ -1369,6 +1374,9 @@ IRQN:
 ;===============================================================================
 ; Uart I/O
 ;-------------------------------------------------------------------------------
+
+; Inserts the byte in A into the transmit buffer. If the buffer is full then
+; wait until some space is available. Registers are preserved.
 
 		.longa	off		; Assume 8-bit A
 		.longi	off		; Assume 8-bit X/Y
@@ -1464,9 +1472,36 @@ BumpIdx:
 		endif
 		rts			; Done
 
+; Returns the number of characters in the transmit buffer.
+
+UartTxCount:
+		php
+		SHORT_A
+		sec			; Work out index difference
+		lda	TX_HEAD
+		sbc	TX_TAIL
+		jmp	CorrectCount	; And correct if negative
+
+; Returns rge number of characters in the receive buffer.
+		
+UartRxCount:
+		php
+		SHORT_A
+		sec			; Work out index difference
+		lda	RX_HEAD
+		sbc	RX_TAIL
+CorrectCount:	if mi			; And correct if negative
+		 clc
+		 adc	#BUF_SIZE
+		endif
+		plp
+		rts			; Done
+		
 ;===============================================================================
 ; SPI I/O
 ;-------------------------------------------------------------------------------
+
+; Fetch the value of the SPI control register
 
 SpiGetControl:
 		php
@@ -1475,6 +1510,8 @@ SpiGetControl:
 		plp
 		rts
 
+; Set the value of the SPI control register
+	
 SpiSetControl:
 		php
 		SHORT_A
@@ -1482,12 +1519,16 @@ SpiSetControl:
 		plp
 		rts
 		
+; Fetch the value of the SPI status register
+
 SpiGetStatus:
 		php
 		SHORT_A
 		lda	SPI_STAT
 		plp
 		rts
+
+; Fetch the value of the SPI divisor register
 
 SpiGetDivisor:
 		php
@@ -1496,6 +1537,8 @@ SpiGetDivisor:
 		plp
 		rts
 
+; Set the value of the SPI divisor register
+
 SpiSetDivisor:
 		php
 		SHORT_A
@@ -1503,13 +1546,35 @@ SpiSetDivisor:
 		plp
 		rts
 
+; Fetch the value of the SPI chip select register
+
+SpiGetSelect:
+		php
+		SHORT_A
+		lda	SPI_SLCT
+		plp
+		rts
+
+; Set the value of the SPI chip select register
+
+SpiSetSelect:
+		php
+		SHORT_A
+		sta	SPI_SLCT
+		plp
+		rts
+
+; Send a $ff byte and return the value received
+
 SpiSendIdle:
 		php
 		SHORT_A
 		lda	#$ff
 		bra	SpiSend
 
-SpiDataSend:	
+; Send a data byte and return the value received
+
+SpiSendData:	
 		php
 		SHORT_A
 SpiSend:	sta	SPI_DATA

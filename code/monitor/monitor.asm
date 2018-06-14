@@ -2199,6 +2199,8 @@ MODES:
 		jmp	SpiGetStatus
 		jmp	SpiGetDivisor
 		jmp	SpiSetDivisor
+		jmp	SpiGetSelect
+		jmp	SpiSetSelect
 		jmp	SpiSendIdle
 		jmp	SpiSendData
 		
@@ -2328,47 +2330,79 @@ BumpIdx:
 		endif
 		rts			; Done
 
+; Returns the number of characters in the transmit buffer.
+
 UartTxCount:
-		sec
+		sec			; Work out index difference
 		lda	TX_HEAD
 		sbc	TX_TAIL
-		jmp	Correct
+		jmp	CorrectCount	; And correct if negative
+
+; Returns rge number of characters in the receive buffer.
 		
 UartRxCount:
-		sec
+		sec			; Work out index difference
 		lda	RX_HEAD
 		sbc	RX_TAIL
-Correct:	if mi
+CorrectCount:	if mi			; And correct if negative
 		 clc
 		 adc	#BUF_SIZE
 		endif
-		rts
+		rts			; Done
 
 ;===============================================================================
 ; SPI I/O
 ;-------------------------------------------------------------------------------
 
+; Fetch the value of the SPI control register
+
 SpiGetControl:
 		lda	SPI_CTRL
 		rts
-		
+	
+; Set the value of the SPI control register
+	
 SpiSetControl:
-		sta	SPI_CTRL
+		sta	SPI_CTRL 
 		rts
 		
+; Fetch the value of the SPI status register
+
 SpiGetStatus:
 		lda	SPI_STAT
 		rts
 		
+; Fetch the value of the SPI divisor register
+
 SpiGetDivisor:
 		lda	SPI_DVSR
 		rts
 		
+; Set the value of the SPI divisor register
+
 SpiSetDivisor:
 		sta	SPI_DVSR
 		rts
 
+; Fetch the value of the SPI chip select register
+
+SpiGetSelect:
+		lda	SPI_SLCT
+		plp
+		rts
+
+; Set the value of the SPI chip select register
+
+SpiSetSelect:
+		sta	SPI_SLCT
+		plp
+		rts
+
+; Send a $ff byte and return the value received
+
 SpiSendIdle:	lda	#$ff
+
+; Send a data byte and return the value received
 
 SpiSendData:	sta	SPI_DATA
 		repeat
