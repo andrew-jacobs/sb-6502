@@ -1042,8 +1042,6 @@ IsPrintable:
 Disassemble:
 		rts
 
-
-
 ;===============================================================================
 ; Display Utilities
 ;-------------------------------------------------------------------------------
@@ -1260,7 +1258,7 @@ OPCODES:
 		.byte	OP_TYA,OP_STA,OP_TXS,OP_TXY,OP_STZ,OP_STA,OP_STZ,OP_STA
 		.byte	OP_LDY,OP_LDA,OP_LDX,OP_LDA,OP_LDY,OP_LDA,OP_LDX,OP_LDA	; A0
 		.byte	OP_TAY,OP_LDA,OP_TAX,OP_PLB,OP_LDY,OP_LDA,OP_LDX,OP_LDA
-		.byte	OP_BCS,OP_LDA,OP_LDA,OP_LDY,OP_LDA,OP_LDY,OP_LDX,OP_LDA	; B0
+		.byte	OP_BCS,OP_LDA,OP_LDA,OP_LDA,OP_LDA,OP_LDY,OP_LDX,OP_LDA	; B0
 		.byte	OP_CLV,OP_LDA,OP_TSX,OP_TYX,OP_LDY,OP_LDA,OP_LDX,OP_LDA
 		.byte	OP_CPY,OP_CMP,OP_REP,OP_CMP,OP_CPY,OP_CMP,OP_DEC,OP_CMP	; C0
 		.byte	OP_INY,OP_CMP,OP_DEX,OP_WAI,OP_CPY,OP_CMP,OP_DEC,OP_CMP
