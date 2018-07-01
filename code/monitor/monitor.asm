@@ -1969,6 +1969,14 @@ Bar:
 		lda	#'|'
 		jmp	UartTx
 
+; Output a new line
+
+NewLine:
+		lda	#CR
+		jsr	UartTx
+		lda	#LF
+		jmp	UartTx
+		
 ;===============================================================================
 ; Strings
 ;-------------------------------------------------------------------------------
@@ -2183,13 +2191,18 @@ MODES:
 ;-------------------------------------------------------------------------------
 
 		jmp	UartTx
-		
 		jmp	UartRx
-		
-NewLine:	lda	#CR
-		jsr	UartTx
-		lda	#LF
-		jmp	UartTx
+		jmp	UartTxCount
+		jmp	UartRxCount
+		jmp	SpiGetControl
+		jmp	SpiSetControl
+		jmp	SpiGetStatus
+		jmp	SpiGetDivisor
+		jmp	SpiSetDivisor
+		jmp	SpiGetSelect
+		jmp	SpiSetSelect
+		jmp	SpiSendIdle
+		jmp	SpiSendData
 		
 ;===============================================================================
 ; IRQ Handler
@@ -2316,6 +2329,87 @@ BumpIdx:
 		 ldy	#0		; Yes, wrap around
 		endif
 		rts			; Done
+
+; Returns the number of characters in the transmit buffer.
+
+UartTxCount:
+		sec			; Work out index difference
+		lda	TX_HEAD
+		sbc	TX_TAIL
+		jmp	CorrectCount	; And correct if negative
+
+; Returns rge number of characters in the receive buffer.
+		
+UartRxCount:
+		sec			; Work out index difference
+		lda	RX_HEAD
+		sbc	RX_TAIL
+CorrectCount:	if mi			; And correct if negative
+		 clc
+		 adc	#BUF_SIZE
+		endif
+		rts			; Done
+
+;===============================================================================
+; SPI I/O
+;-------------------------------------------------------------------------------
+
+; Fetch the value of the SPI control register
+
+SpiGetControl:
+		lda	SPI_CTRL
+		rts
+	
+; Set the value of the SPI control register
+	
+SpiSetControl:
+		sta	SPI_CTRL 
+		rts
+		
+; Fetch the value of the SPI status register
+
+SpiGetStatus:
+		lda	SPI_STAT
+		rts
+		
+; Fetch the value of the SPI divisor register
+
+SpiGetDivisor:
+		lda	SPI_DVSR
+		rts
+		
+; Set the value of the SPI divisor register
+
+SpiSetDivisor:
+		sta	SPI_DVSR
+		rts
+
+; Fetch the value of the SPI chip select register
+
+SpiGetSelect:
+		lda	SPI_SLCT
+		plp
+		rts
+
+; Set the value of the SPI chip select register
+
+SpiSetSelect:
+		sta	SPI_SLCT
+		plp
+		rts
+
+; Send a $ff byte and return the value received
+
+SpiSendIdle:	lda	#$ff
+
+; Send a data byte and return the value received
+
+SpiSendData:	sta	SPI_DATA
+		repeat
+		 bit	SPI_STAT
+		until mi
+		lda	SPI_DATA
+		rts
 		
 ;===============================================================================
 ; Vector Locations

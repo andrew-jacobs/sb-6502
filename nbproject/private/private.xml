@@ -2,8 +2,12 @@
 <project-private xmlns="http://www.netbeans.org/ns/project-private/1">
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
+<<<<<<< HEAD
         <group>
             <file>file:/C:/OpenSource/MPLABX/sb-6502/firmware.asm</file>
         </group>
+=======
+        <group/>
+>>>>>>> 330b7c2b792ce4f4cd27576fd62f325d2ecf43ef
     </open-files>
 </project-private>

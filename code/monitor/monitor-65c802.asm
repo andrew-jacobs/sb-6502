@@ -1054,8 +1054,6 @@ IsPrintable:
 Disassemble:
 		rts
 
-
-
 ;===============================================================================
 ; Display Utilities
 ;-------------------------------------------------------------------------------
@@ -1164,6 +1162,15 @@ Bar:
 		lda	#'|'
 		jmp	UartTx
 		
+; Output a new line.
+
+		.longa	off
+NewLine:
+		lda	#CR
+		jsr	UartTx
+		lda	#LF
+		jmp	UartTx
+
 ; Output an opening bracket.
 
 		.longa	off
@@ -1263,7 +1270,7 @@ OPCODES:
 		.byte	OP_TYA,OP_STA,OP_TXS,OP_TXY,OP_STZ,OP_STA,OP_STZ,OP_STA
 		.byte	OP_LDY,OP_LDA,OP_LDX,OP_LDA,OP_LDY,OP_LDA,OP_LDX,OP_LDA	; A0
 		.byte	OP_TAY,OP_LDA,OP_TAX,OP_PLB,OP_LDY,OP_LDA,OP_LDX,OP_LDA
-		.byte	OP_BCS,OP_LDA,OP_LDA,OP_LDY,OP_LDA,OP_LDY,OP_LDX,OP_LDA	; B0
+		.byte	OP_BCS,OP_LDA,OP_LDA,OP_LDA,OP_LDA,OP_LDY,OP_LDX,OP_LDA	; B0
 		.byte	OP_CLV,OP_LDA,OP_TSX,OP_TYX,OP_LDY,OP_LDA,OP_LDX,OP_LDA
 		.byte	OP_CPY,OP_CMP,OP_REP,OP_CMP,OP_CPY,OP_CMP,OP_DEC,OP_CMP	; C0
 		.byte	OP_INY,OP_CMP,OP_DEX,OP_WAI,OP_CPY,OP_CMP,OP_DEC,OP_CMP
@@ -1319,18 +1326,23 @@ MODES:
 ; I/O API
 ;-------------------------------------------------------------------------------
 
-		.longa	off
+; These routines can be called in native or emulation mode and with either 8- or
+; 16- bit register sizes.
+
 		jmp	UartTx
-		
-		.longa	off
 		jmp	UartRx
-		
-		.longa	off
-NewLine:	lda	#CR
-		jsr	UartTx
-		lda	#LF
-		jmp	UartTx
-		
+		jmp	UartTxCount
+		jmp	UartRxCount
+		jmp	SpiGetControl
+		jmp	SpiSetControl
+		jmp	SpiGetStatus
+		jmp	SpiGetDivisor
+		jmp	SpiSetDivisor
+		jmp	SpiGetSelect
+		jmp	SpiSetSelect
+		jmp	SpiSendIdle
+		jmp	SpiSendData
+				
 ;===============================================================================
 ; IRQ Handlers
 ;-------------------------------------------------------------------------------
@@ -1372,6 +1384,9 @@ IRQN:
 ;===============================================================================
 ; Uart I/O
 ;-------------------------------------------------------------------------------
+
+; Inserts the byte in A into the transmit buffer. If the buffer is full then
+; wait until some space is available. Registers are preserved.
 
 		.longa	off		; Assume 8-bit A
 		.longi	off		; Assume 8-bit X/Y
@@ -1467,6 +1482,119 @@ BumpIdx:
 		endif
 		rts			; Done
 
+; Returns the number of characters in the transmit buffer.
+
+UartTxCount:
+		php
+		SHORT_A
+		sec			; Work out index difference
+		lda	TX_HEAD
+		sbc	TX_TAIL
+		jmp	CorrectCount	; And correct if negative
+
+; Returns rge number of characters in the receive buffer.
+		
+UartRxCount:
+		php
+		SHORT_A
+		sec			; Work out index difference
+		lda	RX_HEAD
+		sbc	RX_TAIL
+CorrectCount:	if mi			; And correct if negative
+		 clc
+		 adc	#BUF_SIZE
+		endif
+		plp
+		rts			; Done
+		
+;===============================================================================
+; SPI I/O
+;-------------------------------------------------------------------------------
+
+; Fetch the value of the SPI control register
+
+SpiGetControl:
+		php
+		SHORT_A
+		lda	SPI_CTRL
+		plp
+		rts
+
+; Set the value of the SPI control register
+	
+SpiSetControl:
+		php
+		SHORT_A
+		sta	SPI_CTRL
+		plp
+		rts
+		
+; Fetch the value of the SPI status register
+
+SpiGetStatus:
+		php
+		SHORT_A
+		lda	SPI_STAT
+		plp
+		rts
+
+; Fetch the value of the SPI divisor register
+
+SpiGetDivisor:
+		php
+		SHORT_A
+		lda	SPI_DVSR
+		plp
+		rts
+
+; Set the value of the SPI divisor register
+
+SpiSetDivisor:
+		php
+		SHORT_A
+		sta	SPI_DVSR
+		plp
+		rts
+
+; Fetch the value of the SPI chip select register
+
+SpiGetSelect:
+		php
+		SHORT_A
+		lda	SPI_SLCT
+		plp
+		rts
+
+; Set the value of the SPI chip select register
+
+SpiSetSelect:
+		php
+		SHORT_A
+		sta	SPI_SLCT
+		plp
+		rts
+
+; Send a $ff byte and return the value received
+
+SpiSendIdle:
+		php
+		SHORT_A
+		lda	#$ff
+		bra	SpiSend
+
+; Send a data byte and return the value received
+
+SpiSendData:	
+		php
+		SHORT_A
+SpiSend:	sta	SPI_DATA
+		repeat
+		 bit	SPI_STAT
+		until mi
+		lda	SPI_DATA
+		plp
+		rts
+		
 ;===============================================================================
 ; Vectors
 ;-------------------------------------------------------------------------------
