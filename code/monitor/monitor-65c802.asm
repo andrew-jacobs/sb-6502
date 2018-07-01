@@ -607,6 +607,32 @@ RptCommand:
 
 		cmp	#'D'
 		if 	eq
+		 jsr	GetWord
+		 if	cc
+		  jsr	SetStartAddr
+		  jsr	SetEndAddr
+		  jsr	GetWord
+		  if	cc
+		   jsr	SetEndAddr
+		  else
+		   inc	ADDR_E+1
+		  endif
+		  
+		  repeat
+		   jsr	NewLine		; Print the memory address
+		   lda	ADDR_S+1
+		   jsr	ShowHex2
+		   lda	ADDR_S+0
+		   jsr	ShowHex2
+		   
+		   jsr	Disassemble
+		   jsr	BumpAddr
+		   break cs
+		   jsr	CheckEnd
+		  until	cs
+		  jmp	NewCommand
+		 endif
+		 jmp	Error		
 		endif
 	
 ;===============================================================================
@@ -781,20 +807,6 @@ RptCommand:
 		 endif
 		 jmp	Error		; Handle syntax errors
 		endif
-
-; Clock test. Remove
-	cmp	#'C'
-	if	eq
-	 jsr	NewLine
-	 repeat
-	  lda	RTC_SEC0
-	  repeat
-	   cmp 	RTC_SEC0
-	  until ne
-	  lda	#'.'
-	  jsr	UartTx
-	 forever
-	endif
 		
 ;===============================================================================
 ; '?' - Display Help
