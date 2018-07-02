@@ -1689,7 +1689,7 @@ Disassemble:
 		ldy	#0		; Fetch the opcode
 		lda	(ADDR_S),y
 		tax
-		jsr	ShowHex2	; And display it
+		jsr	ShowHex2	; .. and display it
 		
 		jsr	Space
 		lda	MODES,x		; Fetch the mode

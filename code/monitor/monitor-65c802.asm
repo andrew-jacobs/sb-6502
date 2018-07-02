@@ -170,7 +170,7 @@ MO_AIX		.equ	7<<1			; (a,x)
 MO_DPG		.equ	8<<1			; d
 MO_STK		.equ	9<<1			; d,s
 MO_DPX		.equ	10<<1			; d,x
-MO_DPY		.equ	11<<1			; d,x
+MO_DPY		.equ	11<<1			; d,y
 MO_DIN		.equ	12<<1			; (d)
 MO_DLI		.equ	13<<1			; [d]
 MO_SKY		.equ	14<<1			; (d,s),y
@@ -1051,8 +1051,386 @@ IsPrintable:
 ; Disassembly
 ;-------------------------------------------------------------------------------
 
+		.longa	off
 Disassemble:
+		jsr	Space
+		ldy	#0
+		jsr	ShowByte	; Fetch the opcode
+		tax
+		phx
+		lda	MODES,x		; Fetch the mode
+		tax
+		jmp	(Decode,x)
+
+Decode:		.word	DI_ABS		; a
+		.word	DI_ACC		; A
+		.word	DI_ABX		; a,x
+		.word	DI_ABY		; a,y
+		.word	DI_ALG		; al
+		.word	DI_ALX		; al,x
+		.word	DI_AIN		; (a)
+		.word	DI_AIX		; (a,x)
+		.word	DI_DPG		; d
+		.word	DI_STK		; d,s
+		.word	DI_DPX		; d,x
+		.word	DI_DPY		; d,y
+		.word	DI_DIN		; (d)
+		.word	DI_DIL		; [d]
+		.word	DI_SKY		; (d,s),y
+		.word	DI_DIX		; (d,x)
+		.word	DI_DIY		; (d),y
+		.word	DI_DLY		; [d],y
+		.word	DI_IMP		;
+		.word	DI_REL		; r
+		.word	DI_RLG		; rl
+		.word	DI_MOV		; xyc
+		.word	DI_IMM		; # (A or M)
+		.word	DI_INT		; # (BRK/COP/WDM)
+		.word	DI_IMX		; # (X or Y)
+
+;-------------------------------------------------------------------------------
+
+DI_ABS:		jsr	ShowByte2
+		jsr	ShowSpace
+		plx
+		jsr	ShowOpcode
+		jsr	ShowAbsolute
+		lda	#3
 		rts
+		
+DI_ACC:		jsr	ShowSpace3
+		plx
+		jsr	ShowOpcode
+		lda	#'A'
+		jsr	UartTx
+		lda	#1
+		rts
+		
+DI_ABX:		jsr	ShowByte2
+		jsr	ShowSpace
+		plx
+		jsr	ShowOpcode
+		jsr	ShowAbsolute
+		jsr	ShowIndexX
+		lda	#3
+		rts
+		
+DI_ABY:		jsr	ShowByte2
+		jsr	ShowSpace
+		plx
+		jsr	ShowOpcode
+		jsr	ShowAbsolute
+		jsr	ShowIndexY
+		lda	#3
+		rts
+		
+DI_ALG:		jsr	ShowByte3
+		plx
+		jsr	ShowOpcode
+		jsr	ShowLongAbs
+		lda	#4
+		rts
+		
+DI_ALX:		jsr	ShowByte3
+		plx
+		jsr	ShowOpcode
+		jsr	ShowLongAbs
+		jsr	ShowIndexX
+		lda	#4
+		rts
+
+DI_AIN:		jsr	ShowByte2
+		jsr	ShowSpace
+		plx
+		jsr	ShowOpcode
+		jsr	OpenParen
+		jsr	ShowAbsolute
+		jsr	CloseParen
+		lda	#3
+		rts
+		
+DI_AIX:		jsr	ShowByte2
+		jsr	ShowSpace
+		plx
+		jsr	ShowOpcode
+		jsr	OpenParen
+		jsr	ShowAbsolute
+		jsr	ShowIndexX
+		jsr	CloseParen
+		lda	#3
+		rts
+		
+DI_DPG:		jsr	ShowByte
+		jsr	ShowSpace2
+		plx
+		jsr	ShowOpcode
+		jsr	ShowDirect
+		lda	#2
+		rts
+		
+DI_STK:		jsr	ShowByte
+		jsr	ShowSpace2
+		plx
+		jsr	ShowOpcode
+		jsr	ShowDirect
+		jsr	ShowIndexS
+		lda	#2
+		rts
+		
+DI_DPX:		jsr	ShowByte
+		jsr	ShowSpace2
+		plx
+		jsr	ShowOpcode
+		jsr	ShowDirect
+		jsr	ShowIndexX
+		lda	#2
+		rts
+		
+DI_DPY:		jsr	ShowByte
+		jsr	ShowSpace2
+		plx
+		jsr	ShowOpcode
+		jsr	ShowDirect
+		jsr	ShowIndexY
+		lda	#2
+		rts
+		
+DI_DIN:		jsr	ShowByte
+		jsr	ShowSpace2
+		plx
+		jsr	ShowOpcode
+		jsr	OpenParen
+		jsr	ShowDirect
+		jsr	CloseParen
+		lda	#2
+		rts
+		
+DI_DIL:		jsr	ShowByte
+		jsr	ShowSpace2
+		plx
+		jsr	ShowOpcode
+		jsr	OpenBracket
+		jsr	ShowDirect
+		jsr	CloseBracket
+		lda	#2
+		rts
+		
+DI_SKY:		jsr	ShowByte
+		jsr	ShowSpace2
+		plx
+		jsr	ShowOpcode
+		jsr	OpenParen
+		jsr	ShowDirect
+		jsr	ShowIndexS
+		jsr	CloseParen
+		jsr	ShowIndexY
+		lda	#2
+		rts
+
+DI_DIX:		jsr	ShowByte
+		jsr	ShowSpace2
+		plx
+		jsr	ShowOpcode
+		jsr	OpenParen
+		jsr	ShowDirect
+		jsr	ShowIndexX
+		jsr	CloseParen
+		lda	#2
+		rts
+
+DI_DIY:		jsr	ShowByte
+		jsr	ShowSpace2
+		plx
+		jsr	ShowOpcode
+		jsr	OpenParen
+		jsr	ShowDirect
+		jsr	CloseParen
+		jsr	ShowIndexY
+		lda	#2
+		rts
+
+DI_DLY:		jsr	ShowByte
+		jsr	ShowSpace2
+		plx
+		jsr	ShowOpcode
+		jsr	OpenBracket
+		jsr	ShowDirect
+		jsr	CloseBracket
+		jsr	ShowIndexY
+		lda	#2
+		rts
+
+DI_IMP:		jsr	ShowSpace3
+		plx
+		jsr	ShowOpcode
+		lda	#1
+		rts
+
+DI_REL:		jsr	ShowByte
+		jsr	ShowSpace2
+		plx
+		jsr	ShowOpcode
+	; FIX	
+		lda	#2
+		rts
+		
+DI_RLG:		jsr	ShowByte2
+		jsr	ShowSpace
+		plx
+		jsr	ShowOpcode
+	; FIX	
+		lda	#3
+		rts
+
+DI_MOV:		jsr	ShowByte2
+		jsr	ShowSpace
+		plx
+		jsr	ShowOpcode
+		jsr	ShowDirect
+		jsr	Comma
+		jsr	Dollar
+		iny
+		lda	(ADDR_S),y
+		jsr	ShowHex2
+		lda	#3
+		rts
+		
+DI_IMM:
+	; FIX
+
+DI_INT:		jsr	ShowByte
+		jsr	ShowSpace2
+		plx
+		jsr	ShowOpcode
+		jsr	Hash
+		jsr	ShowDirect
+		lda	#2
+		rts
+		
+DI_IMX:
+	; FIX
+
+DI_WRD:		jsr	ShowByte2
+		jsr	ShowSpace
+		plx
+		jsr	ShowOpcode
+		jsr	Hash
+		jsr	ShowAbsolute
+		lda	#3
+		rts
+
+;-------------------------------------------------------------------------------
+		
+		.longa	off
+ShowOpcode:
+		lda	OPCODES,x
+		tax
+		LONG_I
+		ldy	MNEMONICS,x
+		jsr	Extract
+		jsr	Extract
+		jsr	Extract
+		SHORT_I
+		jmp	Space
+
+		.longa	off
+Extract:
+		LONG_A
+		tya
+		pha
+		lsr	a
+		lsr	a
+		lsr	a
+		lsr	a
+		lsr	a
+		tay
+		pla
+		SHORT_A
+		and	#$1f
+		ora	#'@'
+		jmp	UartTx
+		
+;-------------------------------------------------------------------------------
+		
+		.longa	off
+		.longi	off
+ShowLongAbs:
+		jsr	Dollar
+		ldy	#3
+		lda	(ADDR_S),y
+		jsr	ShowHex2
+		dey
+ShowAbs:	lda	(ADDR_S),y
+		jsr	ShowHex2
+		dey
+ShowDir:	lda	(ADDR_S),y
+		jmp	ShowHex2
+		
+		.longa	off
+		.longi	off
+ShowAbsolute:
+		jsr	Dollar
+		ldy	#2
+		bra	ShowAbs
+
+		.longa	off
+		.longi	off
+ShowDirect:
+		jsr	Dollar
+		ldy	#1
+		bra	ShowDir
+
+;-------------------------------------------------------------------------------
+		
+		.longa	off
+ShowIndexX:
+		jsr	Comma
+		lda	#'X'
+		jmp	UartTx
+		
+		.longa	off
+ShowIndexY:
+		jsr	Comma
+		lda	#'Y'
+		jmp	UartTx
+
+		.longa	off
+ShowIndexS:
+		jsr	Comma
+		lda	#'S'
+		jmp	UartTx
+
+;-------------------------------------------------------------------------------
+
+; Display one, two or three bytes from the current instruction depending on the
+; entry point.
+
+		.longa	off
+ShowByte3:
+		jsr	ShowByte
+ShowByte2:
+		jsr	ShowByte
+
+ShowByte:
+		lda	(ADDR_S),y
+		iny
+		pha
+		jsr	ShowHex2
+		jsr	Space
+		pla
+		rts
+
+; Display one teo or three sets of spaces depending on the entry point.
+
+		.longa	off
+ShowSpace3:
+		jsr	ShowSpace
+ShowSpace2:
+		jsr	ShowSpace
+ShowSpace:
+		jsr	Space
+		jsr	Space
+		jmp	Space
 
 ;===============================================================================
 ; Display Utilities
@@ -1100,7 +1478,7 @@ ShowShort:
 
 ;-------------------------------------------------------------------------------
 
-; Display the byte in A as four hexadecimal digits. The values in A & Y are
+; Display the bytes in A/B as four hexadecimal digits. The value in A/B is
 ; destroyed.
 
 		.longa	off
@@ -1148,19 +1526,40 @@ ToHex:
 Space2:
 		jsr	Space		; Print one space then drop into ..
 		
-; Output a single space. The values in A & Y are destroyed.
+; Output a single space. The value in A is destroyed.
 
 		.longa	off
 Space:
 		lda	#' '
-		jmp	UartTx
+		bra	PrintIt
 		
 ; Output a vertical bar character.
 
 		.longa	off
 Bar:
 		lda	#'|'
-		jmp	UartTx
+		bra	PrintIt
+		
+; Output a hash sign.
+
+		.longa	off
+Hash:
+		lda	#'#'
+		bra	PrintIt
+		
+; Output a dollar sign.
+
+		.longa	off
+Dollar:
+		lda	#'$'
+		bra	PrintIt
+		
+; Output a comma.
+
+		.longa	off
+Comma:
+		lda	#','
+		bra	PrintIt
 		
 ; Output a new line.
 
@@ -1169,21 +1568,35 @@ NewLine:
 		lda	#CR
 		jsr	UartTx
 		lda	#LF
-		jmp	UartTx
+PrintIt		jmp	UartTx
+		
+; Output an opening parenthesis.
+
+		.longa	off
+OpenParen:
+		lda	#'('
+		bra	PrintIt
+		
+; Output a closing parenthesis.
+
+		.longa	off
+CloseParen:
+		lda	#')'
+		bra	PrintIt
 
 ; Output an opening bracket.
 
 		.longa	off
 OpenBracket:
 		lda	#'['
-		jmp	UartTx
+		bra	PrintIt
 
 ; Output a closing bracket.
 
 		.longa	off
 CloseBracket:
 		lda	#']'
-		jmp	UartTx
+		bra	PrintIt
 	
 ;===============================================================================
 ; Strings
@@ -1490,7 +1903,7 @@ UartTxCount:
 		sec			; Work out index difference
 		lda	TX_HEAD
 		sbc	TX_TAIL
-		jmp	CorrectCount	; And correct if negative
+		bra	CorrectCount	; And correct if negative
 
 ; Returns rge number of characters in the receive buffer.
 		
