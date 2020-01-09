@@ -7,7 +7,7 @@
 ;                                         
 ; A Firmware for a Three Chip 6502/65C02/65C802 Single Board Computer
 ;-------------------------------------------------------------------------------
-; Copyright (C)2014-2018 Andrew John Jacobs
+; Copyright (C)2014-2020 Andrew John Jacobs
 ; All rights reserved.
 ;
 ; This work is made available under the terms of the Creative Commons
@@ -1155,7 +1155,7 @@ AciaWrStat:
                 bra     NormalLo                ; Continue
 
 AciaRdCmnd:
-                movf    ACIA_CMD                ; Fetch command bits
+                movf    ACIA_CMD,W              ; Fetch command bits
                 clrf    DATA_TRIS               ; Place on data bus
                 movwf   DATA_LAT
                 nop
@@ -1178,7 +1178,7 @@ AciaWrCmnd:
                 bra     NormalLo                ; Continue
 
 AciaRdCtrl:
-                movf    ACIA_CTL                ; Fetch control bits
+                movf    ACIA_CTL,W              ; Fetch control bits
                 clrf    DATA_TRIS               ; Place on data bus
                 movwf   DATA_LAT
                 nop
@@ -1193,15 +1193,15 @@ AciaWrCtrl:
                 mullw   .10
                 rcall   ComputedJump
             
-                movlw   low UART_BRG(.115200)   ; 0 = 115K
+                movlw   low UART_BRG(.38400)   ; 0 = 115K
                 movwf   SPBRG1
-                movlw   high UART_BRG(.115200)
+                movlw   high UART_BRG(.38400)
                 movwf   SPBRGH1
                 bra     NormalLo                ; Continue
 
-                movlw   low UART_BRG(.50)       ; 1 = 50
+                movlw   low UART_BRG(.57600)       ; 1 = 50
                 movwf   SPBRG1
-                movlw   high UART_BRG(.50)
+                movlw   high UART_BRG(.57600)
                 movwf   SPBRGH1
                 bra     NormalLo                ; Continue
 

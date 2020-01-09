@@ -533,11 +533,19 @@ RptCommand:
 
 		cmp	#'G'
 		if	eq
-
-		 lda	PC_REG+1	; Push the target address
-		 pha
-		 lda	PC_REG+0
-		 pha
+		 jsr	GetWord		; Extract start address
+		 if cc
+		  lda	TEMP+1
+		  pha
+		  lda	TEMP+0
+		  pha
+		 else
+		  lda	PC_REG+1	; Push the target address
+		  pha
+		  lda	PC_REG+0
+		  pha
+		 endif
+		 
 		 lda	P_REG		; And status flags
 		 pha
 		 lda	A_REG		; Reload A, X and Y
@@ -669,12 +677,25 @@ RptCommand:
 		if eq
 		 jsr	GetWord		; Extract start address
 		 if cc
-		  lda	TEMP+0
-		  sta	PC_REG+0
-		  lda	TEMP+1
-		  sta	PC_REG+1
+		  ldy	TEMP+0		; And overwrite PC
+		  sty	PC_REG+0
+		  ldy	TEMP+1
+		  sty	PC_REG+1
 		 endif
-		 
+	
+		 cmp	#','
+		 sec
+		 if eq
+		  jsr	GetWord		; Extract count
+		 endif
+		 if cs
+		  ldy	#1		; Default one step
+		  sty	TEMP+0
+		  dey
+		  sty	TEMP+1
+		 endif
+			 
+Trace:
 		 jsr	NewLine		; Show the current PC
 		 lda	PC_REG+1
 		 sta	ADDR_S+1
@@ -759,13 +780,13 @@ RptCommand:
 		  
 		  lda	#MO_ZPX		; Force wrap around for ZPG,X
 		  cmp	MODES,x
-		  if ne
+		  if eq
 		   sty	ADDR_S+1
 		  endif
 
 		  lda	#MO_IZX		; .. and (ZPG,X)
 		  cmp	MODES,x
-		  if ne
+		  if eq
 		   sty	ADDR_S+1
 		  endif
 		 endif
@@ -773,19 +794,28 @@ RptCommand:
 		 lda	#MB_IND		; Handle indirection
 		 and 	MODES,x
 		 if ne
-		  lda	(ADDR_S),y
+		  lda	(ADDR_S),y	; Fetch low byte of target
 		  pha
-		  cpx	#$6C		; Broken indirection?
+		  
+		.if	__65C02__
+		  cpx	#$6C		; JMP (abs)?
+		  if ne
+		   cpx	#$7C		; or JMP (abs,X)?
+		  endif
 		  if eq
-		   inc	ADDR_S+0	; Yes.
-		  else
-		   inc	ADDR_S+0	; No.
+		   inc	ADDR_S+0	; 65C02 increments properly
 		   if eq
 		    inc ADDR_S+1
 		   endif
+		  else
+		   inc	ADDR_S+0	; Otherwise just the low byte
 		  endif
-		  lda	(ADDR_S),y
-		  sta	ADDR_S+1
+		.else
+		  inc	ADDR_S+0	; 6502 bumps just the low byte
+		.endif
+		  
+		  lda	(ADDR_S),y	; Fetch high byte of target
+		  sta	ADDR_S+1	; And save indirect address
 		  pla
 		  sta	ADDR_S+0
 		 endif
@@ -880,14 +910,14 @@ EMULATE:
 		.word	EM_LSR-1
 		.word	EM_NOP-1
 		.word	EM_ORA-1
-		.word	EM_PLA-1
-		.word	EM_PLP-1
-		.word	EM_PLX-1
-		.word	EM_PLY-1
 		.word	EM_PHA-1
 		.word	EM_PHP-1
 		.word	EM_PHX-1
 		.word	EM_PHY-1
+		.word	EM_PLA-1
+		.word	EM_PLP-1
+		.word	EM_PLX-1
+		.word	EM_PLY-1
 		.word	EM_RMB-1
 		.word	EM_ROL-1
 		.word	EM_ROR-1
@@ -981,6 +1011,7 @@ EM_ORA:
 		 jmp	SaveAP
 		 
 EM_BIT:
+		.if 	__65C02__
 		 cpx	#$89		; Immediate does not affect NV
 		 if ne
 		  pha
@@ -991,6 +1022,7 @@ EM_BIT:
 		  sta	P_REG
 		  pla
 		 endif
+		.endif
 		 and	(ADDR_S),y	; Handle Z flag
 		 php
 		 pla
@@ -1112,6 +1144,7 @@ EM_JSR:
 		 lda	PC_REG+1	; And push PC
 		 pha
 		 lda	PC_REG+0
+		 pha
 
 EM_JMP:
 		 lda	ADDR_S+0	; Set PC to target address
@@ -1237,8 +1270,10 @@ EM_RTS:
 		 jmp	SaveNone
 		 
 EM_STP:
+		 jmp	SaveNone
 
 EM_WAI:
+		 jmp	SaveNone
 
 ;-------------------------------------------------------------------------------
 
@@ -1253,124 +1288,129 @@ EM_TAY:
 		 jmp	SaveP
 
 EM_TSX:
-		tsx
-		stx	X_REG
-		jmp	SaveP
+		 tsx
+		 stx	X_REG
+		 jmp	SaveP
 		
 EM_TXA:
-		lda	X_REG
-		jmp	SaveAP
+		 lda	X_REG
+		 jmp	SaveAP
 		
 EM_TXS:
-		ldx	X_REG
-		txs
-		jmp	SaveNone
+		 ldx	X_REG
+		 txs
+		 jmp	SaveNone
 		
 EM_TYA:
-		lda	Y_REG
-		jmp	SaveAP
+		 lda	Y_REG
+		 jmp	SaveAP
 		
 ;-------------------------------------------------------------------------------
 
-		;.if __65C02__
-		
 EM_BBR:
-		txa			; Get bit number
-		and	#$70
-		lsr	a
-		lsr	a
-		lsr	a
-		lsr	a
-		tax
-		lda	BITS,x		; Map to bit mask
-		and	(ADDR_S),y	; And test value
-		bne	SaveNone
-		jmp	EM_BRA
+		 txa			; Get bit number
+		 and	#$70
+		 lsr	a
+		 lsr	a
+		 lsr	a
+		 lsr	a
+		 tax
+		 lda	BITS,x		; Map to bit mask
+		 and	(ADDR_S),y	; And test value
+		 bne	SaveNone
+		 jmp	EM_BRA
 		
 EM_BBS:
-		txa			; Get bit number
-		and	#$70
-		lsr	a
-		lsr	a
-		lsr	a
-		lsr	a
-		tax
-		lda	BITS,x		; Map to bit mask
-		and	(ADDR_S),y	; And test value
-		beq	SaveNone
-		jmp	EM_BRA
+		 txa			; Get bit number
+		 and	#$70
+		 lsr	a
+		 lsr	a
+		 lsr	a
+		 lsr	a
+		 tax
+		 lda	BITS,x		; Map to bit mask
+		 and	(ADDR_S),y	; And test value
+		 beq	SaveNone
+		 jmp	EM_BRA
 
 EM_RMB:
-		txa			; Get bit number
-		and	#$70
-		lsr	a
-		lsr	a
-		lsr	a
-		lsr	a
-		tax
-		lda	MASK,x		; Map to bit mask
-		and	(ADDR_S),y
-		sta	(ADDR_S),y
-		jmp	SaveNone
+		 txa			; Get bit number
+		 and	#$70
+		 lsr	a
+		 lsr	a
+		 lsr	a
+		 lsr	a
+		 tax
+		 lda	MASK,x		; Map to bit mask
+		 and	(ADDR_S),y
+		 sta	(ADDR_S),y
+	 	 jmp	SaveNone
 		
 EM_SMB:
-		txa			; Get bit number
-		and	#$70
-		lsr	a
-		lsr	a
-		lsr	a
-		lsr	a
-		tax
-		lda	BITS,x		; Map to bit mask
-		ora	(ADDR_S),y
-		sta	(ADDR_S),y
-		jmp	SaveNone
+		 txa			; Get bit number
+		 and	#$70
+		 lsr	a
+		 lsr	a
+		 lsr	a
+		 lsr	a
+		 tax
+		 lda	BITS,x		; Map to bit mask
+		 ora	(ADDR_S),y
+		 sta	(ADDR_S),y
+		 jmp	SaveNone
 
 EM_TRB:
-		pha
-		and	(ADDR_S),Y
-		php
-		pla
-		eor	P_REG
-		and	#1<<1
-		eor	P_REG
-		sta	P_REG
-		pla
-		eor	#$ff
-		and	(ADDR_S),y
-		sta	(ADDR_S),y
-		jmp	SaveNone
+		 pha
+		 and	(ADDR_S),Y
+		 php
+		 pla
+		 eor	P_REG
+		 and	#1<<1
+		 eor	P_REG
+		 sta	P_REG
+		 pla
+		 eor	#$ff
+		 and	(ADDR_S),y
+		 sta	(ADDR_S),y
+		 jmp	SaveNone
 		
 EM_TSB:
-		pha
-		and	(ADDR_S),Y
-		php
-		pla
-		eor	P_REG
-		and	#1<<1
-		eor	P_REG
-		sta	P_REG
-		pla
-		ora	(ADDR_S),y
-		sta	(ADDR_S),y
-		jmp	SaveNone
-		
-		;.endif
+		 pha
+		 and	(ADDR_S),Y
+		 php
+		 pla
+		 eor	P_REG
+		 and	#1<<1
+		 eor	P_REG
+		 sta	P_REG
+		 pla
+		 ora	(ADDR_S),y
+		 sta	(ADDR_S),y
+		 jmp	SaveNone
 		
 ;-------------------------------------------------------------------------------
 		
 SaveAP:
-		 sta	A_REG
+		 sta	A_REG		; Save the updated A
 SaveP:
-		 php
+		 php			; Save the updated flags
 		 pla
 		 sta	P_REG
 SaveNone:
-
+		 lda	TEMP+0		; Repeat as instructed
+		 if eq
+		  dec	TEMP+1
+		 endif
+		 dec	TEMP+0
+		 
+		 lda	TEMP+0
+		 ora	TEMP+1
+		 if ne
+		  jmp	Trace
+		 endif
 		 
 EM_ERR:
 		 jmp	NewCommand
-		
 		endif
 
 ;===============================================================================
@@ -1395,20 +1435,6 @@ EM_ERR:
 		 endif
 		 jmp	Error		; Handle syntax errors
 		endif
-		
-; Clock test. Remove
-	cmp	#'C'
-	if	eq
-	 jsr	NewLine
-	 repeat
-	  lda	RTC_SEC0
-	  repeat
-	   cmp 	RTC_SEC0
-	  until ne
-	  lda	#'.'
-	  jsr	UartTx
-	 forever
-	endif
 		
 ;===============================================================================
 ; '?' - Display Help
@@ -1510,6 +1536,7 @@ AppendChar:
 NextChar:
 		cpx	CMD_LEN		; Reached end of buffer>
 		if 	cs
+		 lda	#0
 		 rts			; Yes, return with C=1
 		endif
 		lda	COMMAND,X	; No, fetch a character
@@ -1685,6 +1712,11 @@ DumpRegisters:
 ;-------------------------------------------------------------------------------
 
 Disassemble:
+		lda	TEMP+0		; Save temporary area
+		pha
+		lda	TEMP+1
+		pha
+		
 		jsr	Space
 		ldy	#0		; Fetch the opcode
 		lda	(ADDR_S),y
@@ -1891,6 +1923,11 @@ Disassemble:
 		 inx
 		endif
 		
+		pla			; Restore temporary area
+		sta	TEMP+1
+		pla
+		sta	TEMP+0
+		
 		lda	COUNT		; Return the number of bytes
 		rts
 		
@@ -1996,10 +2033,10 @@ ShowString:
 STRINGS:
 TTL_STR		.equ	.-STRINGS
 		.if	__6502__
-		.byte	CR,LF,"Boot 6502 [18.06]"
+		.byte	CR,LF,"Boot 6502 [20.01]"
 		.endif
 		.if	__65C02__
-		.byte	CR,LF,"Boot 65C02 [18.06]"
+		.byte	CR,LF,"Boot 65C02 [20.01]"
 		.endif
 		.byte	0
 PC_STR		.equ	.-STRINGS
@@ -2194,13 +2231,6 @@ MODES:
 		jmp	UartRx
 		jmp	UartTxCount
 		jmp	UartRxCount
-		jmp	SpiGetControl
-		jmp	SpiSetControl
-		jmp	SpiGetStatus
-		jmp	SpiGetDivisor
-		jmp	SpiSetDivisor
-		jmp	SpiGetSelect
-		jmp	SpiSetSelect
 		jmp	SpiSendIdle
 		jmp	SpiSendData
 		
@@ -2353,50 +2383,6 @@ CorrectCount:	if mi			; And correct if negative
 ;===============================================================================
 ; SPI I/O
 ;-------------------------------------------------------------------------------
-
-; Fetch the value of the SPI control register
-
-SpiGetControl:
-		lda	SPI_CTRL
-		rts
-	
-; Set the value of the SPI control register
-	
-SpiSetControl:
-		sta	SPI_CTRL 
-		rts
-		
-; Fetch the value of the SPI status register
-
-SpiGetStatus:
-		lda	SPI_STAT
-		rts
-		
-; Fetch the value of the SPI divisor register
-
-SpiGetDivisor:
-		lda	SPI_DVSR
-		rts
-		
-; Set the value of the SPI divisor register
-
-SpiSetDivisor:
-		sta	SPI_DVSR
-		rts
-
-; Fetch the value of the SPI chip select register
-
-SpiGetSelect:
-		lda	SPI_SLCT
-		plp
-		rts
-
-; Set the value of the SPI chip select register
-
-SpiSetSelect:
-		sta	SPI_SLCT
-		plp
-		rts
 
 ; Send a $ff byte and return the value received
 
