@@ -22,15 +22,21 @@
 ;          65(C)02                 65C802
 ; +------+-----------------------+-----------------------+
 ; | 0000 | Page Zero             | Default Page Zero     |
-; | 00fe | Interrupt Temp        |                       |
+; | 00F0 | Monitor (Overwritable)| Monitor (Overwritable)|
+; | 00FE | Interrupt Temp        |                       |
 ; +------+-----------------------+-----------------------+
 ; | 0100 | Stack                 | Default Stack         |
 ; +------+-----------------------+-----------------------+
 ; | 0200 | Vectors               | Vectors               |
 ; | 0208 | I/O RAM               | I/O RAM               |
+; | 0280 | Monitor (Overwritable)| Monitor (Overwritable)|
 ; +------+-----------------------+-----------------------+
-; | 0280 | RAM                   | RAM                   |
+; | 0300 | RAM                   | RAM                   |
 ; |      |                       |                       |
+; | BFFF |                       |                       |
+; +------+-----------------------+-----------------------+
+; | C000 | 'ROM' Image           | 'ROM' Image           |
+; |      | (Overwritable)        | (Overwritable)        |
 ; | EFFF |                       |                       |
 ; +------+-----------------------+-----------------------+
 ; | F000 | Boot 'ROM' Image      | Boot 'ROM' Image      |
@@ -46,6 +52,9 @@
 ; | FFE8 |                       | 65C802 Vectors        |
 ; | FFFA | 65(C)02 Vectors       |                       |
 ; +------+-----------------------+-----------------------+
+;
+; If the monitor is not being used then its zero page ($F0-$FD) and buffer area
+; ($0280-$02FF) can be overwriten by the user program.
 ;
 ; The Host PIC18F is too fast for the UART to be set to 50 or 75 baud. The other
 ; speeds work correctly.

@@ -2368,7 +2368,7 @@ UartTxCount:
 		sbc	TX_TAIL
 		jmp	CorrectCount	; And correct if negative
 
-; Returns rge number of characters in the receive buffer.
+; Returns the number of characters in the receive buffer.
 		
 UartRxCount:
 		sec			; Work out index difference
