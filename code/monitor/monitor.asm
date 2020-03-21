@@ -36,7 +36,7 @@ OP_BIT		.equ	$12
 OP_BNE		.equ	$14
 OP_BMI		.equ	$16
 OP_BPL		.equ	$18
-		.if	__65C02__
+		.if	__65C02__|__65SC02__
 OP_BRA		.equ	$1A
 		.endif
 OP_BRK		.equ	$1C
@@ -66,15 +66,17 @@ OP_NOP		.equ	$4A
 OP_ORA		.equ	$4C
 OP_PHA		.equ	$4E
 OP_PHP		.equ	$50
-		.if	__65C02__
+		.if	__65C02__|__65SC02__
 OP_PHX		.equ	$52
 OP_PHY		.equ	$54
 		.endif
 OP_PLA		.equ	$56
 OP_PLP		.equ	$58
-		.if	__65C02__
+		.if	__65C02__|__65SC02__
 OP_PLX		.equ	$5A
 OP_PLY		.equ	$5C
+		.endif
+		.if	__65C02__
 OP_RMB		.equ	$5E
 		.endif
 OP_ROL		.equ	$60
@@ -89,17 +91,17 @@ OP_SEI		.equ	$6E
 OP_SMB		.equ	$70
 		.endif
 OP_STA		.equ	$72
-		.if	__65C02__
+		.if	__65C02__|__65SC02__
 OP_STP		.equ	$74
 		.endif
 OP_STX		.equ	$76
 OP_STY		.equ	$78
-		.if	__65C02__
+		.if	__65C02__|__65SC02__
 OP_STZ		.equ	$7A
 		.endif
 OP_TAX		.equ	$7C
 OP_TAY		.equ	$7E
-		.if	__65C02__
+		.if	__65C02__|__65SC02__
 OP_TRB		.equ	$80
 OP_TSB		.equ	$82
 		.endif
@@ -107,7 +109,7 @@ OP_TSX		.equ	$84
 OP_TXA		.equ	$86
 OP_TXS		.equ	$88
 OP_TYA		.equ	$8A
-		.if	__65C02__
+		.if	__65C02__|__65SC02__
 OP_WAI		.equ	$8C
 		.endif
 
@@ -139,7 +141,7 @@ MO_REL		.equ		      MB_REL
 MO_ZPG		.equ		      MB_ZPG
 MO_ZPX		.equ	       MB_XRG|MB_ZPG
 MO_ZPY		.equ	       MB_YRG|MB_ZPG
-		.if	__65C02__
+		.if	__65C02__|__65SC02__
 MO_IZP		.equ	MB_IND	     |MB_ZPG
 		.endif
 MO_IZX		.equ	MB_IND|MB_XRG|MB_ZPG
@@ -148,7 +150,7 @@ MO_ABS		.equ		      MB_ABS
 MO_ABX		.equ	       MB_XRG|MB_ABS
 MO_ABY		.equ	       MB_YRG|MB_ABS
 MO_IAB		.equ	MB_IND	     |MB_ABS
-		.if	__65C02__
+		.if	__65C02__|__65SC02__
 MO_IAX		.equ	MB_IND|MB_XRG|MB_ABS
 		.endif
 
@@ -385,7 +387,7 @@ ShowRegisters:
 ;-------------------------------------------------------------------------------
 
 NewCommand:
-		.if	__65C02__
+		.if	__65C02__|__65SC02__
 		stz	CMD_LEN		; Mark the buffer as empty
 		.else
 		lda	#0		; Mark the buffer as empty
@@ -797,7 +799,7 @@ Trace:
 		  lda	(ADDR_S),y	; Fetch low byte of target
 		  pha
 		  
-		.if	__65C02__
+		.if	__65C02__|__65SC02__
 		  cpx	#$6C		; JMP (abs)?
 		  if ne
 		   cpx	#$7C		; or JMP (abs,X)?
@@ -1011,7 +1013,7 @@ EM_ORA:
 		 jmp	SaveAP
 		 
 EM_BIT:
-		.if 	__65C02__
+		.if 	__65C02__|__65SC02__
 		 cpx	#$89		; Immediate does not affect NV
 		 if ne
 		  pha
@@ -1580,7 +1582,7 @@ GetByte:
 		ldy	#2		; Set maximum number of nybble
 		sty	COUNT
 		
-		.if	__65C02__
+		.if	__65C02__|__65SC02__
 		stz	TEMP+0		; Clear conversion area
 		stz	TEMP+1
 		.else
@@ -2032,13 +2034,17 @@ ShowString:
 
 STRINGS:
 TTL_STR		.equ	.-STRINGS
+		.byte	CR,LF,"Boot "
 		.if	__6502__
-		.byte	CR,LF,"Boot 6502 [20.01]"
+		.byte	CR,LF,"6502"
 		.endif
 		.if	__65C02__
-		.byte	CR,LF,"Boot 65C02 [20.01]"
+		.byte	CR,LF,"65C02"
 		.endif
-		.byte	0
+		.if	__65SC02__
+		.byte	CR,LF,"65SC02"
+		.endif
+		.byte	" [20.03]",0
 PC_STR		.equ	.-STRINGS
 		.byte	"PC=",0
 SP_STR		.equ	.-STRINGS
@@ -2216,6 +2222,78 @@ MODES:
 		.byte	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_IMP,MO_ABX,MO_ABX,MO_BRL
 		.endif
 		
+;-------------------------------------------------------------------------------
+
+		.if	__65SC02__
+OPCODES:
+		.byte	OP_BRK,OP_ORA,OP_ERR,OP_ERR,OP_TSB,OP_ORA,OP_ASL,OP_NOP ; 0
+		.byte	OP_PHP,OP_ORA,OP_ASL,OP_ERR,OP_TSB,OP_ORA,OP_ASL,OP_NOP
+		.byte	OP_BPL,OP_ORA,OP_ORA,OP_ERR,OP_TRB,OP_ORA,OP_ASL,OP_NOP ; 1
+		.byte	OP_CLC,OP_ORA,OP_INC,OP_ERR,OP_TRB,OP_ORA,OP_ASL,OP_NOP
+		.byte	OP_JSR,OP_AND,OP_ERR,OP_ERR,OP_BIT,OP_AND,OP_ROL,OP_NOP ; 2
+		.byte	OP_PLP,OP_AND,OP_ROL,OP_ERR,OP_BIT,OP_AND,OP_ROL,OP_NOP
+		.byte	OP_BMI,OP_AND,OP_AND,OP_ERR,OP_BIT,OP_AND,OP_ROL,OP_NOP ; 3
+		.byte	OP_SEC,OP_AND,OP_DEC,OP_ERR,OP_BIT,OP_AND,OP_ROL,OP_NOP
+		.byte	OP_RTI,OP_EOR,OP_ERR,OP_ERR,OP_ERR,OP_EOR,OP_LSR,OP_NOP ; 4
+		.byte	OP_PHA,OP_EOR,OP_LSR,OP_ERR,OP_JMP,OP_EOR,OP_LSR,OP_NOP
+		.byte	OP_BVC,OP_EOR,OP_EOR,OP_ERR,OP_ERR,OP_EOR,OP_LSR,OP_NOP ; 5
+		.byte	OP_CLI,OP_EOR,OP_PHY,OP_ERR,OP_ERR,OP_EOR,OP_LSR,OP_NOP
+		.byte	OP_RTS,OP_ADC,OP_ERR,OP_ERR,OP_STZ,OP_ADC,OP_ROR,OP_NOP ; 6
+		.byte	OP_PLA,OP_ADC,OP_ROR,OP_ERR,OP_JMP,OP_ADC,OP_ROR,OP_NOP
+		.byte	OP_BVS,OP_ADC,OP_ADC,OP_ERR,OP_STZ,OP_ADC,OP_ROR,OP_NOP ; 7
+		.byte	OP_SEI,OP_ADC,OP_PLY,OP_ERR,OP_JMP,OP_ADC,OP_ROR,OP_NOP
+		.byte	OP_BRA,OP_STA,OP_ERR,OP_ERR,OP_STY,OP_STA,OP_STX,OP_NOP ; 8
+		.byte	OP_DEY,OP_BIT,OP_TXA,OP_ERR,OP_STY,OP_STA,OP_STX,OP_NOP
+		.byte	OP_BCC,OP_STA,OP_STA,OP_ERR,OP_STY,OP_STA,OP_STX,OP_NOP ; 9
+		.byte	OP_TYA,OP_STA,OP_TXS,OP_ERR,OP_STZ,OP_STA,OP_STZ,OP_NOP
+		.byte	OP_LDY,OP_LDA,OP_LDX,OP_ERR,OP_LDY,OP_LDA,OP_LDX,OP_NOP ; A
+		.byte	OP_TAY,OP_LDA,OP_TAX,OP_ERR,OP_LDY,OP_LDA,OP_LDX,OP_NOP
+		.byte	OP_BCS,OP_LDA,OP_LDA,OP_ERR,OP_LDY,OP_LDA,OP_LDX,OP_NOP ; B
+		.byte	OP_CLV,OP_LDA,OP_TSX,OP_ERR,OP_LDY,OP_LDA,OP_LDX,OP_NOP
+		.byte	OP_CPY,OP_CMP,OP_ERR,OP_ERR,OP_CPY,OP_CMP,OP_DEC,OP_NOP ; C
+		.byte	OP_INY,OP_CMP,OP_DEX,OP_WAI,OP_CPY,OP_CMP,OP_DEC,OP_NOP
+		.byte	OP_BNE,OP_CMP,OP_CMP,OP_ERR,OP_ERR,OP_CMP,OP_DEC,OP_NOP ; D
+		.byte	OP_CLD,OP_CMP,OP_PHX,OP_STP,OP_ERR,OP_CMP,OP_DEC,OP_NOP
+		.byte	OP_CPX,OP_SBC,OP_ERR,OP_ERR,OP_CPX,OP_SBC,OP_INC,OP_NOP ; E
+		.byte	OP_INX,OP_SBC,OP_NOP,OP_ERR,OP_CPX,OP_SBC,OP_INC,OP_NOP
+		.byte	OP_BEQ,OP_SBC,OP_SBC,OP_ERR,OP_ERR,OP_SBC,OP_INC,OP_NOP ; F
+		.byte	OP_SED,OP_SBC,OP_PLX,OP_ERR,OP_ERR,OP_SBC,OP_INC,OP_NOP
+
+MODES:
+		.byte	MO_IMM,MO_IZX,MO_IMM,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_IMP ; 0
+		.byte	MO_IMP,MO_IMM,MO_ACC,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_IMP
+		.byte	MO_REL,MO_IZY,MO_IZP,MO_IMP,MO_ZPG,MO_ZPX,MO_ZPX,MO_IMP ; 1
+		.byte	MO_IMP,MO_ABY,MO_ACC,MO_IMP,MO_ABS,MO_ABX,MO_ABX,MO_IMP
+		.byte	MO_ABS,MO_IZX,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_IMP ; 2
+		.byte	MO_IMP,MO_IMM,MO_ACC,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_IMP
+		.byte	MO_REL,MO_IZY,MO_IZP,MO_IMP,MO_ZPX,MO_ZPX,MO_ZPX,MO_IMP ; 3
+		.byte	MO_IMP,MO_ABY,MO_ACC,MO_IMP,MO_ABX,MO_ABX,MO_ABX,MO_IMP
+		.byte	MO_IMP,MO_IZX,MO_IMP,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_IMP ; 4
+		.byte	MO_IMP,MO_IMM,MO_ACC,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_IMP
+		.byte	MO_REL,MO_IZY,MO_IZP,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_IMP ; 5
+		.byte	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_IMP,MO_ABX,MO_ABX,MO_IMP
+		.byte	MO_IMP,MO_IZX,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_IMP ; 6
+		.byte	MO_IMP,MO_IMM,MO_ACC,MO_IMP,MO_IAB,MO_ABS,MO_ABS,MO_IMP
+		.byte	MO_REL,MO_IZY,MO_IZP,MO_IMP,MO_ZPX,MO_ZPX,MO_ZPX,MO_IMP ; 7
+		.byte	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_IAX,MO_ABX,MO_ABX,MO_IMP
+		.byte	MO_REL,MO_IZX,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_IMP ; 8
+		.byte	MO_IMP,MO_IMM,MO_IMP,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_IMP
+		.byte	MO_REL,MO_IZY,MO_IZP,MO_IMP,MO_ZPX,MO_ZPX,MO_ZPY,MO_IMP ; 9
+		.byte	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_ABS,MO_ABX,MO_ABX,MO_IMP
+		.byte	MO_IMM,MO_IZX,MO_IMM,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_IMP ; A
+		.byte	MO_IMP,MO_IMM,MO_IMP,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_IMP
+		.byte	MO_REL,MO_IZY,MO_IZP,MO_IMP,MO_ZPX,MO_ZPX,MO_ZPY,MO_IMP ; B
+		.byte	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_ABX,MO_ABX,MO_ABY,MO_IMP
+		.byte	MO_IMM,MO_IZX,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_IMP ; C
+		.byte	MO_IMP,MO_IMM,MO_IMP,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_IMP
+		.byte	MO_REL,MO_IZY,MO_IZP,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_IMP ; D
+		.byte	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_IMP,MO_ABX,MO_ABX,MO_IMP
+		.byte	MO_IMM,MO_IZX,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_IMP ; E
+		.byte	MO_IMP,MO_IMM,MO_IMP,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_IMP
+		.byte	MO_REL,MO_IZY,MO_IZP,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_IMP ; F
+		.byte	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_IMP,MO_ABX,MO_ABX,MO_IMP
+		.endif
+		
 ;==============================================================================
 ; Virtual Hardware Area
 ;-------------------------------------------------------------------------------
@@ -2243,7 +2321,7 @@ MODES:
 
 IRQ:
 		pha			; Save users registers
-		.if	__65C02__
+		.if	__65C02__|__65SC02__
 		phx
 		phy
 		.else
@@ -2297,7 +2375,7 @@ IRQ:
 
 ;-------------------------------------------------------------------------------
 
-		.if	__65C02__
+		.if	__65C02__|__65SC02__
 		ply			; Restore user registers
 		plx
 		.else

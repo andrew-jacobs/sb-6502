@@ -5,7 +5,7 @@
 ;  ___) | |_) |_____| (_) |__) | |_| / __/ 
 ; |____/|____/       \___/____/ \___/_____|
 ;                                         
-; A Firmware for a Three Chip 6502/65C02/65C802 Single Board Computer
+; A Firmware for a Three Chip 6502/65C02/65SC02/65C802 Single Board Computer
 ;-------------------------------------------------------------------------------
 ; Copyright (C)2014-2020 Andrew John Jacobs
 ; All rights reserved.
@@ -19,16 +19,17 @@
 ;
 ; Notes:
 ;
-; This firmware programs a Microchip PIC18F46K22 microcontroller to act as
-; the glue logic between a Rockwell/Synertec 6502 or WDC 65C02 and 64K of a
-; 128K SRAM memory chip while partially emulating a 6551 ACIA, a 65SPI interface
-; and a DS1813 RTC.
+; This firmware programs a Microchip PIC18F microcontroller to act as the glue
+; logic between a Rockwell/Synertec 6502 or WDC 65C02 and 64K of a  128K SRAM
+; memory chip while partially emulating a 6551 ACIA, a 65SPI interface and a
+; DS1813 RTC.
 ;
 ; At start up the firmware determines which microprocessor is installed by
 ; executing a JMP ($00FF) instruction and checking which memory locations the
 ; indirect address is read from (e.g. $00FF/$0000 = 6502, $00FF/$0100 = 65C02
-; & 65C802) and the number of cycles taken to do it. A different boot ROM image
-; is loaded for each type of device.
+; & 65C802) and the number of cycles taken to do it. Further instructions are
+; executed if a 65C02 is found to determine if it is a 65SC02. A different boot
+; ROM image is loaded for each type of device.
 ;
 ; FOSC is too fast for the UART to be set to 50 or 75 baud. The other speeds
 ; should work.
@@ -54,9 +55,90 @@
 
                 config  CP0=OFF,CP1=OFF,CP2=OFF,CP3=OFF,CPB=OFF,CPD=OFF
                 config  WRT0=OFF,WRT1=OFF,WRT2=OFF,WRT3=OFF,WRTC=OFF,WRTB=OFF,WRTD=OFF
-                config  EBTR0=OFF,EBTR1=OFF,EBTR2=OFF,EBTR3=OFF,EBTRB=OFF
+                config  EBTR0=OFF,EBTR1=OFF,EBTR2=OFF,EBTR3=OFF
+		config	EBTRB=OFF
+
+OSC             equ     .16000000
+PLL             equ     .4
 
                 endif
+		
+;-------------------------------------------------------------------------------
+		
+		ifdef __18F47K40
+		include "P18F47K40.inc"
+		
+; CONFIG1L
+  CONFIG  FEXTOSC = OFF         ; External Oscillator mode Selection bits (Oscillator not enabled)
+  CONFIG  RSTOSC = HFINTOSC_64MHZ; Power-up default value for COSC bits (HFINTOSC with HFFRQ = 64 MHz and CDIV = 1:1)
+
+; CONFIG1H
+  CONFIG  CLKOUTEN = OFF        ; Clock Out Enable bit (CLKOUT function is disabled)
+  CONFIG  CSWEN = OFF           ; Clock Switch Enable bit (The NOSC and NDIV bits cannot be changed by user software)
+  CONFIG  FCMEN = OFF           ; Fail-Safe Clock Monitor Enable bit (Fail-Safe Clock Monitor disabled)
+
+; CONFIG2L
+  CONFIG  MCLRE = EXTMCLR       ; Master Clear Enable bit (If LVP = 0, MCLR pin is MCLR; If LVP = 1, RE3 pin function is MCLR )
+  CONFIG  PWRTE = ON            ; Power-up Timer Enable bit (Power up timer enabled)
+  CONFIG  LPBOREN = OFF         ; Low-power BOR enable bit (ULPBOR disabled)
+  CONFIG  BOREN = OFF           ; Brown-out Reset Enable bits (Brown-out Reset disabled)
+
+; CONFIG2H
+  CONFIG  BORV = VBOR_2P45      ; Brown Out Reset Voltage selection bits (Brown-out Reset Voltage (VBOR) set to 2.45V)
+  CONFIG  ZCD = OFF             ; ZCD Disable bit (ZCD disabled. ZCD can be enabled by setting the ZCDSEN bit of ZCDCON)
+  CONFIG  PPS1WAY = ON          ; PPSLOCK bit One-Way Set Enable bit (PPSLOCK bit can be cleared and set only once; PPS registers remain locked after one clear/set cycle)
+  CONFIG  STVREN = ON           ; Stack Full/Underflow Reset Enable bit (Stack full/underflow will cause Reset)
+  CONFIG  DEBUG = OFF           ; Debugger Enable bit (Background debugger disabled)
+  CONFIG  XINST = OFF           ; Extended Instruction Set Enable bit (Extended Instruction Set and Indexed Addressing Mode disabled)
+
+; CONFIG3L
+  CONFIG  WDTCPS = WDTCPS_31    ; WDT Period Select bits (Divider ratio 1:65536; software control of WDTPS)
+  CONFIG  WDTE = OFF            ; WDT operating mode (WDT Disabled)
+
+; CONFIG3H
+  CONFIG  WDTCWS = WDTCWS_7     ; WDT Window Select bits (window always open (100%); software control; keyed access not required)
+  CONFIG  WDTCCS = SC           ; WDT input clock selector (Software Control)
+
+; CONFIG4L
+  CONFIG  WRT0 = OFF            ; Write Protection Block 0 (Block 0 (000800-003FFFh) not write-protected)
+  CONFIG  WRT1 = OFF            ; Write Protection Block 1 (Block 1 (004000-007FFFh) not write-protected)
+  CONFIG  WRT2 = OFF            ; Write Protection Block 2 (Block 2 (008000-00BFFFh) not write-protected)
+  CONFIG  WRT3 = OFF            ; Write Protection Block 3 (Block 3 (00C000-00FFFFh) not write-protected)
+  CONFIG  WRT4 = OFF            ; Write Protection Block 3 (Block 4 (010000-013FFFh) not write-protected)
+  CONFIG  WRT5 = OFF            ; Write Protection Block 3 (Block 5 (014000-017FFFh) not write-protected)
+  CONFIG  WRT6 = OFF            ; Write Protection Block 3 (Block 6 (018000-01BFFFh) not write-protected)
+  CONFIG  WRT7 = OFF            ; Write Protection Block 3 (Block 7 (01C000-01FFFFh) not write-protected)
+
+; CONFIG4H
+  CONFIG  WRTC = OFF            ; Configuration Register Write Protection bit (Configuration registers (300000-30000Bh) not write-protected)
+  CONFIG  WRTB = OFF            ; Boot Block Write Protection bit (Boot Block (000000-0007FFh) not write-protected)
+  CONFIG  WRTD = OFF            ; Data EEPROM Write Protection bit (Data EEPROM not write-protected)
+  CONFIG  SCANE = OFF           ; Scanner Enable bit (Scanner module is NOT available for use, SCANMD bit is ignored)
+  CONFIG  LVP = OFF             ; Low Voltage Programming Enable bit (HV on MCLR/VPP must be used for programming)
+
+; CONFIG5L
+  CONFIG  CP = OFF              ; UserNVM Program Memory Code Protection bit (UserNVM code protection disabled)
+  CONFIG  CPD = OFF             ; DataNVM Memory Code Protection bit (DataNVM code protection disabled)
+
+; CONFIG5H
+
+; CONFIG6L
+  CONFIG  EBTR0 = OFF           ; Table Read Protection Block 0 (Block 0 (000800-003FFFh) not protected from table reads executed in other blocks)
+  CONFIG  EBTR1 = OFF           ; Table Read Protection Block 1 (Block 1 (004000-007FFFh) not protected from table reads executed in other blocks)
+  CONFIG  EBTR2 = OFF           ; Table Read Protection Block 2 (Block 2 (008000-00BFFFh) not protected from table reads executed in other blocks)
+  CONFIG  EBTR3 = OFF           ; Table Read Protection Block 3 (Block 3 (00C000-00FFFFh) not protected from table reads executed in other blocks)
+  CONFIG  EBTR4 = OFF           ; Table Read Protection Block 4 (Block 4 (010000-013FFFh) not protected from table reads executed in other blocks)
+  CONFIG  EBTR5 = OFF           ; Table Read Protection Block 5 (Block 5 (014000-017FFFh) not protected from table reads executed in other blocks)
+  CONFIG  EBTR6 = OFF           ; Table Read Protection Block 6 (Block 6 (018000-01BFFFh) not protected from table reads executed in other blocks)
+  CONFIG  EBTR7 = OFF           ; Table Read Protection Block 7 (Block 7 (01C000-01FFFFh) not protected from table reads executed in other blocks)
+
+; CONFIG6H
+  CONFIG  EBTRB = OFF           ; Boot Block Table Read Protection bit (Boot Block (000000-0007FFh) not protected from table reads executed in other blocks)
+		
+OSC             equ     .64000000
+PLL             equ     .1
+
+		endif
                 
 ;-------------------------------------------------------------------------------
                 
@@ -108,9 +190,6 @@ CR              equ     .13
 
 ; Internal Oscillator
        
-OSC             equ     .16000000
-PLL             equ     .4
-
 FOSC            equ     OSC * PLL
 
 ; 6502/65C02 Control Pins
@@ -258,7 +337,12 @@ ROM_LK1		res	.1
          
 .Interrupt      code    h'0008'
       
+		ifdef	__18F46K22
                 bcf     PIR1,TMR2IF     ; Clear the interrupt flag
+		endif
+		ifdef	__18F47K40
+		bcf	PIR4,TMR2IF     ; Clear the interrupt flag
+		endif
 		
 		movf	RTC_CTLB,W	; Is period interrupt configured?
 		andlw	h'f0'
@@ -383,16 +467,41 @@ PowerOnReset:
 
 ;-------------------------------------------------------------------------------
 
+		ifdef	__18F46K22
                 movlw   b'01110000'             ; Set oscillator for 16 MIPs
                 movwf   OSCCON
-                bsf     OSCTUNE,PLLEN
+                bsf     OSCTUNE,PLLEN		; And enable 4x PLL
 
                 ifndef  __DEBUG
 WaitTillStable:
                 btfss   OSCCON,HFIOFS           ; And wait until stable
                 bra     WaitTillStable
                 endif
+		endif
+		
+;-------------------------------------------------------------------------------
 
+		ifdef	__18F47K40
+		banksel	PPSLOCK			; Unlock PPS module
+		movlw	h'55'
+		movwf	PPSLOCK
+		movlw	h'aa'
+		movwf	PPSLOCK
+		bcf	PPSLOCK,PPSLOCKED
+		
+		movlw	h'17'			; RC7 is RX1
+		movwf	RX1PPS
+		movlw	h'09'			; RC6 is TX1
+		movwf	RC6PPS
+		
+		banksel	PPSLOCK			; Lock PPS module
+		movlw	h'55'
+		movwf	PPSLOCK
+		movlw	h'aa'
+		movwf	PPSLOCK
+		bsf	PPSLOCK,PPSLOCKED
+		endif
+		
 ;-------------------------------------------------------------------------------
 
                 bcf     TXD_TRIS,TXD_PIN        ; Make TXD an output    
@@ -436,7 +545,12 @@ WaitTillStable:
                 clrf    TMR2
                 movwf   T2CON
                 
+		ifdef	__18F46K22
                 bcf     PIR1,TMR2IF
+		endif
+		ifdef	__18F47K40
+                bcf     PIR4,TMR2IF
+		endif
 		bsf	INTCON,PEIE
                 
 ;-------------------------------------------------------------------------------
@@ -596,13 +710,67 @@ NoReread:
                 rcall   HiPhaseLoad
                 TRACE_DATA
 
-                ;-------------------------------------------------------------------------------
+;-------------------------------------------------------------------------------
 
                 btfsc   EXTRA_CYCLE,.7          ; Determine device
-                bra     W65C02
+		ifdef	__18F46K22
+		bra	W65C02
+		else
+                bra     TestSC
+		endif
                 movf    CAPTURE,W
-                bz      W65C802
- 
+		btfsc	STATUS,Z
+                bra     W65C802
+		bra	R6502
+		
+; Execute a SMB0 $EA NOP NOP NOP and  
+	
+		ifdef	__18F47K40
+TestSC:
+                rcall   LoPhase                 ; Send SMB Opcode
+                TRACE_NEWL
+                TRACE_ADDR
+                movlw   h'87'
+                rcall   HiPhaseLoad
+                TRACE_DATA
+                
+                rcall   LoPhase                 ; Send address lo byte
+                TRACE_NEWL
+                TRACE_ADDR
+                movlw   h'1a'
+                rcall   HiPhaseLoad
+                TRACE_DATA
+		
+                rcall   LoPhase                 ; Send address lo byte
+                TRACE_NEWL
+                TRACE_ADDR
+		movf	ADRH_PORT,W
+		movwf	CAPTURE
+                movlw   h'ea'
+                rcall   HiPhaseLoad
+                TRACE_DATA
+
+		rcall   LoPhase                 ; Send address lo byte
+                TRACE_NEWL
+                TRACE_ADDR
+                movlw   h'ea'
+                rcall   HiPhaseLoad
+                TRACE_DATA
+		
+		rcall   LoPhase                 ; Send fake relative address
+                TRACE_NEWL
+                TRACE_ADDR
+                movlw   h'ea'
+                rcall   HiPhaseLoad
+                TRACE_DATA
+		
+		movf	CAPTURE,W
+		bz	W65C02
+		bra	R65SC02
+		endif
+		
+;-------------------------------------------------------------------------------
+		
 R6502:
                 movlw   low ROM6502             ; Fix 6502 ROM address
                 movwf   ROML
@@ -626,9 +794,21 @@ W65C802:
                 movwf   ROML
                 movlw   high ROM65C802
                 movwf   ROMH
-		movwf	upper ROM65C802
+		movlw	upper ROM65C802
                 movwf	ROMU
-
+		bra	StartLoad
+	
+		ifdef	__18F47K40
+R65SC02:
+                movlw   low ROM65SC02           ; Fix 65SC02 ROM address
+                movwf   ROML
+                movlw   high ROM65SC02
+                movwf   ROMH
+		movlw	upper ROM65SC02
+                movwf	ROMU
+		bra	StartLoad
+		endif
+		
 ;-------------------------------------------------------------------------------
 
 StartLoad:
@@ -861,7 +1041,12 @@ NewLine:
                 movlw   '\n'
 
 UartTx:
+		ifdef	__18F46K22
                 btfss   PIR1,TX1IF              ; Wait until able to TX
+		endif
+		ifdef	__18F47K40
+                btfss   PIR3,TX1IF              ; Wait until able to TX
+		endif		
                 bra     UartTx
                 movwf   TXREG1                  ; Then send the character
                 return
@@ -924,7 +1109,12 @@ NormalLo:
                 bsf     NRAM_LAT,NRAM_PIN       ; Disable RAM
                 TRACE_NEWL
                 TRACE_ADDR
+		ifdef	__18F46K22
                 movf    PIR1,W                  ; Any hardware interrupts
+		endif
+		ifdef	__18F47K40
+                movf    PIR3,W                  ; Any hardware interrupts
+		endif
                 andlw   M(INT_HW_RXD)|M(INT_HW_TXD)|M(INT_HW_SPI)
                 iorwf   INT_FLAG,W              ; .. or software interrupts
                 andwf   INT_MASK,W              ; .. to service?
@@ -1131,10 +1321,18 @@ AciaWrData:
 
 AciaRdStat:
                 clrf    WREG                    ; Build status byte
+		ifdef	__18F46K22
                 btfsc   PIR1,RC1IF              ; Test for receive data full
                 iorlw   M(.7)|M(.3)
                 btfsc   PIR1,TX1IF              ; Test for transmit data empty
                 iorlw   M(.7)|M(.4)
+		endif
+		ifdef	__18F47K40
+                btfsc   PIR3,RC1IF              ; Test for receive data full
+                iorlw   M(.7)|M(.3)
+                btfsc   PIR3,TX1IF              ; Test for transmit data empty
+                iorlw   M(.7)|M(.4)
+		endif
                 btfsc   RC1STA,OERR             ; Test for overrun error
                 iorlw   M(.2)
                 btfsc   RC1STA,FERR             ; Test for framing error
@@ -1566,9 +1764,16 @@ RtcWrCtlA:
                 movf    DATA_PORT,W             ; Copy from data bus
                 andlw   h'cf'
                 movwf   RTC_CTLA                ; .. to register
+		ifdef	__18F46K22
 		bcf	PIE1,TMR2IE
 		btfsc	RTC_CTLA,.6		; Enabled?
 		bsf	PIE1,TMR2IE
+		endif
+		ifdef	__18F47K40
+		bcf	PIE4,TMR2IE
+		btfsc	RTC_CTLA,.6		; Enabled?
+		bsf	PIE4,TMR2IE
+		endif
 		andlw	h'03'			; Interrupts enabled?
 		bcf	INT_MASK,INT_SW_TMR	; Assume no.
 		btfss	STATUS,Z
@@ -1676,8 +1881,14 @@ RomRdData:
 		bra	NormalLo
     
 RomWrData:
+		ifdef	__18F46K22
 		bsf	EECON1,EEPGD		; Set to access program memory
 		bcf	EECON1,CFGS
+		endif
+		ifdef	__18F47K40
+		bsf	NVMCON1,NVMREG1		; Set to accees program memory
+		bcf	NVMCON1,NVMREG0
+		endif
 		
 		movf	ROM_LK0,W		; Is ROM unlocked?
 		xorwf	h'aa'
@@ -1692,6 +1903,7 @@ RomWrData:
 		andwf	.63
 		bnz	WrByte			; No, already erased
 
+		ifdef	__18F46K22
 		bsf	EECON1,WREN
 		bsf	EECON1,FREE
 		movlw	h'55'			; Perform unlock sequence
@@ -1699,6 +1911,16 @@ RomWrData:
 		movlw	h'aa'
 		movwf	EECON2
 		bsf	EECON1,WR		; Erase a block
+		endif
+		ifdef	__18F47K40
+		bsf	NVMCON1,WREN
+		bsf	NVMCON1,FREE
+		movlw	h'55'			; Perform unlock sequence
+		movwf	NVMCON2
+		movlw	h'aa'
+		movwf	NVMCON2
+		bsf	NVMCON1,WR		; Erase a block
+		endif
 		
 WrByte:
 		movf	DATA_PORT,W		; Fetch byte to write
@@ -1709,13 +1931,23 @@ WrByte:
 		andlw	.63
 		bnz	WrDone			; No, not yet
 
+		ifdef	__18F46K22
 		bsf	EECON1,WREN
 		movlw	h'55'			; Perform unlock sequence
 		movwf	EECON2
 		movlw	h'aa'
 		movwf	EECON2
 		bsf	EECON1,WR		; Write block
-	
+		endif
+		ifdef	__18F47K40
+		bsf	NVMCON1,WREN
+		movlw	h'55'			; Perform unlock sequence
+		movwf	NVMCON2
+		movlw	h'aa'
+		movwf	NVMCON2
+		bsf	NVMCON1,WR		; Write block
+		endif		
+		
 WrDone:	
 		infsnz	ROM_OFF0,W		; Bump Offset
 		incf	ROM_OFF1,W
@@ -1776,5 +2008,14 @@ ROM65C02:
 ROM65C802:
 		res	.12 * .1024
                 include "boot-65c802.asm"
+		
+		ifdef	__18F47K40
+.ROM65SC02      code_pack   h'010000'
+
+ROM65SC02:
+		res	.12 * .1024
+                include "boot-65sc02.asm"
+
+		endif
 
                 end

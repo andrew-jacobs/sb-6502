@@ -27,11 +27,11 @@ CLEAN_SUBPROJECTS=${CLEAN_SUBPROJECTS_${SUBPROJECTS}}
 PROJECTNAME=sb-6502
 
 # Active Configuration
-DEFAULTCONF=default
+DEFAULTCONF=PIC18F47K40
 CONF=${DEFAULTCONF}
 
 # All Configurations
-ALLCONFS=default 
+ALLCONFS=PIC18F46K22 PIC18F47K40 
 
 
 # build
@@ -45,13 +45,15 @@ ALLCONFS=default
 
 # clobber
 .clobber-impl: .clobber-pre .depcheck-impl
-	    ${MAKE} SUBPROJECTS=${SUBPROJECTS} CONF=default clean
+	    ${MAKE} SUBPROJECTS=${SUBPROJECTS} CONF=PIC18F46K22 clean
+	    ${MAKE} SUBPROJECTS=${SUBPROJECTS} CONF=PIC18F47K40 clean
 
 
 
 # all
 .all-impl: .all-pre .depcheck-impl
-	    ${MAKE} SUBPROJECTS=${SUBPROJECTS} CONF=default build
+	    ${MAKE} SUBPROJECTS=${SUBPROJECTS} CONF=PIC18F46K22 build
+	    ${MAKE} SUBPROJECTS=${SUBPROJECTS} CONF=PIC18F47K40 build
 
 
 

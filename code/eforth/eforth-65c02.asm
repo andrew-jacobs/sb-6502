@@ -114,8 +114,8 @@ IP		.space	2		; Forth instruction pointer -2
 
 _UP		.space	2		; User Area pointer
 
-USER_AREA	.space	32		; User variables
-
+USER_AREA	.space	76		; User variables
+CODE_AREA	.space	0
 
 ;===============================================================================
 ; Startup
@@ -124,9 +124,9 @@ USER_AREA	.space	32		; User variables
 		.code
 		.org	$c000
 		
-		lda	#<TEST+1 ;COLD+1
+		lda	#<COLD+1
 		sta	IP+0
-		lda	#>TEST+1 ;COLD+1
+		lda	#>COLD+1
 		sta	IP+1
 		ldx	#<DSTACK_TOP
 		jmp	INNER
@@ -794,8 +794,12 @@ CSP:		USER
 		.word	28
 ; 'NUMBER
 		.word	30
-; HLD
+; HLD ( -- a )
+
+		HEADER	3,"hld",NORMAL
+HLD:		USER
 		.word	32
+		
 ; HANDLER
 		.word	34
 	
@@ -829,19 +833,26 @@ LAST:		USER
 		.word	64
 
 ;===============================================================================
-; Common Functions
+; 3.2 Common Functions
 ;-------------------------------------------------------------------------------
+
+; FALSE ( -- f )
+;
+; Not in eForth but added as constant 0 is useful.
 
 		HEADER	5,"false",NORMAL
 FALSE:		COLON
-		LITERAL	0
-		LINK	EXIT
+		LITERAL	0		; 0
+		LINK	EXIT		; ;
+
+; TRUE ( -- f )
+;
+; Not in eForth but added as constant -1 is useful.
 		
 		HEADER	4,"true",NORMAL
 TRUE:		COLON
-		LITERAL	-1
-		LINK	EXIT
-
+		LITERAL	-1		; -1
+		LINK	EXIT		; ;
 
 ; ?DUP ( w -- w w )
 
@@ -854,41 +865,41 @@ QDUP:		COLON
 
 		HEADER 	3,"rot",NORMAL
 ROT:		COLON
-		LINK	TO_R
-		LINK	SWAP
-		LINK	R_FROM
-		LINK	SWAP
-		LINK	EXIT
+		LINK	TO_R		; >R
+		LINK	SWAP		; SWAP
+		LINK	R_FROM		; R>
+		LINK	SWAP		; SWAP
+		LINK	EXIT		; ;
 
 		HEADER	5,"2drop",NORMAL
 TWO_DROP:	COLON
-		LINK	DROP
-		LINK	DROP
-		LINK	EXIT
+		LINK	DROP		; DROP
+		LINK	DROP		; DROP
+		LINK	EXIT		; ;
 		
 		HEADER	4,"2dup",NORMAL
 TWO_DUP:	COLON
-		LINK	OVER
-		LINK	OVER
-		LINK	EXIT
+		LINK	OVER		; OVER
+		LINK	OVER		; OVER
+		LINK	EXIT		; ;
 		
 		HEADER	1,"+",NORMAL
 PLUS:		COLON
-		LINK	UM_PLUS
-		LINK	DROP
-		LINK	EXIT
+		LINK	UM_PLUS		; UM+
+		LINK	DROP		; DROP
+		LINK	EXIT		; ;
 		
 		HEADER	3,"not",NORMAL
 NOT:		COLON
-		LINK	TRUE
-		LINK	XOR
-		LINK	EXIT
+		LINK	TRUE		; TRUE
+		LINK	XOR		; XOR
+		LINK	EXIT		; ;
 	
 		HEADER	6,"negate",NORMAL
 NEGATE:		COLON
-		LINK	NOT
-		LINK	ONE_PLUS
-		LINK	EXIT
+		LINK	NOT		; NOT
+		LINK	ONE_PLUS	; 1 +
+		LINK	EXIT		; ;
 	
 		HEADER	7,"dnegate",NORMAL
 DNEGATE:	COLON
@@ -928,7 +939,7 @@ ABS:		COLON
 .Skip:		LINK	EXIT
 
 ;===============================================================================
-; Comparison
+; 3.3 Comparison
 ;-------------------------------------------------------------------------------
 
 		HEADER	1,"=",NORMAL
@@ -1005,46 +1016,203 @@ WITHIN:		COLON
 		LINK	EXIT
 
 ;===============================================================================
-; Divide
+; 3.4 Divide
 ;-------------------------------------------------------------------------------
 		
-; UM/MOD
-; M/MOD
-; /MOD
-; MOD
-; /
+; UM/MOD ( ud u -- ur uq )
+
+		HEADER	6,"um/mod",NORMAL
+UM_SLASH_MOD:	COLON
+		LINK	TWO_DUP		; 2DUP
+		LINK	U_LESS		; U<
+		JZERO	.Then2		; IF
+		LINK	NEGATE		; NEGATE
+		LITERAL	15		; 15
+		LINK	TO_R		; FOR
+.Loop:		LINK	TO_R		; >R
+		LINK	DUP		; DUP
+		LINK	UM_PLUS		; UM+
+		LINK	TO_R		; >R
+		LINK	TO_R		; >R
+		LINK	DUP		; DUP
+		LINK	UM_PLUS		; UM+
+		LINK	TO_R		; R>
+		LINK	PLUS		; +
+		LINK	DUP		; DUP
+		LINK	R_FROM		; R>
+		LINK	R_FETCH		; R@
+		LINK	SWAP		; SWAP
+		LINK	TO_R		; >R
+		LINK	UM_PLUS		; UM+
+		LINK	R_FROM		; R>
+		LINK	OR		; OR
+		JZERO	.Else1		; IF
+		LINK	TO_R		; >R
+		LINK	DROP		; DROP
+		LITERAL	1		; 1
+		LINK	PLUS		; +
+		LINK	R_FROM		; R>
+		JUMP	.Then1		; ELSE
+.Else1:		LINK	DROP		; DROP
+.Then1:		LINK	R_FROM		; THEN R>
+		NEXT	.Loop		; NEXT
+		LINK	DROP		; DROP
+		LINK	SWAP		; SWAP
+		LINK	EXIT		; EXIT
+.Then2:		LINK	DROP		; THEN DROP
+		LINK	TWO_DROP	; 2DROP
+		LINK	TRUE		; -1
+		LINK	DUP		; DUP
+		LINK	EXIT		; ;
+		
+; M/MOD ( d n -- r q )
+;
+; Floored division
+
+		HEADER	5,"m/mod",NORMAL
+M_SLASH_MOD:	COLON
+		LINK	DUP		; DUP
+		LINK 	ZERO_LESS	; 0<
+		LINK	DUP		; DUP
+		LINK	TO_R		; >R
+		JZERO	.Then1		; IF
+		LINK	NEGATE		; NEGATE
+		LINK	TO_R		; >R
+		LINK	DNEGATE		; DNEGATE
+		LINK	R_FROM		; R>
+.Then1:		LINK	TO_R		; THEN >R
+		LINK	DUP		; DUP
+		LINK	ZERO_LESS	; 0<
+		JZERO	.Then2		; IF
+		LINK	R_FETCH		; R@
+		LINK	PLUS		; +
+.Then2:		LINK	R_FROM		; THEN R>
+		LINK	UM_SLASH_MOD	; UM/MOD
+		LINK	R_FROM		; R>
+		JZERO	.Then3		; IF
+		LINK	SWAP		; SWAP
+		LINK	NEGATE		; NEGATE
+		LINK	SWAP		; SWAP
+.Then3:		LINK	EXIT		; THEN ;
+
+; /MOD ( n n -- r q )
+
+		HEADER	4,"/mod",NORMAL
+SLASH_MOD:		COLON
+		LINK	OVER		; OVER
+		LINK	ZERO_LESS	; 0<
+		LINK	SWAP		; SWAP
+		LINK	M_SLASH_MOD	; M/MOD
+		LINK	EXIT		; ;
+		
+; MOD ( n n -- r )
+
+		HEADER	3,"mod",NORMAL
+MOD:		COLON
+		LINK	SLASH_MOD	; /MOD
+		LINK	DROP		; DROP
+		LINK	EXIT		; ;
+		
+; / ( n n -- q )
+
+		HEADER	1,"/",NORMAL
+SLASH:		COLON
+		LINK	SLASH_MOD	; /MOD
+		LINK	SWAP		; SWAP
+		LINK	DROP		; DROP
+		LINK	EXIT		; ;
 		
 ;===============================================================================
-; Multiply
+; 3.5 Multiply
 ;-------------------------------------------------------------------------------
 
+; UM* ( u u -- ud )
+
 		HEADER	3,"um*",NORMAL
-UM_TIMES:	COLON	
-
-
-		LINK	EXIT
+UM_STAR:	COLON	
+		LINK	FALSE		; 0
+		LINK	SWAP		; SWAP
+		LITERAL	15		; 15
+		LINK	TO_R		; FOR
+.Loop:		LINK	DUP		; DUP
+		LINK	UM_PLUS		; UM+
+		LINK	TO_R		; >R
+		LINK	TO_R		; >R
+		LINK	DUP		; DUP
+		LINK	UM_PLUS		; UM+
+		LINK	R_FROM		; R>
+		LINK	PLUS		; +
+		LINK	R_FROM		; R>
+		JZERO	.Then		; IF
+		LINK	TO_R		; >R
+		LINK	OVER		; OVER
+		LINK	UM_PLUS		; UM+
+		LINK	R_FROM		; R>
+		LINK	PLUS		; +
+.Then:		NEXT	.Loop		; NEXT
+		LINK	ROT		; ROT
+		LINK	DROP		; DROP
+		LINK	EXIT		; ;
 		
-	
+; * ( n n -- n )
+
 		HEADER	1,"*",NORMAL
-TIMES:		COLON
-		LINK	UM_TIMES
+STAR:		COLON
+		LINK	UM_STAR
 		LINK	DROP
 		LINK	EXIT
 
-; M*
-; */MOD
-; */
+; M* ( n n -- d )
+
+		HEADER	6,"m*",NORMAL
+M_STAR:		COLON
+		LINK	TWO_DUP		; 2DUP
+		LINK	XOR		; XOR
+		LINK	ZERO_LESS	; 0<
+		LINK	TO_R		; >R
+		LINK	ABS		; ABS
+		LINK	SWAP		; SWAP
+		LINK	ABS		; ABS
+		LINK	UM_STAR		; UM*
+		LINK 	R_FROM		; R>
+		JZERO	.Then		; IF
+		LINK	DNEGATE		; DNEGATE
+.Then:		LINK	EXIT		; THEN ;
+		
+		
+; */MOD ( n n n -- r q )
+
+		HEADER	5,"*/mod",NORMAL
+STAR_SLASH_MOD:	COLON
+		LINK	TO_R		; >R
+		LINK	M_STAR		; M*
+		LINK	R_FROM		; R>
+		LINK	M_SLASH_MOD	; M/MOD
+		LINK	EXIT		; ;
+
+; */ ( n n n -- q )
+
+		HEADER	2,"*/",NORMAL
+STAR_SLASH:	COLON
+		LINK	STAR_SLASH_MOD	; */MOD
+		LINK	SWAP		; SWAP
+		LINK	DROP		; DROP
+		LINK	EXIT		; ;
 
 	
 ;===============================================================================
-; Memory Allocation
+; 3.6 Memory Allignment
 ;-------------------------------------------------------------------------------
+
+; CELL- ( a -- a )
 
 		HEADER	5,"cell-",NORMAL
 CELL_MINUS:	COLON
 		LITERAL -2
 		LINK	PLUS
 		LINK	EXIT
+
+; CELL+ ( a -- a )
 		
 		HEADER	5,"cell+",NORMAL
 CELL_PLUS:	COLON
@@ -1052,26 +1220,66 @@ CELL_PLUS:	COLON
 		LINK	PLUS
 		LINK	EXIT
 
+; CELLS ( n -- n )
+
 		HEADER	5,"cells",NORMAL
 CELLS:		COLON
 		LITERAL 2
-		LINK	TIMES
+		LINK	STAR
 		LINK	EXIT
 	
+; ALIGNED ( b -- a )
+;
 ; 6502 family devices are not alignment sensitive.
 
 		HEADER	7,"aligned",NORMAL
 ALIGNED:	COLON
 		LINK	EXIT
 
+; BL ( -- c )
 		HEADER	2,"bl",NORMAL
 BL:		COLON
 		LITERAL	' '
 		LINK	EXIT
 
-; >CHAR
-; DEPTH
-; PICK
+; >CHAR ( c -- c )
+
+		HEADER	5,">char",NORMAL
+TO_CHAR:	COLON
+		LITERAL	$7f		; 127
+		LINK	AND		; AND
+		LINK	DUP		; DUP
+		LITERAL	127		; 127
+		LINK	BL		; BL
+		LINK	WITHIN		; WITHIN
+		JZERO	.Then		; IF
+		LINK	DROP		; DROP
+		LITERAL	95		; 95
+.Then:		LINK	EXIT		; THEN ;
+
+; DEPTH ( -- n )
+
+		HEADER	5,"depth",NORMAL
+DEPTH:		COLON
+		LINK	SP_FETCH	; SP@
+		LINK	SP0		; SP0
+		LINK	FETCH		; @
+		LINK	SWAP		; SWAP
+		LINK	MINUS		; -
+		LITERAL	2		; 2
+		LINK 	SLASH		; /
+		LINK	EXIT		; EXIT
+
+; PICK ( +n -- w )
+
+		HEADER	4,"pick",NORMAL
+PICK:		COLON
+		LINK	ONE_PLUS	; 1 +
+		LINK	CELLS		; CELLS
+		LINK	SP_FETCH	; SP@
+		LINK	PLUS		; +
+		LINK	FETCH		; @
+		LINK 	EXIT		; ;
 
 ;===============================================================================
 ; Memory Access
@@ -1213,10 +1421,12 @@ DIGIT:		COLON
 EXTRACT:	COLON
 		LINK	FALSE		; 0
 		LINK	SWAP		; SWAP
-		LINK	UM_MOD		; UM/MOD
+		LINK	UM_SLASH_MOD	; UM/MOD
 		LINK	SWAP		; SWAP
 		LINK	DIGIT		; DIGIT
 		LINK	EXIT
+		
+; <#
 		
 		HEADER	2,"<#",NORMAL
 LESS_HASH:	COLON
@@ -1224,7 +1434,9 @@ LESS_HASH:	COLON
 		LINK	HLD		; HLD
 		LINK	STORE		; !
 		LINK	EXIT		; ;
-		
+	
+; HOLD
+	
 		HEADER	4,"hold",NORMAL
 HOLD:		COLON
 		LINK	HLD		; HLD
@@ -1235,6 +1447,8 @@ HOLD:		COLON
 		LINK	STORE		; !
 		LINK	C_STORE		; C!
 		LINK	EXIT		; ;
+
+; #
 	
 		HEADER	1,"#",NORMAL
 HASH:		COLON
@@ -1244,6 +1458,8 @@ HASH:		COLON
 		LINK	HOLD		; HOLD
 		LINK	EXIT		; ;
 
+; #S
+
 		HEADER	2,"#s",NORMAL
 HASH_S:		COLON
 .Begin:		LINK	HASH		; BEGIN #
@@ -1252,6 +1468,8 @@ HASH_S:		COLON
 		JUMP	.Begin		; REPEAT	???
 .Done		LINK	EXIT		; ;
 
+; SIGN
+
 		HEADER	4,"sign",NORMAL
 SIGN:		COLON
 		LINK	ZERO_LESS	; 0<
@@ -1259,6 +1477,8 @@ SIGN:		COLON
 		LITERAL	'-'		; [CHAR] -
 		LINK	HOLD		; HOLD
 .Then:		LINK	EXIT		; THEN ;
+
+; #>
 
 		HEADER	3,"#>",NORMAL
 HASH_GREATER:	COLON
@@ -1327,20 +1547,73 @@ DOT_R:		COLON
 		LINK	TYPE		; TYPE
 		LINK	EXIT		; ;
 		
-; U.R
-; U.
-; .
-; ?
+; U.R ( u +n -- )
+;
+; Display an unsigned integer in n column, right justified.
+
+		HEADER	3,"u.r",NORMAL
+U_DOT_R:	COLON
+		LINK 	TO_R		; >R
+		LINK	LESS_HASH	; <#
+		LINK	HASH_S		; #S
+		LINK	HASH_GREATER	; #>
+		LINK	R_FROM		; R>
+		LINK	OVER		; OVER
+		LINK	MINUS		; -
+		LINK	SPACES		; SPACES
+		LINK	TYPE		; TYPE
+		LINK	EXIT		; ;
+
+; U. ( u -- )
+;
+; Display an unsigned integer in free format.
+
+		HEADER	2,"u.",NORMAL
+U_DOT:		COLON
+		LINK	LESS_HASH	; <#
+		LINK	HASH_S		; #S
+		LINK	HASH_GREATER	; #>
+		LINK	SPACE		; SPACE
+		LINK	TYPE		; TYPE
+		LINK	EXIT		; ;
+
+; . ( w -- )
+;
+; Display an integer in free format, preceeded by a space.
+
+		HEADER	1,".",NORMAL
+DOT:		COLON
+		LINK	BASE		; BASE
+		LINK	FETCH		; @
+		LITERAL 10		; 10
+		LINK 	XOR		; XOR
+		JZERO	.Then		; IF
+		LINK	U_DOT		; U.
+		LINK	EXIT		; EXIT
+.Then:		LINK	STR		; THEN STR
+		LINK	SPACE		; SPACE
+		LINK	TYPE		; TYPE
+		LINK	EXIT		; EXIT
+
+; ? ( a -- )
+;
+; Display the contents in a memory cell.
+
+		HEADER	1,"?",NORMAL
+QUESTION:	COLON
+		LINK	FETCH		; @
+		LINK	DOT		; .
+		LINK	EXIT		; ;
 
 ;===============================================================================
-; Numeric Input
+; 4.3 Numeric Input
 ;-------------------------------------------------------------------------------
 
 ; DIGIT?
 ; NUMBER?
 
 ;===============================================================================
-; Basic I/O
+; 4.4 Basic I/O
 ;-------------------------------------------------------------------------------
 
 ; ?KEY ( -- c T | F )
@@ -1439,35 +1712,35 @@ CR:		COLON
 		LINK	EXIT		; ;
 
 ;===============================================================================
-; Parsing
+; 4.5 Parsing
 ;-------------------------------------------------------------------------------
 
 ; parse
 
 ;===============================================================================
-; Dictionary Search
+; 4.6 Dictionary Search
 ;-------------------------------------------------------------------------------
 
 
 ;===============================================================================
-; Terminal
+; 4.7 Terminal
 ;-------------------------------------------------------------------------------
 
 
 ;===============================================================================
-; Error Handling
+; 4.8 Error Handling
 ;-------------------------------------------------------------------------------
 
 ; CATCH
 ; THROW
 
 ;===============================================================================
-; Text Interpreter
+; 4.9 Text Interpreter
 ;-------------------------------------------------------------------------------
 
 
 ;===============================================================================
-; Shell
+; 4.10 Shell
 ;-------------------------------------------------------------------------------
 
 		HEADER	6,"preset",NORMAL
@@ -1487,7 +1760,7 @@ QUIT:		COLON
 		LINK	EXIT
 
 ;===============================================================================
-; Compiler
+; 5.1 Compiler
 ;-------------------------------------------------------------------------------
 
 		HEADER	5,"overt",NORMAL
@@ -1498,11 +1771,113 @@ OVERT:		COLON
 		LINK	FETCH		; @
 		LINK	STORE		; !
 		LINK	EXIT		; ;
-
+		
 ;===============================================================================
-; Structures
+; 5.2 Primitive Compiler Words
 ;-------------------------------------------------------------------------------
 
+; ' ( -- xt )
+
+; ALLOT ( n -- )
+
+		HEADER	5,"allot",NORMAL
+ALLOT:		COLON
+		LINK	CP		; CP
+		LINK	PLUS_STORE	; +!
+		LINK	EXIT		; ;
+
+; , ( w -- )
+
+		HEADER	1,",",NORMAL
+COMMA:		COLON
+		LINK	HERE		; HERE
+		LINK	DUP		; DUP
+		LINK	CELL_PLUS	; CELL+
+		LINK	CP		; CP
+		LINK	STORE		; !
+		LINK	STORE		; !
+		LINK	EXIT		; ;
+		
+; [COMPILE]
+
+; COMPILE
+
+; LITERAL ( w -- )
+
+		HEADER	7,"literal",IMMEDIATE
+LITERAL:	COLON
+		LITERAL	doLIT-1
+		LINK	COMMA
+		LINK	COMMA
+		LINK	EXIT
+		
+; $,"
+
+; RECURSE
+
+;===============================================================================
+; 5.3 Structures
+;-------------------------------------------------------------------------------
+
+; <MARK ( -- a )
+
+		HEADER	5,"<mark",NORMAL
+LESS_MARK:	COLON
+		LINK	HERE		; HERE
+		LINK	EXIT		; ;
+		
+; <RESOLVE ( a -- )
+
+		HEADER	8,"<resolve",NORMAL
+LESS_RESOLVE:	COLON
+		LINK	CELL_MINUS	; CELL-
+		LINK	COMMA		; ,
+		LINK	EXIT
+
+; >MARK ( -- a )
+
+		HEADER	5,">mark",NORMAL
+GREATER_MARK:	COLON
+		LINK	HERE		; HERE
+		LINK	FALSE		; 0
+		LINK	COMMA		; ,
+		LINK	EXIT		; ;
+
+; >RESOLVE ( a -- )
+
+		HEADER 8,">resolve",NORMAL
+GREATER_RESOLVE: COLON
+		LINK	LESS_MARK	; <MARK
+		LINK	CELL_MINUS	; CELL-
+		LINK	SWAP		; SWAP
+		LINK	STORE		; !
+		LINK	EXIT		; ;
+		
+; FOR ( -- a )
+
+		HEADER	3,"for",IMMEDIATE
+FOR:		COLON
+		LITERAL	TO_R-1		; COMPILE >R
+		LINK	COMMA
+		LINK	LESS_MARK	; <MARK
+		LINK	EXIT		; ;
+		
+BEGIN:
+NEXT:
+UNTIL:
+AGAIN:
+IF:
+AHEAD:
+REPEAT:
+THEN:
+AFT:
+ELSE:
+WHEN:
+WHILE:
+
+ABORT_QUOTE:
+DOLLAR_QUOTE:
+DOT_QUOTE:
 
 ;===============================================================================
 ; 5.5 Defining Words
@@ -1537,15 +1912,15 @@ VER:		COLON
 ; eForth saves BASE on the start but does not restore it at exit.
 
 		HEADER	2,"hi",NORMAL
-HI:		COLON
+HELLO:		COLON
 		LINK	IO		; !IO
 		LINK	BASE		; BASE
 		LINK	FETCH		; @
 		LINK	HEX		; HEX
 		LINK	CR		; CR
-		
+	; STR
 		LINK	VER		; VER
-		LINK	HASH_LESS	; <#
+		LINK	LESS_HASH	; <#
 		LINK	HASH		; #
 		LINK	HASH		; #
 		LITERAL	46		; 46
@@ -1563,7 +1938,7 @@ HI:		COLON
 ; A variable containing the boot function address
 
 TICK_BOOT:	VARIABLE
-		.word	HI
+		.word	HELLO
 		
 ; COLD ( -- )
 ;
@@ -1620,7 +1995,7 @@ UZERO:
 		.word	0,0,0,0		; +40 = VOCAB STACK
 		.word	0,0,0,0
 		.word	0,0		; +56 = CURRENT
-		.word	0		; +60 = CP
+		.word	CODE_AREA	; +60 = CP
 		.word	0		; +62 = NP
 		.word	0		; +64 = LAST
 		
