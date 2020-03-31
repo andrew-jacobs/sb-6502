@@ -97,6 +97,13 @@ RTC_CTLA	.equ	$fe2a		; R/W
 RTC_CTLB	.equ	$fe2b		; R/W
 RTC_STAT	.equ	$fe2c		; R/W
 
+; Flash ROM Interface
+
+ROM_OFFL	.equ	$fe30		; R/W
+ROM_OFFH	.equ	$fe31		; R/W
+ROM_DATA	.equ	$fe32		; R/W
+ROM_LOCK	.equ	$fe33		; R/W
+
 ;===============================================================================
 ; Macros
 ;-------------------------------------------------------------------------------

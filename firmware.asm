@@ -489,10 +489,19 @@ WaitTillStable:
 		movwf	PPSLOCK
 		bcf	PPSLOCK,PPSLOCKED
 		
-		movlw	h'17'			; RC7 is RX1
-		movwf	RX1PPS
+		movlw	h'0f'			; RC3 is SCK1
+		movwf	RC3PPS
+		movlw	h'13'
+		movwf	SSP1CLKPPS
+		movlw	h'14'			; RC4 is SDI1
+		movwf	SSP1DATPPS
+		movlw	h'10'			; RC5 is SDO1
+		movwf	RC5PPS
+		
 		movlw	h'09'			; RC6 is TX1
 		movwf	RC6PPS
+		movlw	h'17'			; RC7 is RX1
+		movwf	RX1PPS
 		
 		banksel	PPSLOCK			; Lock PPS module
 		movlw	h'55'
@@ -737,36 +746,36 @@ TestSC:
                 rcall   LoPhase                 ; Send address lo byte
                 TRACE_NEWL
                 TRACE_ADDR
-                movlw   h'1a'
+                movlw   h'ea'
                 rcall   HiPhaseLoad
                 TRACE_DATA
 		
-                rcall   LoPhase                 ; Send address lo byte
+                rcall   LoPhase                 ; A 65C02 will address zero page
                 TRACE_NEWL
                 TRACE_ADDR
-		movf	ADRH_PORT,W
+		movf	ADRH_PORT,W		; .. so capture the address HI
 		movwf	CAPTURE
                 movlw   h'ea'
                 rcall   HiPhaseLoad
                 TRACE_DATA
 
-		rcall   LoPhase                 ; Send address lo byte
+		rcall   LoPhase                 ; Send NOP as dummy data
                 TRACE_NEWL
                 TRACE_ADDR
                 movlw   h'ea'
                 rcall   HiPhaseLoad
                 TRACE_DATA
 		
-		rcall   LoPhase                 ; Send fake relative address
+		rcall   LoPhase                 ; Send NOP as dummy data
                 TRACE_NEWL
                 TRACE_ADDR
                 movlw   h'ea'
                 rcall   HiPhaseLoad
                 TRACE_DATA
 		
-		movf	CAPTURE,W
-		bz	W65C02
-		bra	R65SC02
+		movf	CAPTURE,W		; Test captured address
+		bz	W65C02			; $00 = W65C02
+		bra	R65SC02			; Otherwise R65SC02
 		endif
 		
 ;-------------------------------------------------------------------------------
@@ -1865,6 +1874,8 @@ RomWrOff1:
 		andlw	h'3f'			; Limit to 16K
 		addwf	ROMH,W			; And update TBLPTR
 		movwf	TBLPTRH
+		movf	ROMU,W
+		movwf	TBLPTRU
 		clrf	ROM_LK0			; Clear lock key
 		clrf	ROM_LK1
 		bra	NormalLo

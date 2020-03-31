@@ -1617,7 +1617,7 @@ ShowString:
 		
 STRINGS:
 TTL_STR		.equ	$-STRINGS
-		.byte	"Boot 65C802 [18.06]"
+		.byte	"SB-65C802 [18.06]"
 		.byte	0
 PC_STR		.equ	$-STRINGS
 		.byte	"PC=",0
