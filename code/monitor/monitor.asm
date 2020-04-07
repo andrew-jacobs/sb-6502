@@ -722,7 +722,7 @@ Trace:
 		 sta	ADDR_S+1
 
 		 ldy	#0
-		 lda	(PC_REG),Y	; Fetch the next opcode
+		 lda	(PC_REG),y	; Fetch the next opcode
 		 inc	PC_REG+0	; .. and bump PC
 		 if eq
 		  inc	PC_REG+1
@@ -859,8 +859,7 @@ Trace:
 		  sta	ADDR_E+1
 		 endif
 
-		 lda	OPCODES,x	; Recover the opcode index
-		 tay
+		 ldy	OPCODES,x	; Recover the opcode index
 		 lda	EMULATE+1,y
 		 pha
 		 lda	EMULATE+0,y

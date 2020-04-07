@@ -2,7 +2,7 @@
 
 This repository contains the firmware for a simple single board computer that uses only three chips, namely:
 
-- A MOS 6502, WDC 65C02, R65SC02 or WDC 65C802 microprocessor
+- A MOS 6502, WDC 65C02, R65C02, R65SC02 or WDC 65C802 microprocessor
 - A 128K SRAM memory chip (of which 64K is used)
 - A 18F45K22 or 18F47K40 PIC micro-controller
 
@@ -14,27 +14,27 @@ The board in the photo is a version 1 PCB and lacks a pull up on the /SO pin (no
 
 The board is designed to take either a MOS 6502 or a WDC 65C02. A different socket is provided for each as some of the control signal pins differ between the two chips but the layout of the board overlaps the two sockets.
 
-Both Rockwell and WDC made chips that where pin compatible with the original MOS 6502, namely:
+Both Rockwell and WDC made chips that are pin compatible with the original MOS 6502, namely:
 
 - R65C02
 - R65SC02
 - W65C802
 
-I have tested the board with Synertek (MOS) 6502, California Micro Devices G65SC02, WDC 65C802, GTE G65SC802 and WDC 65C02 devices.
+I have tested the board with Synertek (MOS) 6502, California Micro Devices G65SC02, Rockwell R65C02, WDC 65C802, GTE G65SC802 and WDC 65C02 devices.
 
-On the prototype board I cut two 40 pin DIP sockets up and soldered them in so the same board can be used for any type of chip. On my other boards I usually just install a single 40 pin socket.
-
-In order to make a working system the PIC must act as the source of the microprocessor's clock signal and decode it's control signals to either enable the memory or emulate a peripheral chip at the appropriate time.
+On the prototype board I cut two 40 pin DIP sockets up and soldered them in so the same board can be used for any type of chip. On my other boards I usually just install a single 40 pin socket and on one I have a ZIF socket on the 6502 to make testing processors easier.
 
 ## Booting a ROM-less System
 
-Normally a microprocessor needs a ROM to hold the initial firmware that gets the system up and running. In this design the microprocessor does not have a ROM so we have to get the microprocessor to create one by feeding it fake instructions from the PIC.
+In order to make a working system the PIC must act as the source of the microprocessor's clock signal and decode it's control signals to either enable the memory or emulate a peripheral chip at the appropriate time.
 
-The PIC generates a series of clock pluses while the microprocessor is released from reset. The microprocessor performs an interrupt sequence pushing a random PC value on the stack followed by the status flags. Then it reads the reset vector from $FFFC/D. The PIC provides data values back to the microprocessor as if it was a ROM
+The PIC generates a series of clock pluses while the microprocessor is released from reset. The microprocessor performs an interrupt sequence pushing a random PC value on the stack followed by the status flags. Then it reads the reset vector from $FFFC/D. 
+
+Normally a microprocessor needs a ROM to hold the initial firmware that gets the system up and running. In this design the PIC provides data values back to the microprocessor as if it was a ROM.
 
 ### Telling the 6502, 65C02 and 65C802 Apart
 
-The PIC cannot tell directly which socket is populated or what type of device it is. The PIC uses the fact that the 6502, 65C02 and 65C802 treat JMP ($FFFF) instructions differently. All will read the low byte of the target address from $FFFF but as 6502 reads the high byte from $FF00 while the 65C02 (/65SC02) and 65C802 increment the address correctly and read from $0000 but take a different number of cycles to do so.
+The PIC cannot tell directly which socket is populated or what type of device it is so it uses the fact that there are slight differences in the way the 6502, 65C02/65SC02 and 65C802 execute a JMP ($FFFF) instruction. All will read the low byte of the target address from $FFFF but as 6502 reads the high byte from $FF00 while the 65C02/65SC02 and 65C802 increment the address correctly and read from $0000 but take a different number of cycles to do so.
 
 There are other ways you could tell the processors apart but this technique is easy to implement. The PIC feeds the microprocessor the jump indirect instruction when it resets and examines address bus values to see which memory address is accessed in each clock cycle.
 
@@ -75,7 +75,7 @@ $FE00 | $FE0F | Virtual 6551 ACIA
 $FE10 | $FE1F | Virtual 65SPI
 $FE20 | $FE2F | Virtual DS1318 RTC
 $FE30 | $FE3F | Virtual Flash Interface
-$FE40 | $FFFF | Core I/O Functions + Vectors
+$FE40 | $FFFF | Core I/O Functions + Vectors (in RAM)
 
 The boot code copies a 16K ROM image into the memory area $C000 to $FFFF but this can be overwritten by a user program.
 
