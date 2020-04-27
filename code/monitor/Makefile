@@ -35,7 +35,7 @@ TARGETS	= \
 	monitor-65c802.bin monitor-65c802.hex ../../boot-65c802.asm
 
 LK65_FLAGS = \
-	-bss $$0200-$$EFFF -code $$F000-$$FFFF
+	-bss 0200-EFFF -code F000-FFFF
 
 all:	$(TARGETS)
 

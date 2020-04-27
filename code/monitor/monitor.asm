@@ -33,8 +33,8 @@ OP_BCC		.equ	$0C
 OP_BCS		.equ	$0E
 OP_BEQ		.equ	$10
 OP_BIT		.equ	$12
-OP_BNE		.equ	$14
-OP_BMI		.equ	$16
+OP_BMI		.equ	$14
+OP_BNE		.equ	$16
 OP_BPL		.equ	$18
 		.if	__65C02__
 OP_BRA		.equ	$1A
@@ -229,8 +229,8 @@ MNEMONICS:
 		MNEM    'B','C','S'
 		MNEM    'B','E','Q'
 		MNEM    'B','I','T'
-		MNEM    'B','N','E'
 		MNEM    'B','M','I'
+		MNEM    'B','N','E'
 		MNEM    'B','P','L'
 		MNEM    'B','R','A'
 		MNEM    'B','R','K'
