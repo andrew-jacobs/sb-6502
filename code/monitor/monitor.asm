@@ -548,6 +548,9 @@ RptCommand:
 		  pha
 		 endif
 
+		 lda	#DC1		; Send XON
+		 jsr	UartTx
+
 		 lda	P_REG		; And status flags
 		 pha
 		 lda	A_REG		; Reload A, X and Y
