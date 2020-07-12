@@ -22,15 +22,21 @@
 ;          65(C)02                 65C802
 ; +------+-----------------------+-----------------------+
 ; | 0000 | Page Zero             | Default Page Zero     |
-; | 00fe | Interrupt Temp        |                       |
+; | 00F0 | Monitor (Overwritable)| Monitor (Overwritable)|
+; | 00FE | Interrupt Temp        |                       |
 ; +------+-----------------------+-----------------------+
 ; | 0100 | Stack                 | Default Stack         |
 ; +------+-----------------------+-----------------------+
 ; | 0200 | Vectors               | Vectors               |
 ; | 0208 | I/O RAM               | I/O RAM               |
+; | 0280 | Monitor (Overwritable)| Monitor (Overwritable)|
 ; +------+-----------------------+-----------------------+
-; | 0280 | RAM                   | RAM                   |
+; | 0300 | RAM                   | RAM                   |
 ; |      |                       |                       |
+; | BFFF |                       |                       |
+; +------+-----------------------+-----------------------+
+; | C000 | 'ROM' Image           | 'ROM' Image           |
+; |      | (Overwritable)        | (Overwritable)        |
 ; | EFFF |                       |                       |
 ; +------+-----------------------+-----------------------+
 ; | F000 | Boot 'ROM' Image      | Boot 'ROM' Image      |
@@ -46,6 +52,9 @@
 ; | FFE8 |                       | 65C802 Vectors        |
 ; | FFFA | 65(C)02 Vectors       |                       |
 ; +------+-----------------------+-----------------------+
+;
+; If the monitor is not being used then its zero page ($F0-$FD) and buffer area
+; ($0280-$02FF) can be overwriten by the user program.
 ;
 ; The Host PIC18F is too fast for the UART to be set to 50 or 75 baud. The other
 ; speeds work correctly.
@@ -87,6 +96,13 @@ RTC_ALM3	.equ	$fe28		; R/W
 RTC_CTLA	.equ	$fe2a		; R/W
 RTC_CTLB	.equ	$fe2b		; R/W
 RTC_STAT	.equ	$fe2c		; R/W
+
+; Flash ROM Interface
+
+ROM_OFFL	.equ	$fe30		; R/W
+ROM_OFFH	.equ	$fe31		; R/W
+ROM_DATA	.equ	$fe32		; R/W
+ROM_LOCK	.equ	$fe33		; R/W
 
 ;===============================================================================
 ; Macros
@@ -146,12 +162,5 @@ UARTRX		.equ	$fe43
 UARTTXCOUNT	.equ	$fe46
 UARTRXCOUNT	.equ	$fe49
 
-SPIGETCONTROL	.equ	$fe4c
-SPISETCONTROL	.equ	$fe4f
-SPIGETSTATUS	.equ	$fe52
-SPIGETDIVISOR	.equ	$fe55
-SPISETDIVISOR	.equ	$fe58
-SPIGETSELECT	.equ	$fe5b
-SPISETSELECT	.equ	$fe5e
-SPISENDIDLE	.equ	$fe61
-SPISENDDATA	.equ	$fe64
+SPISENDIDLE	.equ	$fe4c
+SPISENDDATA	.equ	$fe4f

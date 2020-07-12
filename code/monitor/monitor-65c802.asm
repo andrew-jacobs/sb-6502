@@ -743,7 +743,7 @@ RptCommand:
 		endif
 		
 ;===============================================================================
-; 'S' - S19 Record Loader
+; 'S' - S19/28 Record Loader
 ;-------------------------------------------------------------------------------
 
 		cmp	#'S'
@@ -1617,7 +1617,7 @@ ShowString:
 		
 STRINGS:
 TTL_STR		.equ	$-STRINGS
-		.byte	"Boot 65C802 [18.06]"
+		.byte	"SB-65C802 [18.06]"
 		.byte	0
 PC_STR		.equ	$-STRINGS
 		.byte	"PC=",0
@@ -1746,6 +1746,9 @@ MODES:
 		jmp	UartRx
 		jmp	UartTxCount
 		jmp	UartRxCount
+		jmp	SpiSendIdle
+		jmp	SpiSendData
+		
 		jmp	SpiGetControl
 		jmp	SpiSetControl
 		jmp	SpiGetStatus
@@ -1753,8 +1756,6 @@ MODES:
 		jmp	SpiSetDivisor
 		jmp	SpiGetSelect
 		jmp	SpiSetSelect
-		jmp	SpiSendIdle
-		jmp	SpiSendData
 				
 ;===============================================================================
 ; IRQ Handlers

@@ -36,7 +36,7 @@ OP_BIT		.equ	$12
 OP_BMI		.equ	$14
 OP_BNE		.equ	$16
 OP_BPL		.equ	$18
-		.if	__65C02__
+		.if	__65C02__|__65SC02__
 OP_BRA		.equ	$1A
 		.endif
 OP_BRK		.equ	$1C
@@ -66,15 +66,17 @@ OP_NOP		.equ	$4A
 OP_ORA		.equ	$4C
 OP_PHA		.equ	$4E
 OP_PHP		.equ	$50
-		.if	__65C02__
+		.if	__65C02__|__65SC02__
 OP_PHX		.equ	$52
 OP_PHY		.equ	$54
 		.endif
 OP_PLA		.equ	$56
 OP_PLP		.equ	$58
-		.if	__65C02__
+		.if	__65C02__|__65SC02__
 OP_PLX		.equ	$5A
 OP_PLY		.equ	$5C
+		.endif
+		.if	__65C02__
 OP_RMB		.equ	$5E
 		.endif
 OP_ROL		.equ	$60
@@ -89,17 +91,17 @@ OP_SEI		.equ	$6E
 OP_SMB		.equ	$70
 		.endif
 OP_STA		.equ	$72
-		.if	__65C02__
+		.if	__65C02__|__65SC02__
 OP_STP		.equ	$74
 		.endif
 OP_STX		.equ	$76
 OP_STY		.equ	$78
-		.if	__65C02__
+		.if	__65C02__|__65SC02__
 OP_STZ		.equ	$7A
 		.endif
 OP_TAX		.equ	$7C
 OP_TAY		.equ	$7E
-		.if	__65C02__
+		.if	__65C02__|__65SC02__
 OP_TRB		.equ	$80
 OP_TSB		.equ	$82
 		.endif
@@ -107,7 +109,7 @@ OP_TSX		.equ	$84
 OP_TXA		.equ	$86
 OP_TXS		.equ	$88
 OP_TYA		.equ	$8A
-		.if	__65C02__
+		.if	__65C02__|__65SC02__
 OP_WAI		.equ	$8C
 		.endif
 
@@ -139,7 +141,7 @@ MO_REL		.equ		      MB_REL
 MO_ZPG		.equ		      MB_ZPG
 MO_ZPX		.equ	       MB_XRG|MB_ZPG
 MO_ZPY		.equ	       MB_YRG|MB_ZPG
-		.if	__65C02__
+		.if	__65C02__|__65SC02__
 MO_IZP		.equ	MB_IND	     |MB_ZPG
 		.endif
 MO_IZX		.equ	MB_IND|MB_XRG|MB_ZPG
@@ -148,7 +150,7 @@ MO_ABS		.equ		      MB_ABS
 MO_ABX		.equ	       MB_XRG|MB_ABS
 MO_ABY		.equ	       MB_YRG|MB_ABS
 MO_IAB		.equ	MB_IND	     |MB_ABS
-		.if	__65C02__
+		.if	__65C02__|__65SC02__
 MO_IAX		.equ	MB_IND|MB_XRG|MB_ABS
 		.endif
 
@@ -290,7 +292,7 @@ MNEMONICS:
 		MNEM    'T','X','S'
 		MNEM    'T','Y','A'
 		MNEM    'W','A','I'
-		
+
 ;===============================================================================
 ; Power On Reset
 ;-------------------------------------------------------------------------------
@@ -298,7 +300,7 @@ MNEMONICS:
 RESET:
 		sei
 		cld			; Ensure binary mode
-		
+
 		ldx	#$FF		; Reset the stack
 		txs
 
@@ -307,7 +309,7 @@ RESET:
 		stx	RX_TAIL
 		stx	TX_HEAD
 		stx	TX_TAIL
-		
+
 		repeat			; Setup vectors
 		 lda	VECTORS,x
 		 sta	IRQV,x
@@ -323,24 +325,24 @@ RESET:
 
 		lda	#$C0		; Start the timer
 		sta	RTC_CTLA
-		
+
 		cli			; Allow interrupts
-		
+
 		jsr	NewLine
 		ldx	#TTL_STR
 		jsr	ShowString
-		
+
 		repeat
 		 brk	#0		; And enter monitor
 		forever
-		
+
 ;-------------------------------------------------------------------------------
-		
+
 VECTORS:	.word	IRQ		; Default vectors
 		.word	NMI
 		.word	IRQ
 		.word	NMI
-		
+
 ;===============================================================================
 ; Entry Point
 ;-------------------------------------------------------------------------------
@@ -361,7 +363,7 @@ BRK:
 		pla
 		sbc	#0
 		sta	PC_REG+1
-		
+
 		cli			; Allow interrupts
 
 ;===============================================================================
@@ -379,13 +381,13 @@ ShowRegisters:
 
 		tsx
 		jsr	DumpRegisters
-		
+
 ;===============================================================================
 ; Command Line
 ;-------------------------------------------------------------------------------
 
 NewCommand:
-		.if	__65C02__
+		.if	__65C02__|__65SC02__
 		stz	CMD_LEN		; Mark the buffer as empty
 		.else
 		lda	#0		; Mark the buffer as empty
@@ -405,16 +407,16 @@ RptCommand:
 		 jsr	UartTx
 		 inx
 		forever
-		
+
 		lda	#DC1		; Send XON
 		jsr	UartTx
 		repeat
 		 jsr	UartRx		; Wait for some user input
 		 sta	COMMAND,x
-		 
+
 		 cmp	#CR		; End of input?
 		 break eq
-		 
+
 		 cmp 	#ESC		; Cancel input?
 		 if 	eq
 		  beq	NewCommand	; Yes
@@ -424,7 +426,7 @@ RptCommand:
 		 if 	eq
 		  lda	#BS		; .. into a backspace
 		 endif
-		 
+
 		 cmp	#BS		; Handle backspace
 		 if 	eq
 		  cpx   #0
@@ -449,7 +451,7 @@ RptCommand:
 		 jsr	UartTx		; Otherwise echo to screen
 		 inx			; And bump counter
 		forever
-		
+
 		stx	CMD_LEN		; Save the command length
 		lda	#DC3		; Send XOFF
 		jsr	UartTx
@@ -457,7 +459,7 @@ RptCommand:
 		ldx	#0		; Set character offset to start
 		jsr	SkipSpaces	; And get first character
 		bcs	NewCommand
-		
+
 		cmp	#CR		; Empty line?
 		beq	NewCommand	; Yes
 
@@ -477,14 +479,14 @@ RptCommand:
 		  else
 		   inc	ADDR_E+1
 		  endif
-		  
+
 		  repeat
 		   jsr	NewLine		; Print the memory address
 		   lda	ADDR_S+1
 		   jsr	ShowHex2
 		   lda	ADDR_S+0
 		   jsr	ShowHex2
-		   
+
 		   jsr	Disassemble
 		   jsr	BumpAddr
 		   break cs
@@ -492,9 +494,9 @@ RptCommand:
 		  until	cs
 		  jmp	NewCommand
 		 endif
-		 jmp	Error		
+		 jmp	Error
 		endif
-		
+
 ;===============================================================================
 ; 'F' - Fill
 ;-------------------------------------------------------------------------------
@@ -514,7 +516,7 @@ RptCommand:
 		   ldy	#0		; Perform the fill
 		   lda	TEMP+0
 		   sta 	(ADDR_S),y
-		   
+
 		   iny
 		   tya
 		   jsr	BumpAddr	; Until the end
@@ -526,18 +528,29 @@ RptCommand:
 		 endif
 		 jmp	NewCommand
 		endif
-		
+
 ;===============================================================================
 ; 'G' - Go
 ;-------------------------------------------------------------------------------
 
 		cmp	#'G'
 		if	eq
+		 jsr	GetWord		; Extract start address
+		 if cc
+		  lda	TEMP+1
+		  pha
+		  lda	TEMP+0
+		  pha
+		 else
+		  lda	PC_REG+1	; Push the target address
+		  pha
+		  lda	PC_REG+0
+		  pha
+		 endif
 
-		 lda	PC_REG+1	; Push the target address
-		 pha
-		 lda	PC_REG+0
-		 pha
+		 lda	#DC1		; Send XON
+		 jsr	UartTx
+
 		 lda	P_REG		; And status flags
 		 pha
 		 lda	A_REG		; Reload A, X and Y
@@ -548,7 +561,7 @@ RptCommand:
 
 ;===============================================================================
 ; 'M' - Show Memory
-;-------------------------------------------------------------------------------		
+;-------------------------------------------------------------------------------
 
 		cmp	#'M'
 		if	eq
@@ -562,14 +575,14 @@ RptCommand:
 		  else
 		   inc	ADDR_E+1	; Or default to start + 256
 		  endif
-		  
+
 		  repeat
 		   jsr	NewLine		; Print the memory address
 		   lda	ADDR_S+1
 		   jsr	ShowHex2
 		   lda	ADDR_S+0
 		   jsr	ShowHex2
-		   
+
 		   ldy	#0		; Dump 16 bytes of data
 		   repeat
 		    jsr	Space
@@ -578,7 +591,7 @@ RptCommand:
 		    jsr	ShowHex2
 		    cpy #16
 		   until eq
-		   
+
 		   jsr	Space		; Then show as characters
 		   jsr	Bar
 		   ldy	#0
@@ -593,7 +606,7 @@ RptCommand:
 		    cpy	#16
 		   until eq
 		   jsr	Bar
-		   
+
 		   tya
 		   jsr	BumpAddr
 		   break cs
@@ -612,7 +625,7 @@ RptCommand:
 		if	eq
 		 jmp	ShowRegisters
 		endif
-		
+
 ;===============================================================================
 ; 'S' - S19 Record Loader
 ;-------------------------------------------------------------------------------
@@ -626,12 +639,12 @@ RptCommand:
 		  bcs	.S19Fail
 		  sta	ADDR_E+0
 		  jsr	GetWord		; Extract address
-		  bcs	.S19Fail		  
+		  bcs	.S19Fail
 		  jsr	SetStartAddr
 		  dec	ADDR_E+0	; Reduce count
 		  dec	ADDR_E+0
 		  dec	ADDR_E+0
-		  
+
 		  ldy	#0
 		  sty	ADDR_E+1
 		  repeat
@@ -653,14 +666,14 @@ RptCommand:
 		   lda	TEMP+0		; Copy to PC
 		   sta	PC_REG+0
 		   lda	TEMP+1
-		   sta 	PC_REG+1	   
+		   sta 	PC_REG+1
 		  else
 .S19Fail:	   jmp	Error
 		  endif
 		 endif
 		 jmp	NewCommand
 		endif
-		
+
 ;===============================================================================
 ; 'T' - Trace
 ;-------------------------------------------------------------------------------
@@ -669,12 +682,25 @@ RptCommand:
 		if eq
 		 jsr	GetWord		; Extract start address
 		 if cc
-		  lda	TEMP+0
-		  sta	PC_REG+0
-		  lda	TEMP+1
-		  sta	PC_REG+1
+		  ldy	TEMP+0		; And overwrite PC
+		  sty	PC_REG+0
+		  ldy	TEMP+1
+		  sty	PC_REG+1
 		 endif
-		 
+
+		 cmp	#','
+		 sec
+		 if eq
+		  jsr	GetWord		; Extract count
+		 endif
+		 if cs
+		  ldy	#1		; Default one step
+		  sty	TEMP+0
+		  dey
+		  sty	TEMP+1
+		 endif
+
+Trace:
 		 jsr	NewLine		; Show the current PC
 		 lda	PC_REG+1
 		 sta	ADDR_S+1
@@ -682,7 +708,7 @@ RptCommand:
 		 lda	PC_REG+0
 		 sta	ADDR_S+0
 		 jsr	ShowHex2
-		 
+
 		 jsr	Disassemble	; Disassembly opcode
 		 repeat
 		  cpx	#16		; .. justify output
@@ -692,20 +718,20 @@ RptCommand:
 		 forever
 		 tsx
 		 jsr	DumpRegisters	; .. and show registers
-	
+
 		 lda	#<A_REG		; Assume accumulator is target
 		 sta	ADDR_S+0
 		 lda	#>A_REG
 		 sta	ADDR_S+1
-	
+
 		 ldy	#0
-		 lda	(PC_REG),Y	; Fetch the next opcode
+		 lda	(PC_REG),y	; Fetch the next opcode
 		 inc	PC_REG+0	; .. and bump PC
 		 if eq
 		  inc	PC_REG+1
 		 endif
 		 tax
-		 lda	MODES,X		; Extract address type 
+		 lda	MODES,X		; Extract address type
 		 and	#MB_ABS
 		 cmp	#MB_ZPG		; Zero page?
 		 if eq
@@ -730,7 +756,7 @@ RptCommand:
 		   inc 	PC_REG+0
 		   if eq
 		    inc	PC_REG+1
-		   endif		  
+		   endif
 		  else
 		   cmp	#MB_IMM		; Immediate?
 		   if eq
@@ -745,7 +771,7 @@ RptCommand:
 		   endif
 		  endif
 		 endif
-		    
+
 		 lda	#MB_XRG		; Handle X index
 		 and	MODES,x
 		 if ne
@@ -756,40 +782,49 @@ RptCommand:
 		  if cs
 		   inc	ADDR_S+1
 		  endif
-		  
+
 		  lda	#MO_ZPX		; Force wrap around for ZPG,X
 		  cmp	MODES,x
-		  if ne
+		  if eq
 		   sty	ADDR_S+1
 		  endif
 
 		  lda	#MO_IZX		; .. and (ZPG,X)
 		  cmp	MODES,x
-		  if ne
+		  if eq
 		   sty	ADDR_S+1
 		  endif
 		 endif
-		 
+
 		 lda	#MB_IND		; Handle indirection
 		 and 	MODES,x
 		 if ne
-		  lda	(ADDR_S),y
+		  lda	(ADDR_S),y	; Fetch low byte of target
 		  pha
-		  cpx	#$6C		; Broken indirection?
+
+		.if	__65C02__|__65SC02__
+		  cpx	#$6C		; JMP (abs)?
+		  if ne
+		   cpx	#$7C		; or JMP (abs,X)?
+		  endif
 		  if eq
-		   inc	ADDR_S+0	; Yes.
-		  else
-		   inc	ADDR_S+0	; No.
+		   inc	ADDR_S+0	; 65C02 increments properly
 		   if eq
 		    inc ADDR_S+1
 		   endif
+		  else
+		   inc	ADDR_S+0	; Otherwise just the low byte
 		  endif
-		  lda	(ADDR_S),y
-		  sta	ADDR_S+1
+		.else
+		  inc	ADDR_S+0	; 6502 bumps just the low byte
+		.endif
+
+		  lda	(ADDR_S),y	; Fetch high byte of target
+		  sta	ADDR_S+1	; And save indirect address
 		  pla
 		  sta	ADDR_S+0
 		 endif
-		  
+
 		 lda	#MB_YRG		; Handle Y index
 		 and	MODES,x
 		 if ne
@@ -800,14 +835,14 @@ RptCommand:
 		  if cs
 		   inc	ADDR_S+1
 		  endif
-		  
+
 		  lda	#MB_ZPG		; Restrict to zero page
 		  and	MODES,x
 		  if ne
 		   ldy	ADDR_S+1
 		  endif
 		 endif
-		 
+
 		 lda	#MB_REL		; Relative address?
 		 and	MODES,x
 		 if ne
@@ -826,9 +861,8 @@ RptCommand:
 		  adc	PC_REG+1
 		  sta	ADDR_E+1
 		 endif
-		  
-		 lda	OPCODES,x	; Recover the opcode index
-		 tay
+
+		 ldy	OPCODES,x	; Recover the opcode index
 		 lda	EMULATE+1,y
 		 pha
 		 lda	EMULATE+0,y
@@ -839,7 +873,7 @@ RptCommand:
 		 lda	A_REG		; .. and A
 		 plp
 		 rts			; Go to emulation code
-	
+
 EMULATE:
 		.word	EM_ERR-1
 		.word	EM_ADC-1
@@ -880,14 +914,14 @@ EMULATE:
 		.word	EM_LSR-1
 		.word	EM_NOP-1
 		.word	EM_ORA-1
-		.word	EM_PLA-1
-		.word	EM_PLP-1
-		.word	EM_PLX-1
-		.word	EM_PLY-1
 		.word	EM_PHA-1
 		.word	EM_PHP-1
 		.word	EM_PHX-1
 		.word	EM_PHY-1
+		.word	EM_PLA-1
+		.word	EM_PLP-1
+		.word	EM_PLX-1
+		.word	EM_PLY-1
 		.word	EM_RMB-1
 		.word	EM_ROL-1
 		.word	EM_ROR-1
@@ -912,13 +946,13 @@ EMULATE:
 		.word	EM_TXS-1
 		.word	EM_TYA-1
 		.word	EM_WAI-1
-		
+
 ;-------------------------------------------------------------------------------
 
 EM_CLC:
 		 clc
 		 jmp	SaveP
-		 
+
 EM_CLD:
 		 cld
 		 jmp	SaveP
@@ -930,19 +964,19 @@ EM_CLI:
 EM_CLV:
 		 clv
 		 jmp	SaveP
-		 
+
 EM_SEC:
 		 sec
 		 jmp	SaveP
-		 
+
 EM_SED:
 		 sed
 		 jmp	SaveP
-		 
-EM_SEI:		
+
+EM_SEI:
 		 sei
 		 jmp	SaveP
-		 
+
 ;-------------------------------------------------------------------------------
 
 EM_ADC:
@@ -971,16 +1005,17 @@ EM_CMP:
 EM_AND:
 		 and	(ADDR_S),y
 		 jmp	SaveAP
-		 
+
 EM_EOR:
 		 eor	(ADDR_S),y
 		 jmp	SaveAP
-		 
+
 EM_ORA:
 		 and	(ADDR_S),y
 		 jmp	SaveAP
-		 
+
 EM_BIT:
+		.if 	__65C02__|__65SC02__
 		 cpx	#$89		; Immediate does not affect NV
 		 if ne
 		  pha
@@ -991,6 +1026,7 @@ EM_BIT:
 		  sta	P_REG
 		  pla
 		 endif
+		.endif
 		 and	(ADDR_S),y	; Handle Z flag
 		 php
 		 pla
@@ -999,9 +1035,9 @@ EM_BIT:
 		 eor	P_REG
 		 sta	P_REG
 		 jmp	SaveNone
-	
+
 ;-------------------------------------------------------------------------------
-		
+
 EM_ASL:
 		 lda	(ADDR_S),y
 		 asl	a
@@ -1013,7 +1049,7 @@ EM_LSR:
 		 lsr	a
 		 sta	(ADDR_S),y
 		 jmp	SaveP
-		 
+
 EM_ROL:
 		 lda	(ADDR_S),y
 		 rol	a
@@ -1035,15 +1071,15 @@ EM_DEC:
 		 txa
 		 sta	(ADDR_S),y
 		 jmp	SaveP
-		 
+
 EM_DEX:
 		 dec 	X_REG
 		 jmp	SaveP
-		 
+
 EM_DEY:
 		 dec	Y_REG
 		 jmp	SaveP
-		 
+
 EM_INC:
 		 lda	(ADDR_S),y
 		 tax
@@ -1051,58 +1087,58 @@ EM_INC:
 		 txa
 		 sta	(ADDR_S),y
 		 jmp	SaveP
-	
+
 EM_INX:
 		 inc	X_REG
 		 jmp	SaveP
-		 
+
 EM_INY:
 		 inc	Y_REG
 		 jmp	SaveP
-	
+
 ;-------------------------------------------------------------------------------
-	 
+
 EM_BCC:
 		 bcc	EM_BRA
 		 jmp	SaveNone
-		 
+
 EM_BCS:
 		 bcs	EM_BRA
 		 jmp	SaveNone
-		 
+
 EM_BEQ:
 		 beq	EM_BRA
 		 jmp	SaveNone
-		 
+
 EM_BMI:
 		 bmi	EM_BRA
 		 jmp	SaveNone
-		 
+
 EM_BNE:
 		 bne	EM_BRA
 		 jmp	SaveNone
-		 
+
 EM_BPL:
 		 bpl	EM_BRA
 		 jmp	SaveNone
-		 
+
 EM_BRA:
 		 lda	ADDR_E+0
 		 sta	PC_REG+0
 		 lda	ADDR_E+1
 		 sta	PC_REG+1
 		 jmp	SaveNone
-		 
+
 EM_BVC:
 		 bvc	EM_BRA
 		 jmp	SaveNone
-		 
+
 EM_BVS:
 		 bvs	EM_BRA
 		 jmp	SaveNone
-		 
+
 ;-------------------------------------------------------------------------------
-		 
+
 EM_JSR:
 		 lda	PC_REG+0	; Back up
 		 if eq
@@ -1112,6 +1148,7 @@ EM_JSR:
 		 lda	PC_REG+1	; And push PC
 		 pha
 		 lda	PC_REG+0
+		 pha
 
 EM_JMP:
 		 lda	ADDR_S+0	; Set PC to target address
@@ -1125,12 +1162,12 @@ EM_JMP:
 EM_LDA:
 		 lda	(ADDR_S),y
 		 jmp	SaveAP
-		 
+
 EM_LDX:
 		 lda	(ADDR_S),y
 		 sta	X_REG
 		 jmp	SaveP
-		 
+
 EM_LDY:
 		 lda	(ADDR_S),y
 		 sta	Y_REG
@@ -1139,15 +1176,15 @@ EM_LDY:
 EM_STA:
 		 sta 	(ADDR_S),y
 		 jmp	SaveNone
-		 
+
 EM_STX:
 		 lda	X_REG
 		 JMP	EM_STA
-		 
+
 EM_STY:
 		 lda 	Y_REG
 		 jmp	EM_STA
-		 
+
 EM_STZ:
 		 lda	#0
 		 jmp	EM_STA
@@ -1157,37 +1194,37 @@ EM_STZ:
 EM_PHA:
 		 pha
 		 jmp	SaveNone
-		 
+
 EM_PHP:
 		 lda	P_REG
 		 pha
 		 jmp	SaveNone
-		 
+
 EM_PHX:
 		 lda	X_REG
 		 pha
 		 jmp	SaveNone
-		 
+
 EM_PHY:
 		 lda	Y_REG
 		 pha
 		 jmp	SaveNone
-		 
+
 EM_PLA:
 		 pla
 		 jmp	SaveAP
-		 
+
 EM_PLP:
 		 pla
 		 ora	#$30
 		 sta	P_REG
 		 jmp	SaveNone
-		 
+
 EM_PLX:
 		 pla
 		 sta	X_REG
 		 jmp	SaveP
-		 
+
 EM_PLY:
 		 pla
 		 sta	Y_REG
@@ -1224,7 +1261,7 @@ EM_RTI:
 		 ora	#$30
 		 sta	P_REG
 		 jmp	SaveNone
-		 
+
 EM_RTS:
 		 pla
 		 sta	PC_REG+0
@@ -1235,10 +1272,12 @@ EM_RTS:
 		  inc	PC_REG+1
 		 endif
 		 jmp	SaveNone
-		 
+
 EM_STP:
+		 jmp	SaveNone
 
 EM_WAI:
+		 jmp	SaveNone
 
 ;-------------------------------------------------------------------------------
 
@@ -1246,131 +1285,136 @@ EM_TAX:
 		 lda	A_REG
 		 sta	X_REG
 		 jmp	SaveP
-		 
+
 EM_TAY:
 		 lda	A_REG
 		 sta	Y_REG
 		 jmp	SaveP
 
 EM_TSX:
-		tsx
-		stx	X_REG
-		jmp	SaveP
-		
+		 tsx
+		 stx	X_REG
+		 jmp	SaveP
+
 EM_TXA:
-		lda	X_REG
-		jmp	SaveAP
-		
+		 lda	X_REG
+		 jmp	SaveAP
+
 EM_TXS:
-		ldx	X_REG
-		txs
-		jmp	SaveNone
-		
+		 ldx	X_REG
+		 txs
+		 jmp	SaveNone
+
 EM_TYA:
-		lda	Y_REG
-		jmp	SaveAP
-		
+		 lda	Y_REG
+		 jmp	SaveAP
+
 ;-------------------------------------------------------------------------------
 
-		;.if __65C02__
-		
 EM_BBR:
-		txa			; Get bit number
-		and	#$70
-		lsr	a
-		lsr	a
-		lsr	a
-		lsr	a
-		tax
-		lda	BITS,x		; Map to bit mask
-		and	(ADDR_S),y	; And test value
-		bne	SaveNone
-		jmp	EM_BRA
-		
+		 txa			; Get bit number
+		 and	#$70
+		 lsr	a
+		 lsr	a
+		 lsr	a
+		 lsr	a
+		 tax
+		 lda	BITS,x		; Map to bit mask
+		 and	(ADDR_S),y	; And test value
+		 bne	SaveNone
+		 jmp	EM_BRA
+
 EM_BBS:
-		txa			; Get bit number
-		and	#$70
-		lsr	a
-		lsr	a
-		lsr	a
-		lsr	a
-		tax
-		lda	BITS,x		; Map to bit mask
-		and	(ADDR_S),y	; And test value
-		beq	SaveNone
-		jmp	EM_BRA
+		 txa			; Get bit number
+		 and	#$70
+		 lsr	a
+		 lsr	a
+		 lsr	a
+		 lsr	a
+		 tax
+		 lda	BITS,x		; Map to bit mask
+		 and	(ADDR_S),y	; And test value
+		 beq	SaveNone
+		 jmp	EM_BRA
 
 EM_RMB:
-		txa			; Get bit number
-		and	#$70
-		lsr	a
-		lsr	a
-		lsr	a
-		lsr	a
-		tax
-		lda	MASK,x		; Map to bit mask
-		and	(ADDR_S),y
-		sta	(ADDR_S),y
-		jmp	SaveNone
-		
+		 txa			; Get bit number
+		 and	#$70
+		 lsr	a
+		 lsr	a
+		 lsr	a
+		 lsr	a
+		 tax
+		 lda	MASK,x		; Map to bit mask
+		 and	(ADDR_S),y
+		 sta	(ADDR_S),y
+	 	 jmp	SaveNone
+
 EM_SMB:
-		txa			; Get bit number
-		and	#$70
-		lsr	a
-		lsr	a
-		lsr	a
-		lsr	a
-		tax
-		lda	BITS,x		; Map to bit mask
-		ora	(ADDR_S),y
-		sta	(ADDR_S),y
-		jmp	SaveNone
+		 txa			; Get bit number
+		 and	#$70
+		 lsr	a
+		 lsr	a
+		 lsr	a
+		 lsr	a
+		 tax
+		 lda	BITS,x		; Map to bit mask
+		 ora	(ADDR_S),y
+		 sta	(ADDR_S),y
+		 jmp	SaveNone
 
 EM_TRB:
-		pha
-		and	(ADDR_S),Y
-		php
-		pla
-		eor	P_REG
-		and	#1<<1
-		eor	P_REG
-		sta	P_REG
-		pla
-		eor	#$ff
-		and	(ADDR_S),y
-		sta	(ADDR_S),y
-		jmp	SaveNone
-		
-EM_TSB:
-		pha
-		and	(ADDR_S),Y
-		php
-		pla
-		eor	P_REG
-		and	#1<<1
-		eor	P_REG
-		sta	P_REG
-		pla
-		ora	(ADDR_S),y
-		sta	(ADDR_S),y
-		jmp	SaveNone
-		
-		;.endif
-		
-;-------------------------------------------------------------------------------
-		
-SaveAP:
-		 sta	A_REG
-SaveP:
+		 pha
+		 and	(ADDR_S),Y
 		 php
+		 pla
+		 eor	P_REG
+		 and	#1<<1
+		 eor	P_REG
+		 sta	P_REG
+		 pla
+		 eor	#$ff
+		 and	(ADDR_S),y
+		 sta	(ADDR_S),y
+		 jmp	SaveNone
+
+EM_TSB:
+		 pha
+		 and	(ADDR_S),Y
+		 php
+		 pla
+		 eor	P_REG
+		 and	#1<<1
+		 eor	P_REG
+		 sta	P_REG
+		 pla
+		 ora	(ADDR_S),y
+		 sta	(ADDR_S),y
+		 jmp	SaveNone
+
+;-------------------------------------------------------------------------------
+
+SaveAP:
+		 sta	A_REG		; Save the updated A
+SaveP:
+		 php			; Save the updated flags
 		 pla
 		 sta	P_REG
 SaveNone:
+		 lda	TEMP+0		; Repeat as instructed
+		 if eq
+		  dec	TEMP+1
+		 endif
+		 dec	TEMP+0
 
-		 
+		 lda	TEMP+0
+		 ora	TEMP+1
+		 if ne
+		  jmp	Trace
+		 endif
+
 EM_ERR:
 		 jmp	NewCommand
-		
 		endif
 
 ;===============================================================================
@@ -1395,21 +1439,7 @@ EM_ERR:
 		 endif
 		 jmp	Error		; Handle syntax errors
 		endif
-		
-; Clock test. Remove
-	cmp	#'C'
-	if	eq
-	 jsr	NewLine
-	 repeat
-	  lda	RTC_SEC0
-	  repeat
-	   cmp 	RTC_SEC0
-	  until ne
-	  lda	#'.'
-	  jsr	UartTx
-	 forever
-	endif
-		
+
 ;===============================================================================
 ; '?' - Display Help
 ;-------------------------------------------------------------------------------
@@ -1448,8 +1478,8 @@ BumpAddr:
 		adc	ADDR_S+1
 		sta	ADDR_S+1
 		rts
-		
-CheckEnd:	
+
+CheckEnd:
 		lda	ADDR_S+1
 		cmp	ADDR_E+1
 		if 	cs
@@ -1468,7 +1498,7 @@ SetPrompt:
 		jsr	AppendChar
 		lda	#' '		; Then a space
 		jsr	AppendChar
-		
+
 		lda	ADDR_S+1	; Followed by the address
 		jsr	AppendHex2
 		lda	ADDR_S+0
@@ -1477,8 +1507,8 @@ SetPrompt:
 		jsr	AppendChar
 		jmp	RptCommand	; Then output it
 
-; Convert the byte in A into hexadecimal digits and append to the command buffer.		
-		
+; Convert the byte in A into hexadecimal digits and append to the command buffer.
+
 AppendHex2:
 		pha
 		lsr	a
@@ -1498,7 +1528,7 @@ AppendChar:
 		inx
 		stx	CMD_LEN
 		rts
-				
+
 ;===============================================================================
 ; Parsing Utilities
 ;-------------------------------------------------------------------------------
@@ -1510,6 +1540,7 @@ AppendChar:
 NextChar:
 		cpx	CMD_LEN		; Reached end of buffer>
 		if 	cs
+		 lda	#0
 		 rts			; Yes, return with C=1
 		endif
 		lda	COMMAND,X	; No, fetch a character
@@ -1522,12 +1553,12 @@ ToUpper:
 		if 	cs
 		 cmp	#'z'+1		; .. and 'z'?
 		 if 	cc
-		  and	#$5f		; Yes, convert 	
+		  and	#$5f		; Yes, convert
 		 endif
 		endif
 		clc			; Ensure C=0
 		rts
-		
+
 ; Fetch the next characters from the command buffer ignoring spaces.
 
 SkipSpaces:
@@ -1552,8 +1583,8 @@ GetWord:
 GetByte:
 		ldy	#2		; Set maximum number of nybble
 		sty	COUNT
-		
-		.if	__65C02__
+
+		.if	__65C02__|__65SC02__
 		stz	TEMP+0		; Clear conversion area
 		stz	TEMP+1
 		.else
@@ -1578,13 +1609,13 @@ GetByte:
 		 rol	TEMP+1
 		 ora	TEMP+0
 		 sta	TEMP+0
-		 
+
 		 dec	COUNT		; Reach maximum length?
 		 break	eq
-		 
+
 		 jsr	NextChar	; Try for another nybble
 		 jsr	GetNybble
-		until 	cs		
+		until 	cs
 		clc			; Conversion sucessfull
 		rts
 
@@ -1620,7 +1651,7 @@ IsHex:
 		endif
 		clc
 		rts
-		
+
 ; Return with the carry set of the character in A is not printable.
 
 IsPrintable:
@@ -1644,7 +1675,7 @@ IsPrintable:
 DumpRegisters:
 		txa			; Save SP
 		pha
-		
+
 		ldx	#A_STR		; Display A
 		jsr	ShowString
 		lda	A_REG
@@ -1659,7 +1690,7 @@ DumpRegisters:
 		jsr	ShowString
 		lda	Y_REG
 		jsr	ShowHex2
-		
+
 		ldx	#P_STR		; Display P
 		jsr	ShowString
 		ldx	#7
@@ -1673,8 +1704,8 @@ DumpRegisters:
 		 tya
 		 jsr	UartTx
 		 dex
-		until mi		  
-		
+		until mi
+
 		ldx	#SP_STR		; Display SP
 		jsr	ShowString
 		pla
@@ -1685,27 +1716,32 @@ DumpRegisters:
 ;-------------------------------------------------------------------------------
 
 Disassemble:
+		lda	TEMP+0		; Save temporary area
+		pha
+		lda	TEMP+1
+		pha
+
 		jsr	Space
 		ldy	#0		; Fetch the opcode
 		lda	(ADDR_S),y
 		tax
 		jsr	ShowHex2	; .. and display it
-		
+
 		jsr	Space
 		lda	MODES,x		; Fetch the mode
 		pha			; And save some copies
 		pha
 		and	#MB_REL|MB_ABS	; Show second byte if relative,
 		if	ne		; .. zero page, immediate or absolute
-		 iny		
+		 iny
 		 lda	(ADDR_S),y
 		 jsr	ShowHex2
 		else
 		 jsr	Space2
 		endif
-		
+
 		jsr	Space
-		pla			; Show third byte 
+		pla			; Show third byte
 		.if	__65C02__
 		cmp	#MO_BRL		; .. if bit relative
 		beq	.Skip
@@ -1719,7 +1755,7 @@ Disassemble:
 		else
 		 jsr	Space2
 		endif
-		
+
 		iny			; Save the byte count
 		sty	COUNT
 
@@ -1737,7 +1773,7 @@ Disassemble:
 		jsr	ExtractLetter
 		jsr	Space
 		ldx	#4
-		
+
 		.if	__65C02__
 		pla
 		pha
@@ -1758,7 +1794,7 @@ Disassemble:
 		 inx
 		endif
 		.endif
-		
+
 		pla			; Indirect mode?
 		pha
 		if	mi
@@ -1766,7 +1802,7 @@ Disassemble:
 		 jsr	UartTx
 		 inx
 		endif
-		
+
 		pla			; Has an address?
 		pha
 		and	#MB_ABS
@@ -1791,12 +1827,12 @@ Disassemble:
 		  inx
 		 endif
 		 ldy	#1
-		 lda	(ADDR_S),y	; Then lo byte	
+		 lda	(ADDR_S),y	; Then lo byte
 		 jsr	ShowHex2
 		 inx
 		 inx
 		endif
-		
+
 		.if	__65C02__
 		pla
 		pha
@@ -1808,7 +1844,7 @@ Disassemble:
 		 inx
 		endif
 		.endif
-		
+
 		pla
 		pha
 		tay
@@ -1823,7 +1859,7 @@ Disassemble:
 		 if	ne
 		  iny
 		 endif
-		 
+
 		 sec			; Word out address of next
 		 tya			; .. instruction
 		 adc	ADDR_S+0
@@ -1831,12 +1867,12 @@ Disassemble:
 		 lda	#0
 		 adc	ADDR_S+1
 		 sta	TEMP+1
-		 
+
 		 clc			; Fetch offset
 		 lda	(ADDR_S),y	; Work out lo byte
 		 adc	TEMP+0
 		 pha			; And save
-		 lda	(ADDR_S),y	
+		 lda	(ADDR_S),y
 		 and	#$80
 		 if	mi
 		  lda	#$ff
@@ -1850,7 +1886,7 @@ Disassemble:
 		 inx
 		 inx
 		endif
-		
+
 		pla
 		pha
 		and	#MB_ACC
@@ -1859,7 +1895,7 @@ Disassemble:
 		 jsr	UartTx
 		 inx
 		endif
-		
+
 		pla
 		pha
 		and	#MB_XRG
@@ -1871,7 +1907,7 @@ Disassemble:
 		 inx
 		 inx
 		endif
-		
+
 		pla
 		pha
 		if	mi
@@ -1879,7 +1915,7 @@ Disassemble:
 		 jsr	UartTx
 		 inx
 		endif
-		
+
 		pla
 		and	#MB_YRG
 		if 	ne
@@ -1890,10 +1926,15 @@ Disassemble:
 		 inx
 		 inx
 		endif
-		
+
+		pla			; Restore temporary area
+		sta	TEMP+1
+		pla
+		sta	TEMP+0
+
 		lda	COUNT		; Return the number of bytes
 		rts
-		
+
 ExtractLetter:
 		pha
 		and	#$1f
@@ -1915,8 +1956,8 @@ ExtractLetter:
 		lsr	TEMP
 		ror	a
 		rts
-		
-		
+
+
 ;===============================================================================
 ; Display Utilities
 ;-------------------------------------------------------------------------------
@@ -1939,9 +1980,9 @@ ShowHex2:
 ShowHex:
 		jsr	ToHex		; Convert to printable character
 		jmp	UartTx		; And display.
-		
+
 ; Convert the lo nybble of A to a hexadecimal digit.
-		
+
 ToHex		and	#$0f		; Isolate the lo nybble
 		sed			; Convert to ASCII using BCD
 		clc
@@ -1950,13 +1991,13 @@ ToHex		and	#$0f		; Isolate the lo nybble
 		cld
 		rts			; Done
 
-;-------------------------------------------------------------------------------		
+;-------------------------------------------------------------------------------
 
 ; Output two spaces.
 
 Space2:
 		jsr	Space		; Print one space then drop into ..
-		
+
 ; Output a single space. The values in A & Y are destroyed.
 
 Space:
@@ -1976,7 +2017,7 @@ NewLine:
 		jsr	UartTx
 		lda	#LF
 		jmp	UartTx
-		
+
 ;===============================================================================
 ; Strings
 ;-------------------------------------------------------------------------------
@@ -1990,18 +2031,22 @@ ShowString:
 		 break	eq		; Reached the end?
 		 jsr	UartTx		; No, display it
 		 inx			; Bump the index
-		forever		
+		forever
 		rts			; Done.
 
 STRINGS:
 TTL_STR		.equ	.-STRINGS
+		.byte	CR,LF,"SB-"
 		.if	__6502__
-		.byte	CR,LF,"Boot 6502 [18.06]"
+		.byte	"6502"
 		.endif
 		.if	__65C02__
-		.byte	CR,LF,"Boot 65C02 [18.06]"
+		.byte	"65C02"
 		.endif
-		.byte	0
+		.if	__65SC02__
+		.byte	"65SC02"
+		.endif
+		.byte	" [20.03]",0
 PC_STR		.equ	.-STRINGS
 		.byte	"PC=",0
 SP_STR		.equ	.-STRINGS
@@ -2026,7 +2071,7 @@ HLP_STR		.equ	.-STRINGS
 		.byte	CR,LF,"T [xxxx][,cccc]\t\tTrace"
 		.byte	CR,LF,"W xxxx yy\t\tWrite Memory"
 		.byte 	0
-		
+
 FLAG		.byte	"CZID11VN"
 BITS		.byte	$01,$02,$04,$08,$10,$20,$40,$80
 MASK		.byte	$fe,$fd,$fb,$f7,$ef,$df,$bf,$7f
@@ -2036,7 +2081,7 @@ MASK		.byte	$fe,$fd,$fb,$f7,$ef,$df,$bf,$7f
 ;-------------------------------------------------------------------------------
 
 		.org	$fc00
-		
+
 		.if	__6502__
 OPCODES:
 		.byte	OP_BRK,OP_ORA,OP_ERR,OP_ERR,OP_ERR,OP_ORA,OP_ASL,OP_ERR ; 0
@@ -2178,14 +2223,86 @@ MODES:
 		.byte	MO_REL,MO_IZY,MO_IZP,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_ZPG ; F
 		.byte	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_IMP,MO_ABX,MO_ABX,MO_BRL
 		.endif
-		
+
+;-------------------------------------------------------------------------------
+
+		.if	__65SC02__
+OPCODES:
+		.byte	OP_BRK,OP_ORA,OP_ERR,OP_ERR,OP_TSB,OP_ORA,OP_ASL,OP_NOP ; 0
+		.byte	OP_PHP,OP_ORA,OP_ASL,OP_ERR,OP_TSB,OP_ORA,OP_ASL,OP_NOP
+		.byte	OP_BPL,OP_ORA,OP_ORA,OP_ERR,OP_TRB,OP_ORA,OP_ASL,OP_NOP ; 1
+		.byte	OP_CLC,OP_ORA,OP_INC,OP_ERR,OP_TRB,OP_ORA,OP_ASL,OP_NOP
+		.byte	OP_JSR,OP_AND,OP_ERR,OP_ERR,OP_BIT,OP_AND,OP_ROL,OP_NOP ; 2
+		.byte	OP_PLP,OP_AND,OP_ROL,OP_ERR,OP_BIT,OP_AND,OP_ROL,OP_NOP
+		.byte	OP_BMI,OP_AND,OP_AND,OP_ERR,OP_BIT,OP_AND,OP_ROL,OP_NOP ; 3
+		.byte	OP_SEC,OP_AND,OP_DEC,OP_ERR,OP_BIT,OP_AND,OP_ROL,OP_NOP
+		.byte	OP_RTI,OP_EOR,OP_ERR,OP_ERR,OP_ERR,OP_EOR,OP_LSR,OP_NOP ; 4
+		.byte	OP_PHA,OP_EOR,OP_LSR,OP_ERR,OP_JMP,OP_EOR,OP_LSR,OP_NOP
+		.byte	OP_BVC,OP_EOR,OP_EOR,OP_ERR,OP_ERR,OP_EOR,OP_LSR,OP_NOP ; 5
+		.byte	OP_CLI,OP_EOR,OP_PHY,OP_ERR,OP_ERR,OP_EOR,OP_LSR,OP_NOP
+		.byte	OP_RTS,OP_ADC,OP_ERR,OP_ERR,OP_STZ,OP_ADC,OP_ROR,OP_NOP ; 6
+		.byte	OP_PLA,OP_ADC,OP_ROR,OP_ERR,OP_JMP,OP_ADC,OP_ROR,OP_NOP
+		.byte	OP_BVS,OP_ADC,OP_ADC,OP_ERR,OP_STZ,OP_ADC,OP_ROR,OP_NOP ; 7
+		.byte	OP_SEI,OP_ADC,OP_PLY,OP_ERR,OP_JMP,OP_ADC,OP_ROR,OP_NOP
+		.byte	OP_BRA,OP_STA,OP_ERR,OP_ERR,OP_STY,OP_STA,OP_STX,OP_NOP ; 8
+		.byte	OP_DEY,OP_BIT,OP_TXA,OP_ERR,OP_STY,OP_STA,OP_STX,OP_NOP
+		.byte	OP_BCC,OP_STA,OP_STA,OP_ERR,OP_STY,OP_STA,OP_STX,OP_NOP ; 9
+		.byte	OP_TYA,OP_STA,OP_TXS,OP_ERR,OP_STZ,OP_STA,OP_STZ,OP_NOP
+		.byte	OP_LDY,OP_LDA,OP_LDX,OP_ERR,OP_LDY,OP_LDA,OP_LDX,OP_NOP ; A
+		.byte	OP_TAY,OP_LDA,OP_TAX,OP_ERR,OP_LDY,OP_LDA,OP_LDX,OP_NOP
+		.byte	OP_BCS,OP_LDA,OP_LDA,OP_ERR,OP_LDY,OP_LDA,OP_LDX,OP_NOP ; B
+		.byte	OP_CLV,OP_LDA,OP_TSX,OP_ERR,OP_LDY,OP_LDA,OP_LDX,OP_NOP
+		.byte	OP_CPY,OP_CMP,OP_ERR,OP_ERR,OP_CPY,OP_CMP,OP_DEC,OP_NOP ; C
+		.byte	OP_INY,OP_CMP,OP_DEX,OP_WAI,OP_CPY,OP_CMP,OP_DEC,OP_NOP
+		.byte	OP_BNE,OP_CMP,OP_CMP,OP_ERR,OP_ERR,OP_CMP,OP_DEC,OP_NOP ; D
+		.byte	OP_CLD,OP_CMP,OP_PHX,OP_STP,OP_ERR,OP_CMP,OP_DEC,OP_NOP
+		.byte	OP_CPX,OP_SBC,OP_ERR,OP_ERR,OP_CPX,OP_SBC,OP_INC,OP_NOP ; E
+		.byte	OP_INX,OP_SBC,OP_NOP,OP_ERR,OP_CPX,OP_SBC,OP_INC,OP_NOP
+		.byte	OP_BEQ,OP_SBC,OP_SBC,OP_ERR,OP_ERR,OP_SBC,OP_INC,OP_NOP ; F
+		.byte	OP_SED,OP_SBC,OP_PLX,OP_ERR,OP_ERR,OP_SBC,OP_INC,OP_NOP
+
+MODES:
+		.byte	MO_IMM,MO_IZX,MO_IMM,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_IMP ; 0
+		.byte	MO_IMP,MO_IMM,MO_ACC,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_IMP
+		.byte	MO_REL,MO_IZY,MO_IZP,MO_IMP,MO_ZPG,MO_ZPX,MO_ZPX,MO_IMP ; 1
+		.byte	MO_IMP,MO_ABY,MO_ACC,MO_IMP,MO_ABS,MO_ABX,MO_ABX,MO_IMP
+		.byte	MO_ABS,MO_IZX,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_IMP ; 2
+		.byte	MO_IMP,MO_IMM,MO_ACC,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_IMP
+		.byte	MO_REL,MO_IZY,MO_IZP,MO_IMP,MO_ZPX,MO_ZPX,MO_ZPX,MO_IMP ; 3
+		.byte	MO_IMP,MO_ABY,MO_ACC,MO_IMP,MO_ABX,MO_ABX,MO_ABX,MO_IMP
+		.byte	MO_IMP,MO_IZX,MO_IMP,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_IMP ; 4
+		.byte	MO_IMP,MO_IMM,MO_ACC,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_IMP
+		.byte	MO_REL,MO_IZY,MO_IZP,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_IMP ; 5
+		.byte	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_IMP,MO_ABX,MO_ABX,MO_IMP
+		.byte	MO_IMP,MO_IZX,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_IMP ; 6
+		.byte	MO_IMP,MO_IMM,MO_ACC,MO_IMP,MO_IAB,MO_ABS,MO_ABS,MO_IMP
+		.byte	MO_REL,MO_IZY,MO_IZP,MO_IMP,MO_ZPX,MO_ZPX,MO_ZPX,MO_IMP ; 7
+		.byte	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_IAX,MO_ABX,MO_ABX,MO_IMP
+		.byte	MO_REL,MO_IZX,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_IMP ; 8
+		.byte	MO_IMP,MO_IMM,MO_IMP,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_IMP
+		.byte	MO_REL,MO_IZY,MO_IZP,MO_IMP,MO_ZPX,MO_ZPX,MO_ZPY,MO_IMP ; 9
+		.byte	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_ABS,MO_ABX,MO_ABX,MO_IMP
+		.byte	MO_IMM,MO_IZX,MO_IMM,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_IMP ; A
+		.byte	MO_IMP,MO_IMM,MO_IMP,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_IMP
+		.byte	MO_REL,MO_IZY,MO_IZP,MO_IMP,MO_ZPX,MO_ZPX,MO_ZPY,MO_IMP ; B
+		.byte	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_ABX,MO_ABX,MO_ABY,MO_IMP
+		.byte	MO_IMM,MO_IZX,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_IMP ; C
+		.byte	MO_IMP,MO_IMM,MO_IMP,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_IMP
+		.byte	MO_REL,MO_IZY,MO_IZP,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_IMP ; D
+		.byte	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_IMP,MO_ABX,MO_ABX,MO_IMP
+		.byte	MO_IMM,MO_IZX,MO_IMP,MO_IMP,MO_ZPG,MO_ZPG,MO_ZPG,MO_IMP ; E
+		.byte	MO_IMP,MO_IMM,MO_IMP,MO_IMP,MO_ABS,MO_ABS,MO_ABS,MO_IMP
+		.byte	MO_REL,MO_IZY,MO_IZP,MO_IMP,MO_IMP,MO_ZPX,MO_ZPX,MO_IMP ; F
+		.byte	MO_IMP,MO_ABY,MO_IMP,MO_IMP,MO_IMP,MO_ABX,MO_ABX,MO_IMP
+		.endif
+
 ;==============================================================================
 ; Virtual Hardware Area
 ;-------------------------------------------------------------------------------
 
 		.org	$fe00
 		.space	64		; Skip over virtual hardware
-		
+
 ;===============================================================================
 ; I/O API
 ;-------------------------------------------------------------------------------
@@ -2194,16 +2311,9 @@ MODES:
 		jmp	UartRx
 		jmp	UartTxCount
 		jmp	UartRxCount
-		jmp	SpiGetControl
-		jmp	SpiSetControl
-		jmp	SpiGetStatus
-		jmp	SpiGetDivisor
-		jmp	SpiSetDivisor
-		jmp	SpiGetSelect
-		jmp	SpiSetSelect
 		jmp	SpiSendIdle
 		jmp	SpiSendData
-		
+
 ;===============================================================================
 ; IRQ Handler
 ;-------------------------------------------------------------------------------
@@ -2213,7 +2323,7 @@ MODES:
 
 IRQ:
 		pha			; Save users registers
-		.if	__65C02__
+		.if	__65C02__|__65SC02__
 		phx
 		phy
 		.else
@@ -2230,7 +2340,7 @@ IRQ:
 		if 	ne
 		 jmp	BRK		; Enter monitor with registers on stack
 		endif
-		
+
 ;-------------------------------------------------------------------------------
 
 		lda	ACIA_STAT	; ACIA is the source?
@@ -2267,7 +2377,7 @@ IRQ:
 
 ;-------------------------------------------------------------------------------
 
-		.if	__65C02__
+		.if	__65C02__|__65SC02__
 		ply			; Restore user registers
 		plx
 		.else
@@ -2289,7 +2399,7 @@ NMI:		rti			; Done
 UartTx:
 		pha
 		sty	IO_TEMP
-		
+
 		ldy	TX_TAIL		; Save the data byte at the tail
 		sta	TX_BUFFER,Y
 		jsr	BumpIdx		; Work out the next offset
@@ -2299,7 +2409,7 @@ UartTx:
 		sty	TX_TAIL
 		lda	#$05		; Ensure TX interrupt enabled
 		sta	ACIA_CMND
-		
+
 		ldy	IO_TEMP
 		pla
 		rts			; Done
@@ -2318,7 +2428,7 @@ UartRx:
 		sty	RX_HEAD
 		ldy	IO_TEMP
 		rts			; Done
-		
+
 ; Increments an index value wrapping it back to zero if it exceeds the buffer
 ; size.
 
@@ -2338,8 +2448,8 @@ UartTxCount:
 		sbc	TX_TAIL
 		jmp	CorrectCount	; And correct if negative
 
-; Returns rge number of characters in the receive buffer.
-		
+; Returns the number of characters in the receive buffer.
+
 UartRxCount:
 		sec			; Work out index difference
 		lda	RX_HEAD
@@ -2354,50 +2464,6 @@ CorrectCount:	if mi			; And correct if negative
 ; SPI I/O
 ;-------------------------------------------------------------------------------
 
-; Fetch the value of the SPI control register
-
-SpiGetControl:
-		lda	SPI_CTRL
-		rts
-	
-; Set the value of the SPI control register
-	
-SpiSetControl:
-		sta	SPI_CTRL 
-		rts
-		
-; Fetch the value of the SPI status register
-
-SpiGetStatus:
-		lda	SPI_STAT
-		rts
-		
-; Fetch the value of the SPI divisor register
-
-SpiGetDivisor:
-		lda	SPI_DVSR
-		rts
-		
-; Set the value of the SPI divisor register
-
-SpiSetDivisor:
-		sta	SPI_DVSR
-		rts
-
-; Fetch the value of the SPI chip select register
-
-SpiGetSelect:
-		lda	SPI_SLCT
-		plp
-		rts
-
-; Set the value of the SPI chip select register
-
-SpiSetSelect:
-		sta	SPI_SLCT
-		plp
-		rts
-
 ; Send a $ff byte and return the value received
 
 SpiSendIdle:	lda	#$ff
@@ -2410,7 +2476,7 @@ SpiSendData:	sta	SPI_DATA
 		until mi
 		lda	SPI_DATA
 		rts
-		
+
 ;===============================================================================
 ; Vector Locations
 ;-------------------------------------------------------------------------------
